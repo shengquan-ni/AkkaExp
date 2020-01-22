@@ -22,7 +22,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, filePath:String, delimiter: String, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata)  {
+class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, filePath:String, delimiter: Char, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata)  {
   override val totalBytes: Long = FileSystem.get(new URI(host),new Configuration()).getFileStatus(new Path(filePath)).getLen
   override lazy val topology: Topology = {
     new Topology(Array(new GeneratorWorkerLayer(

@@ -18,6 +18,9 @@ object Tuple{
     new AmberTuple(keep.map(arr(_)))
   }
   def fromJavaArray(values: Array[Any]) = new AmberTuple(values)
+  def fromJavaStringArray(values: Array[String],types:Array[FieldType.Value]) = new AmberTuple(values,types)
+  def fromJavaStringArray(values: Array[String],keep: Array[Int],types:Array[FieldType.Value]) = new AmberTuple(values,types)
+  def fromJavaStringArray(values: Array[String],keep: Array[Int]) = new AmberTuple(keep.map(values(_)))
   def fromJavaStringIterable(values: java.lang.Iterable[String],types:Array[FieldType.Value]) = new AmberTuple(values.asScala.toArray,types)
   def fromJavaStringIterable(values: java.lang.Iterable[String],keep: Array[Int],types:Array[FieldType.Value]):Tuple = {
     val arr = values.asScala.toArray

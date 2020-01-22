@@ -15,13 +15,11 @@ public class LocalFileScanTupleProducer implements TupleProducer {
 
     private String localPath;
     private int[] indicesToKeep;
-    private String separator;
+    private char separator;
     private TableMetadata metadata;
     private BufferedBlockReader reader = null;
-    private Splitter splitter = null;
     private long startOffset;
     private long endOffset;
-
 
 
     private String[] shrinkStringArray(String[] array, int[] indicesToKeep){
@@ -31,7 +29,7 @@ public class LocalFileScanTupleProducer implements TupleProducer {
         return res;
     }
 
-    LocalFileScanTupleProducer(String localPath, long startOffset,long endOffset, String delimiter, int[] indicesToKeep, TableMetadata metadata){
+    LocalFileScanTupleProducer(String localPath, long startOffset,long endOffset, char delimiter, int[] indicesToKeep, TableMetadata metadata){
         this.localPath = localPath;
         this.separator = delimiter;
         this.indicesToKeep = indicesToKeep;
@@ -44,8 +42,7 @@ public class LocalFileScanTupleProducer implements TupleProducer {
     public void initialize() throws Exception {
         SeekableFileInputStream stream = new SeekableFileInputStream(localPath);
         stream.seek(startOffset);
-        reader= new BufferedBlockReader(stream,endOffset-startOffset);
-        splitter = Splitter.on(separator);
+        reader= new BufferedBlockReader(stream,endOffset-startOffset,separator);
         if(startOffset > 0)
             reader.readLine();
     }
@@ -59,15 +56,15 @@ public class LocalFileScanTupleProducer implements TupleProducer {
     public Tuple next() throws IOException {
         if(metadata != null) {
             if (indicesToKeep != null) {
-                return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()),indicesToKeep, metadata.tupleMetadata().fieldTypes());
+                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep, metadata.tupleMetadata().fieldTypes());
             } else {
-                return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()), metadata.tupleMetadata().fieldTypes());
+                return Tuple.fromJavaStringArray(reader.readLine(),metadata.tupleMetadata().fieldTypes());
             }
         }else{
             if (indicesToKeep != null) {
-                return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()),indicesToKeep);
+                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep);
             } else {
-                return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()));
+                return Tuple.fromJavaArray(reader.readLine());
             }
         }
     }

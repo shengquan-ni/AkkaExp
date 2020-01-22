@@ -3,8 +3,11 @@ package Engine.Operators.Scan;
 import scala.Array;
 import scala.reflect.internal.Chars;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BufferedBlockReader {
     private InputStream input;
@@ -13,34 +16,43 @@ public class BufferedBlockReader {
     private int cursor;
     private int bufferSize;
     private byte[] buffer = new byte[4096]; //4k buffer
-    private int tempLength = 0;
-    private byte[] temp = new byte[1024];
+    private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    private List<String> fields= new ArrayList<>();
+    private char delimiter;
 
-    public BufferedBlockReader(InputStream input, long blockSize){
+    public BufferedBlockReader(InputStream input, long blockSize, char delimiter){
         this.input = input;
         this.blockSize = blockSize;
+        this.delimiter = delimiter;
     }
 
-    public CharSequence readLine() throws IOException {
-        tempLength = 0;
+    public String[] readLine() throws IOException {
+        outputStream.reset();
+        fields.clear();
         while(true) {
             if (cursor >= bufferSize) {
                 fillBuffer();
                 if (bufferSize == -1) {
-                    return new String(temp, 0, tempLength).trim();
+                    return fields.isEmpty()? null: fields.toArray(new String[0]);
                 }
             }
             int start = cursor;
             while (cursor < bufferSize) {
                 if (buffer[cursor] == '\n') {
-                    keepBuffer(start, cursor - start);
+                    outputStream.write(buffer,start,cursor-start);
+                    fields.add(outputStream.toString());
                     currentPos += cursor - start + 1;
                     cursor++;
-                    return new String(temp, 0, tempLength).trim();
+                    return fields.toArray(new String[0]);
+                }else if(buffer[cursor] == delimiter){
+                    outputStream.write(buffer,start,cursor-start);
+                    fields.add(outputStream.toString());
+                    outputStream.reset();
+                    start = cursor+1;
                 }
                 cursor++;
             }
-            keepBuffer(start, bufferSize - start);
+            outputStream.write(buffer, start, bufferSize - start);
             currentPos += bufferSize - start;
         }
     }
@@ -48,15 +60,6 @@ public class BufferedBlockReader {
     private void fillBuffer() throws IOException {
         bufferSize = input.read(buffer);
         cursor = 0;
-    }
-
-    private void keepBuffer(int start, int length){
-        if(tempLength+length>temp.length){
-            byte[] biggerTemp = new byte[temp.length*2];
-            Array.copy(temp,0,biggerTemp,0,tempLength);
-        }
-        Array.copy(buffer,start,temp,tempLength,length);
-        tempLength+=length;
     }
 
     public boolean hasNext(){
