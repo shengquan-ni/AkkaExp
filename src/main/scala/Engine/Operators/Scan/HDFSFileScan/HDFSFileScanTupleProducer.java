@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.net.URI;
 
@@ -39,7 +40,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         FSDataInputStream stream = fs.open(new Path(hdfsPath));
         stream.seek(startOffset);
-        reader = new BufferedBlockReader(stream,endOffset-startOffset,separator);
+        reader = new BufferedBlockReader(new BufferedInputStream(stream),endOffset-startOffset,separator);
         if(startOffset > 0)
             reader.readLine();
     }
