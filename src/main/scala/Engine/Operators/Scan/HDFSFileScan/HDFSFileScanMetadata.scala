@@ -27,11 +27,9 @@ class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, fi
     println("????")
     val fs=FileSystem.get(new URI(host),new Configuration())
     println("!")
-    val res = fs.getFileStatus(new Path(filePath))
-    println("!!")
-    val res1 = res.getLen
+    val res = fs.getLength(new Path(filePath))
     println("!!!")
-    res1
+    res
   }
   override lazy val topology: Topology = {
     new Topology(Array(new GeneratorWorkerLayer(
