@@ -90,7 +90,7 @@ object App {
 
       s"""{
         |"operators":[
-        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":'|'},
+        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|"},
         |{"operatorID":"KeywordSearch","operatorType":"KeywordMatcher","keyword":"package","attributeName":15},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
