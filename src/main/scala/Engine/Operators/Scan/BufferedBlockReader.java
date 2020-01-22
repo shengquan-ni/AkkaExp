@@ -38,13 +38,13 @@ public class BufferedBlockReader {
             }
             int start = cursor;
             while (cursor < bufferSize) {
-                if (buffer[cursor] == '\n') {
+                if (buffer[cursor] == delimiter) {
                     outputStream.write(buffer,start,cursor-start);
                     fields.add(outputStream.toString());
                     currentPos += cursor - start + 1;
                     cursor++;
                     return fields.toArray(new String[0]);
-                }else if(buffer[cursor] == delimiter){
+                }else if(buffer[cursor] == '\n'){
                     outputStream.write(buffer,start,cursor-start);
                     fields.add(outputStream.toString());
                     outputStream.reset();
