@@ -91,12 +91,10 @@ object App {
       s"""{
         |"operators":[
         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|"},
-        |{"operatorID":"KeywordSearch","operatorType":"KeywordMatcher","keyword":"package","attributeName":15},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
         |"links":[
-        |{"origin":"Scan","destination":"KeywordSearch"},
-        |{"origin":"KeywordSearch","destination":"Count"},
+        |{"origin":"Scan","destination":"Count"},
         |{"origin":"Count","destination":"Sink"}]
         |}""".stripMargin)
 

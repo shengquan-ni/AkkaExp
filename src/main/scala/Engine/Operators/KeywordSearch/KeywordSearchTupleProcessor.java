@@ -18,13 +18,9 @@ public class KeywordSearchTupleProcessor implements TupleProcessor {
 
     @Override
     public void accept(Tuple tuple) {
-        try{
-            if(tuple.getString(targetField).contains(keyword)){
-                nextFlag = true;
-                this.tuple = tuple;
-            }
-        }catch(Exception e){
-            System.out.println(tuple.toString());
+        if(tuple.getString(targetField).contains(keyword)){
+            nextFlag = true;
+            this.tuple = tuple;
         }
     }
 
