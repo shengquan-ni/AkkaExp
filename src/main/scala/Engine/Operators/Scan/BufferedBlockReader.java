@@ -1,10 +1,13 @@
 package Engine.Operators.Scan;
 
 
+import com.google.common.primitives.Ints;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class BufferedBlockReader {
@@ -16,12 +19,14 @@ public class BufferedBlockReader {
     private byte[] buffer = new byte[4096]; //4k buffer
     private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     private List<String> fields= new ArrayList<>();
+    private HashSet<Integer> keptFields;
     private char delimiter;
 
-    public BufferedBlockReader(InputStream input, long blockSize, char delimiter){
+    public BufferedBlockReader(InputStream input, long blockSize, char delimiter, int[] kept){
         this.input = input;
         this.blockSize = blockSize;
         this.delimiter = delimiter;
+        this.keptFields = new HashSet<>(Ints.asList(kept));
     }
 
     public String[] readLine() throws IOException {
@@ -34,17 +39,23 @@ public class BufferedBlockReader {
                     return fields.isEmpty()? null: fields.toArray(new String[0]);
                 }
             }
+            int index = 0;
             int start = cursor;
             while (cursor < bufferSize) {
                 if (buffer[cursor] == delimiter) {
-                    outputStream.write(buffer,start,cursor-start);
-                    fields.add(outputStream.toString());
+                    if(keptFields.contains(index)){
+                        outputStream.write(buffer,start,cursor-start);
+                        fields.add(outputStream.toString());
+                    }
                     outputStream.reset();
                     currentPos += cursor - start + 1;
                     start = cursor+1;
+                    index++;
                 }else if(buffer[cursor] == '\n'){
-                    outputStream.write(buffer,start,cursor-start);
-                    fields.add(outputStream.toString());
+                    if(keptFields.contains(index)){
+                        outputStream.write(buffer,start,cursor-start);
+                        fields.add(outputStream.toString());
+                    }
                     currentPos += cursor - start + 1;
                     cursor++;
                     return fields.toArray(new String[0]);

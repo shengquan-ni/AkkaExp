@@ -41,7 +41,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         FSDataInputStream stream = fs.open(new Path(hdfsPath));
         stream.seek(startOffset);
-        reader = new BufferedBlockReader(stream,endOffset-startOffset,separator);
+        reader = new BufferedBlockReader(stream,endOffset-startOffset,separator,indicesToKeep);
         if(startOffset > 0)
             reader.readLine();
     }
