@@ -21,5 +21,5 @@ import scala.concurrent.ExecutionContext
 
 abstract class FileScanMetadata(tag:OperatorTag, val numWorkers:Int, val filePath:String, val delimiter: String, val indicesToKeep:Array[Int], val tableMetadata: TableMetadata) extends OperatorMetadata(tag) {
   val totalBytes: Long = 0
-  
+
 }
