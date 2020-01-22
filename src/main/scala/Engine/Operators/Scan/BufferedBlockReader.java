@@ -48,6 +48,7 @@ public class BufferedBlockReader {
                     outputStream.write(buffer,start,cursor-start);
                     fields.add(outputStream.toString());
                     outputStream.reset();
+                    currentPos += cursor - start + 1;
                     start = cursor+1;
                 }
                 cursor++;
