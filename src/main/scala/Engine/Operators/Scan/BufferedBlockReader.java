@@ -1,7 +1,5 @@
 package Engine.Operators.Scan;
 
-import scala.Array;
-import scala.reflect.internal.Chars;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

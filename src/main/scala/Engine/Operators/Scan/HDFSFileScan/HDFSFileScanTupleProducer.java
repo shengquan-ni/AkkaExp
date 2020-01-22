@@ -6,6 +6,7 @@ import Engine.Common.TupleProducer;
 import Engine.Operators.Scan.BufferedBlockReader;
 import com.google.common.base.Splitter;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -36,7 +37,8 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
     @Override
     public void initialize() throws Exception {
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
-        InputStream stream = fs.open(new Path(hdfsPath));
+        FSDataInputStream stream = fs.open(new Path(hdfsPath));
+        stream.seek(startOffset);
         reader = new BufferedBlockReader(stream,endOffset-startOffset,separator);
         if(startOffset > 0)
             reader.readLine();
