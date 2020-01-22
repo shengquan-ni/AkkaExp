@@ -262,7 +262,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         case PrincipalState.Completed =>
           log.info(sender+" completed")
           if(principalStates.values.forall(_ == PrincipalState.Completed)) {
-            log.info("workflow completed!")
+            timer.stop()
+            log.info("workflow completed! Time Elapsed: "+timer.toString())
             saveRemoveAskHandle()
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
