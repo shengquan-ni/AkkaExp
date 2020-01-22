@@ -34,6 +34,7 @@ import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
 import akka.util.Timeout
+import com.google.common.base.Stopwatch
 import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
@@ -95,6 +96,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   val linksToIgnore = new mutable.HashSet[(OperatorTag,OperatorTag)]
   var periodicallyAskHandle:Cancellable = _
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
+  val timer = new Stopwatch()
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
@@ -226,6 +228,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   private[this] def ready:Receive ={
     case Start =>
       log.info("received start signal")
+      timer.start()
       workflow.startOperators.foreach { x =>
         if(!startDependencies.contains(x))
           AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x), Start, 10, 0)
@@ -312,8 +315,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       }else{
         principalStates(sender) = state
         if(principalStates.values.forall(_ == PrincipalState.Completed)){
+          timer.stop()
           frontier.clear()
-          log.info("workflow completed!")
+          log.info("workflow completed! Time Elapsed: "+timer.toString())
           saveRemoveAskHandle()
           if(frontier.isEmpty){
             context.parent ! ReportState(ControllerState.Completed)
