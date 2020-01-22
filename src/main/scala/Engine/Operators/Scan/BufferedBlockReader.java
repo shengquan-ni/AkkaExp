@@ -41,15 +41,15 @@ public class BufferedBlockReader {
                 if (buffer[cursor] == delimiter) {
                     outputStream.write(buffer,start,cursor-start);
                     fields.add(outputStream.toString());
-                    currentPos += cursor - start + 1;
-                    cursor++;
-                    return fields.toArray(new String[0]);
-                }else if(buffer[cursor] == '\n'){
-                    outputStream.write(buffer,start,cursor-start);
-                    fields.add(outputStream.toString());
                     outputStream.reset();
                     currentPos += cursor - start + 1;
                     start = cursor+1;
+                }else if(buffer[cursor] == '\n'){
+                    outputStream.write(buffer,start,cursor-start);
+                    fields.add(outputStream.toString());
+                    currentPos += cursor - start + 1;
+                    cursor++;
+                    return fields.toArray(new String[0]);
                 }
                 cursor++;
             }
