@@ -25,7 +25,9 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, filePath:String, delimiter: String, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata)  {
   override val totalBytes: Long = {
     println("????")
-    val fs=FileSystem.get(new URI(host),new Configuration())
+    val conf = new Configuration()
+    conf.set("ipc.maximum.data.length","134217728")
+    val fs=FileSystem.get(new URI(host),conf)
     println("!")
     val res = fs.getLength(new Path(filePath))
     println("!!!")
