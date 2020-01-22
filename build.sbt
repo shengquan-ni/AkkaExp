@@ -5,7 +5,7 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
-scalacOptions ++= Seq("-Xelide-below", "FINE")
+scalacOptions ++= Seq("-Xelide-below", "WARNING")
 scalacOptions ++= Seq("-feature")
 
 val akkaVersion = "2.5.24"
