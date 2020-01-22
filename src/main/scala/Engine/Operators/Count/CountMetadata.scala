@@ -7,6 +7,7 @@ import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLay
 import Engine.Architecture.LinkSemantics.{AllToOne, LinkStrategy}
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag}
+import Engine.Common.Constants
 import Engine.Operators.OperatorMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
@@ -23,7 +24,7 @@ class CountMetadata(tag:OperatorTag, val numWorkers:Int) extends OperatorMetadat
        partialLayer,
        finalLayer
      ),Array(
-      new AllToOne(partialLayer,finalLayer,100)
+      new AllToOne(partialLayer,finalLayer,Constants.defaultBatchSize)
     ),Map())
   }
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {

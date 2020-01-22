@@ -7,6 +7,7 @@ import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLay
 import Engine.Architecture.LinkSemantics.{AllToOne, HashBasedShuffle, LinkStrategy}
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag}
+import Engine.Common.Constants
 import Engine.Operators.OperatorMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
@@ -23,7 +24,7 @@ class GroupByMetadata[T](tag:OperatorTag, val numWorkers:Int, val groupByField: 
       partialLayer,
       finalLayer
     ),Array(
-      new HashBasedShuffle(partialLayer,finalLayer,100,x => x.get(groupByField).hashCode())
+      new HashBasedShuffle(partialLayer,finalLayer,Constants.defaultBatchSize,x => x.get(groupByField).hashCode())
     ),Map())
   }
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
