@@ -36,7 +36,6 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
 
     @Override
     public void initialize() throws Exception {
-        System.out.println("??????????");
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         InputStream stream = fs.open(new Path(hdfsPath));
         splitter = Splitter.on(separator);
