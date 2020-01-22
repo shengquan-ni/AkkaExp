@@ -33,6 +33,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         this.metadata = metadata;
         this.startOffset = startOffset;
         this.endOffset = endOffset;
+        System.out.println(startOffset+" "+endOffset);
     }
 
     @Override
