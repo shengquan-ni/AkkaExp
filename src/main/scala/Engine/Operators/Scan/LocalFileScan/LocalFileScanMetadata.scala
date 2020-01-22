@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class LocalFileScanMetadata(tag:OperatorTag, numWorkers:Int, filePath:String, delimiter: String, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata) {
-  override lazy val totalBytes: Long = new File(filePath).length()
+  override val totalBytes: Long = new File(filePath).length()
   override lazy val topology: Topology = {
     new Topology(Array(new GeneratorWorkerLayer(
       LayerTag(tag,"main"),

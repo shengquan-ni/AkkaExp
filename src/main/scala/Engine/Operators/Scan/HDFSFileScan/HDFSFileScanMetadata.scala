@@ -23,11 +23,15 @@ import scala.concurrent.ExecutionContext
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, filePath:String, delimiter: String, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata)  {
-  override lazy val totalBytes: Long = {
+  override val totalBytes: Long = {
     println("????")
-    val res=FileSystem.get(new URI(host),new Configuration()).getFileStatus(new Path(filePath)).getLen
-    println("!!!!")
-    res
+    val fs=FileSystem.get(new URI(host),new Configuration())
+    println("!")
+    val res = fs.getFileStatus(new Path(filePath))
+    println("!!")
+    val res1 = res.getLen
+    println("!!!")
+    res1
   }
   override lazy val topology: Topology = {
     new Topology(Array(new GeneratorWorkerLayer(
