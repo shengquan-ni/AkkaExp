@@ -34,6 +34,7 @@ public class BufferedBlockReader {
     public String[] readLine() throws IOException {
         outputStream.reset();
         fields.clear();
+        int index = 0;
         while(true) {
             if (cursor >= bufferSize) {
                 fillBuffer();
@@ -41,7 +42,6 @@ public class BufferedBlockReader {
                     return fields.isEmpty()? null: fields.toArray(new String[0]);
                 }
             }
-            int index = 0;
             int start = cursor;
             while (cursor < bufferSize) {
                 if (buffer[cursor] == delimiter) {
