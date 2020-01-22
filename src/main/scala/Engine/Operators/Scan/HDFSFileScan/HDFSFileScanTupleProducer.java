@@ -53,6 +53,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
     @Override
     public Tuple next() throws Exception {
         String[] res = reader.readLine();
+        System.gc();
         if(true){
             return null;
         }
