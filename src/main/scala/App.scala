@@ -45,24 +45,24 @@ object App {
     val options = argsToOptionMap(Map(),args.toList)
     var config:Config = null
     var localIpAddress = "0.0.0.0"
-//    try{
-//      val query = new URL("http://checkip.amazonaws.com")
-//      val in:BufferedReader = new BufferedReader(new InputStreamReader(query.openStream()))
-//      localIpAddress = in.readLine()
-//    }catch{
-//      case exception: Exception =>
-//        val localhost: InetAddress = InetAddress.getLocalHost
-//        localIpAddress = localhost.getHostAddress
-//    }
+    try{
+      val query = new URL("http://checkip.amazonaws.com")
+      val in:BufferedReader = new BufferedReader(new InputStreamReader(query.openStream()))
+      localIpAddress = in.readLine()
+    }catch{
+      case exception: Exception =>
+        val localhost: InetAddress = InetAddress.getLocalHost
+        localIpAddress = localhost.getHostAddress
+    }
 
     if(!options.contains('mainNodeAddr)){
       //activate main node
        config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.hostname = $localIpAddress
-        akka.remote.netty.tcp.port = 2553
-        akka.remote.artery.canonical.port = 2553
+        akka.remote.netty.tcp.port = 2552
+        akka.remote.artery.canonical.port = 2552
         akka.remote.artery.canonical.hostname = $localIpAddress
-        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$localIpAddress:2553" ]
+        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$localIpAddress:2552" ]
         """).withFallback(ConfigFactory.load("clustered"))
     }else{
       //activate any node
@@ -70,7 +70,7 @@ object App {
       config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.hostname = $localIpAddress
         akka.remote.artery.canonical.hostname = $localIpAddress
-        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2553" ]
+        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2552" ]
         """).withFallback(ConfigFactory.load("clustered"))
     }
     val system: ActorSystem = ActorSystem("Amber",config)
