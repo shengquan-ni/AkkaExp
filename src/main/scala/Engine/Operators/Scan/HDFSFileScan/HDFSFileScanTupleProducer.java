@@ -52,17 +52,21 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
 
     @Override
     public Tuple next() throws Exception {
+        String[] res = reader.readLine();
+        if(true){
+            return null;
+        }
         if(metadata != null) {
             if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep, metadata.tupleMetadata().fieldTypes());
+                return Tuple.fromJavaStringArray(res,indicesToKeep, metadata.tupleMetadata().fieldTypes());
             } else {
-                return Tuple.fromJavaStringArray(reader.readLine(), metadata.tupleMetadata().fieldTypes());
+                return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
             }
         }else{
             if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep);
+                return Tuple.fromJavaStringArray(res,indicesToKeep);
             } else {
-                return Tuple.fromJavaArray(reader.readLine());
+                return Tuple.fromJavaArray(res);
             }
         }
     }
