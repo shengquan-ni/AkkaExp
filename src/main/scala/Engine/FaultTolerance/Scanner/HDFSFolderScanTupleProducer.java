@@ -19,14 +19,13 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
 
     private String host;
     private String hdfsPath;
-    private String separator;
+    private char separator;
     private TableMetadata metadata;
     private BufferedBlockReader reader = null;
-    private Splitter splitter = null;
     private RemoteIterator<LocatedFileStatus> files = null;
     private FileSystem fs = null;
 
-    public HDFSFolderScanTupleProducer(String host, String hdfsPath, String delimiter, TableMetadata metadata){
+    public HDFSFolderScanTupleProducer(String host, String hdfsPath, char delimiter, TableMetadata metadata){
         this.host = host;
         this.hdfsPath = hdfsPath;
         this.separator = delimiter;
@@ -38,8 +37,7 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
             Path current = files.next().getPath();
             long endOffset = fs.getFileStatus(current).getLen();
             InputStream stream = fs.open(current);
-            splitter = Splitter.on(separator);
-            reader = new BufferedBlockReader(stream,endOffset);
+            reader = new BufferedBlockReader(stream,endOffset,separator);
         }
     }
 
@@ -61,9 +59,9 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
     @Override
     public Tuple next() throws Exception {
         if(metadata != null) {
-            return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()), metadata.tupleMetadata().fieldTypes());
+            return Tuple.fromJavaStringArray(reader.readLine(), metadata.tupleMetadata().fieldTypes());
         }else{
-            return Tuple.fromJavaStringIterable(splitter.split(reader.readLine()));
+            return Tuple.fromJavaArray(reader.readLine());
         }
     }
 
