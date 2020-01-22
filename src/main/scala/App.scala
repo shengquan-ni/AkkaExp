@@ -59,10 +59,10 @@ object App {
       //activate main node
        config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.hostname = $localIpAddress
-        akka.remote.netty.tcp.port = 2552
-        akka.remote.artery.canonical.port = 2552
+        akka.remote.netty.tcp.port = 2553
+        akka.remote.artery.canonical.port = 2553
         akka.remote.artery.canonical.hostname = $localIpAddress
-        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$localIpAddress:2552" ]
+        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$localIpAddress:2553" ]
         """).withFallback(ConfigFactory.load("clustered"))
     }else{
       //activate any node
@@ -70,7 +70,7 @@ object App {
       config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.hostname = $localIpAddress
         akka.remote.artery.canonical.hostname = $localIpAddress
-        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2552" ]
+        akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2553" ]
         """).withFallback(ConfigFactory.load("clustered"))
     }
     val system: ActorSystem = ActorSystem("Amber",config)
