@@ -37,7 +37,7 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
             Path current = files.next().getPath();
             long endOffset = fs.getFileStatus(current).getLen();
             InputStream stream = fs.open(current);
-            reader = new BufferedBlockReader(stream,endOffset,separator);
+            reader = new BufferedBlockReader(stream,endOffset,separator,null);
         }
     }
 

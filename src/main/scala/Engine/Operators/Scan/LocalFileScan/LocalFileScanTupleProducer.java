@@ -42,7 +42,7 @@ public class LocalFileScanTupleProducer implements TupleProducer {
     public void initialize() throws Exception {
         SeekableFileInputStream stream = new SeekableFileInputStream(localPath);
         stream.seek(startOffset);
-        reader= new BufferedBlockReader(stream,endOffset-startOffset,separator);
+        reader= new BufferedBlockReader(stream,endOffset-startOffset,separator,indicesToKeep);
         if(startOffset > 0)
             reader.readLine();
     }
@@ -55,17 +55,9 @@ public class LocalFileScanTupleProducer implements TupleProducer {
     @Override
     public Tuple next() throws IOException {
         if(metadata != null) {
-            if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep, metadata.tupleMetadata().fieldTypes());
-            } else {
-                return Tuple.fromJavaStringArray(reader.readLine(),metadata.tupleMetadata().fieldTypes());
-            }
+            return Tuple.fromJavaStringArray(reader.readLine(),metadata.tupleMetadata().fieldTypes());
         }else{
-            if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(reader.readLine(),indicesToKeep);
-            } else {
-                return Tuple.fromJavaArray(reader.readLine());
-            }
+            return Tuple.fromJavaArray(reader.readLine());
         }
     }
 

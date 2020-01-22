@@ -58,17 +58,9 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
             return null;
         }
         if(metadata != null) {
-            if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(res,indicesToKeep, metadata.tupleMetadata().fieldTypes());
-            } else {
-                return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
-            }
+            return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
         }else{
-            if (indicesToKeep != null) {
-                return Tuple.fromJavaStringArray(res,indicesToKeep);
-            } else {
-                return Tuple.fromJavaArray(res);
-            }
+            return Tuple.fromJavaArray(res);
         }
     }
 

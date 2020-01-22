@@ -18,15 +18,17 @@ public class BufferedBlockReader {
     private int bufferSize;
     private byte[] buffer = new byte[4096]; //4k buffer
     private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    private List<String> fields= new ArrayList<>();
-    private HashSet<Integer> keptFields;
+    private List<String> fields = new ArrayList<>();
+    private HashSet<Integer> keptFields = null;
     private char delimiter;
 
     public BufferedBlockReader(InputStream input, long blockSize, char delimiter, int[] kept){
         this.input = input;
         this.blockSize = blockSize;
         this.delimiter = delimiter;
-        this.keptFields = new HashSet<>(Ints.asList(kept));
+        if(kept != null){
+            this.keptFields = new HashSet<>(Ints.asList(kept));
+        }
     }
 
     public String[] readLine() throws IOException {
@@ -43,7 +45,7 @@ public class BufferedBlockReader {
             int start = cursor;
             while (cursor < bufferSize) {
                 if (buffer[cursor] == delimiter) {
-                    if(keptFields.contains(index)){
+                    if(keptFields == null || keptFields.contains(index)){
                         outputStream.write(buffer,start,cursor-start);
                         fields.add(outputStream.toString());
                     }
@@ -52,7 +54,7 @@ public class BufferedBlockReader {
                     start = cursor+1;
                     index++;
                 }else if(buffer[cursor] == '\n'){
-                    if(keptFields.contains(index)){
+                    if(keptFields == null || keptFields.contains(index)){
                         outputStream.write(buffer,start,cursor-start);
                         fields.add(outputStream.toString());
                     }

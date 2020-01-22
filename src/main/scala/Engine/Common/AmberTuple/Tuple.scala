@@ -13,19 +13,9 @@ object Tuple{
   def fromSeq(values: Seq[Any]): Tuple = new AmberTuple(values.toArray)
   def fromIterable(values: Iterable[Any]): Tuple = new AmberTuple(values.toArray)
   def fromJavaStringIterable(values: java.lang.Iterable[String]):Tuple = new AmberTuple(values.asScala.toArray)
-  def fromJavaStringIterable(values: java.lang.Iterable[String], keep: Array[Int]):Tuple = {
-    val arr = values.asScala.toArray
-    new AmberTuple(keep.map(arr(_)))
-  }
   def fromJavaArray(values: Array[Any]) = new AmberTuple(values)
   def fromJavaStringArray(values: Array[String],types:Array[FieldType.Value]) = new AmberTuple(values,types)
-  def fromJavaStringArray(values: Array[String],keep: Array[Int],types:Array[FieldType.Value]) = new AmberTuple(values,types)
-  def fromJavaStringArray(values: Array[String],keep: Array[Int]) = new AmberTuple(keep.map(values(_)))
   def fromJavaStringIterable(values: java.lang.Iterable[String],types:Array[FieldType.Value]) = new AmberTuple(values.asScala.toArray,types)
-  def fromJavaStringIterable(values: java.lang.Iterable[String],keep: Array[Int],types:Array[FieldType.Value]):Tuple = {
-    val arr = values.asScala.toArray
-    new AmberTuple(keep.map(arr(_)),types)
-  }
   def fromJavaList(values: java.util.List[Any]):Tuple = new AmberTuple(values.asScala.toArray)
   val empty = apply()
 }

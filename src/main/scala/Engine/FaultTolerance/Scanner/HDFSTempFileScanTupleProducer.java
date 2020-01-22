@@ -32,7 +32,7 @@ public class HDFSTempFileScanTupleProducer implements TupleProducer{
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         long endOffset =fs.getFileStatus(new Path(hdfsPath)).getLen();
         InputStream stream = fs.open(new Path(hdfsPath));
-        reader = new BufferedBlockReader(stream,endOffset,separator);
+        reader = new BufferedBlockReader(stream,endOffset,separator,null);
     }
 
     @Override
