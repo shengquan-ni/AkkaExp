@@ -96,7 +96,8 @@ object App {
         |"links":[
         |{"origin":"Scan","destination":"Count"},
         |{"origin":"Count","destination":"Sink"}]
-        |}""".stripMargin)
+        |}""".stripMargin,
+    )
 
     val demoUsage =
       """demo usage =
