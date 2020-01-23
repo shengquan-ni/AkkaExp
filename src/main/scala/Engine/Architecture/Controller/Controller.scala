@@ -67,8 +67,8 @@ object Controller{
     val id = json("operatorID").as[String]
     val tag = OperatorTag(workflowTag.workflow,id)
     json("operatorType").as[String] match{
-      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").as[Array[Int]],null)
-      case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),null,null)
+      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
+      case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "KeywordMatcher" => new KeywordSearchMetadata(tag,Constants.defaultNumWorkers,json("attributeName").as[Int],json("keyword").as[String])
       case "Aggregation" => new CountMetadata(tag,Constants.defaultNumWorkers)
       case "Sink" => new SimpleSinkOperatorMetadata(tag)
