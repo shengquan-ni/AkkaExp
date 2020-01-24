@@ -63,8 +63,6 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         if(metadata != null) {
             return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
         }else{
-            System.out.println(Arrays.toString(res));
-            System.in.read();
             return Tuple.fromJavaArray(res);
         }
     }

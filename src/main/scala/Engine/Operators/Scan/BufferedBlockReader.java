@@ -49,6 +49,8 @@ public class BufferedBlockReader {
                         if(cursor-start > 0){
                             outputStream.write(buffer,start,cursor-start);
                             fields.add(outputStream.toString());
+                        }else{
+                            fields.add(null);
                         }
                     }
                     outputStream.reset();
@@ -60,6 +62,8 @@ public class BufferedBlockReader {
                         if(cursor-start > 0){
                             outputStream.write(buffer,start,cursor-start);
                             fields.add(outputStream.toString());
+                        }else{
+                            fields.add(null);
                         }
                     }
                     currentPos += cursor - start + 1;
