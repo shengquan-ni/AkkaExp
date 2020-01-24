@@ -11,9 +11,6 @@ class FilterSpecializedTupleProcessor(val targetField:Int, val filterType:Filter
 
   override def accept(tuple: Tuple): Unit = {
     val str = tuple.getString(targetField)
-    if(str == null){
-      println(tuple)
-    }
     if (str!=null && filterType.validate(DateTime.parse(str),threshold)) {
       nextFlag = true
       _tuple = tuple

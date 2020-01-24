@@ -32,29 +32,33 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
     @Override
     public void accept(Tuple tuple) throws Exception {
         T key = tuple.getAs(groupByField);
-        double value = Double.parseDouble(tuple.getString(aggregateField));
-        if(!results.containsKey(key)){
-            results.put(key,value);
-            counts.put(key,1);
+        String valStr = tuple.getString(aggregateField);
+        if(valStr == null){
+            System.out.println(tuple);
         }else{
-            switch (aggregationType) {
-                case Min:
-                    results.put(key,Math.min(results.get(key),value));
-                    break;
-                case Max:
-                    results.put(key,Math.max(results.get(key),value));
-                    break;
-                case Count:
-                    counts.put(key,counts.get(key)+1);
-                    break;
-                case Average:
-                    counts.put(key,counts.get(key)+1);
-                case Sum:
-                    results.put(key,results.get(key)+value);
-                    break;
+            double value = Double.parseDouble(valStr);
+            if(!results.containsKey(key)){
+                results.put(key,value);
+                counts.put(key,1);
+            }else{
+                switch (aggregationType) {
+                    case Min:
+                        results.put(key,Math.min(results.get(key),value));
+                        break;
+                    case Max:
+                        results.put(key,Math.max(results.get(key),value));
+                        break;
+                    case Count:
+                        counts.put(key,counts.get(key)+1);
+                        break;
+                    case Average:
+                        counts.put(key,counts.get(key)+1);
+                    case Sum:
+                        results.put(key,results.get(key)+value);
+                        break;
+                }
             }
         }
-
     }
 
     @Override
