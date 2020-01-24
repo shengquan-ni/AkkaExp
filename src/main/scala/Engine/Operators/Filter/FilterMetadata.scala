@@ -10,6 +10,7 @@ import Engine.Operators.OperatorMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
 import akka.util.Timeout
+import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -18,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class FilterMetadata[T : Ordering](tag:OperatorTag, val numWorkers:Int, val targetField:Int, val filterType: FilterType.Val[T], val threshold:T) extends OperatorMetadata(tag){
   override lazy val topology: Topology = {
     new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterTupleProcessor[T](targetField,filterType,threshold),
+      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterSpecializedTupleProcessor(targetField,filterType.asInstanceOf[FilterType.Val[DateTime]],threshold.asInstanceOf[DateTime]),
         numWorkers,
         UseAll(),
         RoundRobinDeployment())

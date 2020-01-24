@@ -8,7 +8,7 @@
       <option name="featureWarnings" value="true" />
       <parameters>
         <parameter value="-Xelide-below" />
-        <parameter value="INFO" />
+        <parameter value="WARNING" />
       </parameters>
     </profile>
   </component>

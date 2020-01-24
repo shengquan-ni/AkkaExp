@@ -32,6 +32,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.twitter" %% "chill-akka" % "0.9.3"
 libraryDependencies += "com.typesafe.play" %% "play-json" % "2.7.3"
 libraryDependencies += "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8"
+libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.22.0"
 
 // https://mvnrepository.com/artifact/com.google.guava/guava
 libraryDependencies += "com.google.guava" % "guava" % "12.0"

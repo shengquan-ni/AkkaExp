@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
@@ -47,8 +46,10 @@ public class BufferedBlockReader {
             while (cursor < bufferSize) {
                 if (buffer[cursor] == delimiter) {
                     if(keptFields == null || keptFields.contains(index)){
-                        outputStream.write(buffer,start,cursor-start);
-                        fields.add(outputStream.toString());
+                        if(cursor-start > 0){
+                            outputStream.write(buffer,start,cursor-start);
+                            fields.add(outputStream.toString());
+                        }
                     }
                     outputStream.reset();
                     currentPos += cursor - start + 1;
@@ -56,12 +57,14 @@ public class BufferedBlockReader {
                     index++;
                 }else if(buffer[cursor] == '\n'){
                     if(keptFields == null || keptFields.contains(index)){
-                        outputStream.write(buffer,start,cursor-start);
-                        fields.add(outputStream.toString());
+                        if(cursor-start > 0){
+                            outputStream.write(buffer,start,cursor-start);
+                            fields.add(outputStream.toString());
+                        }
                     }
                     currentPos += cursor - start + 1;
                     cursor++;
-                    return fields.toArray(new String[0]);
+                    return fields.isEmpty()? null: fields.toArray(new String[0]);
                 }
                 cursor++;
             }
