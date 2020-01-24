@@ -9,6 +9,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
@@ -36,7 +37,7 @@ public class HDFSTempFileScanTupleProducer implements TupleProducer{
     }
 
     @Override
-    public boolean hasNext() {
+    public boolean hasNext() throws IOException {
         return reader.hasNext();
     }
 

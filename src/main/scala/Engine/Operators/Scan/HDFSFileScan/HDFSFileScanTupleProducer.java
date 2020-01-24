@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
@@ -50,7 +51,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
     }
 
     @Override
-    public boolean hasNext() {
+    public boolean hasNext() throws IOException {
         return reader.hasNext();
     }
 

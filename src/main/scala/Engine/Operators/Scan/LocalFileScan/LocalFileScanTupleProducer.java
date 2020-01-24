@@ -48,7 +48,7 @@ public class LocalFileScanTupleProducer implements TupleProducer {
     }
 
     @Override
-    public boolean hasNext() {
+    public boolean hasNext() throws IOException {
         return reader.hasNext();
     }
 
