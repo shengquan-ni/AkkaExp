@@ -95,7 +95,6 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
             case Sum:
                 return Tuple.fromJavaArray(new Object[]{cur.getKey(), cur.getValue()});
             case Count:
-                System.out.println(cur.getKey()+" : "+counts.get(cur.getKey()));
                 return Tuple.fromJavaArray(new Object[]{cur.getKey(),counts.get(cur.getKey()).doubleValue()});
             case Average:
                 return Tuple.fromJavaArray(new Object[]{cur.getKey(),cur.getValue()/counts.get(cur.getKey())});
