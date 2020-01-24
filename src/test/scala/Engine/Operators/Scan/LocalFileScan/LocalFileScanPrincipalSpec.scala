@@ -67,7 +67,7 @@ class LocalFileScanPrincipalSpec
     implicit val timeout = Timeout(5.seconds)
     val metadata = new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.Int)))
     val parent = TestProbe()
-    val principal = parent.childActorOf(Principal.props(new LocalFileScanMetadata(opTag(),5,smallFilePath,";",null,metadata)))
+    val principal = parent.childActorOf(Principal.props(new LocalFileScanMetadata(opTag(),5,smallFilePath,';',null,metadata)))
     principal ! AckedPrincipalInitialization(Array())
     parent.expectMsg(ReportState(PrincipalState.Ready))
     val output = Await.result(principal ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
@@ -88,7 +88,7 @@ class LocalFileScanPrincipalSpec
     implicit val timeout = Timeout(5.seconds)
     val metadata = new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.String)))
     val parent = TestProbe()
-    val principal = parent.childActorOf(Principal.props(new LocalFileScanMetadata(opTag(),5,largeFilePath,";",Array(2),metadata)))
+    val principal = parent.childActorOf(Principal.props(new LocalFileScanMetadata(opTag(),5,largeFilePath,';',Array(2),metadata)))
     principal ! AckedPrincipalInitialization(Array())
     parent.expectMsg(ReportState(PrincipalState.Ready))
     val output = Await.result(principal ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]

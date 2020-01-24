@@ -19,7 +19,7 @@ class ProcessorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProcessor, _n
 
 
   def build(prev:Array[(OperatorMetadata,ActorLayer)],all:Array[Address])(implicit context:ActorContext): Unit ={
-    deployStrategy.initialize(deploymentFilter.filter(prev,all))
+    deployStrategy.initialize(deploymentFilter.filter(prev, all, context.self.path.address))
     layer = new Array[ActorRef](numWorkers)
     for(i <- 0 until numWorkers){
       val workerTag = WorkerTag(tag,i)

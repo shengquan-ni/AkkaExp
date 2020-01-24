@@ -9,5 +9,5 @@ object UseAll{
 
 
 class UseAll extends DeploymentFilter {
-  override def filter(prev:Array[(OperatorMetadata,ActorLayer)], all: Array[Address]): Array[Address] = all
+  override def filter(prev: Array[(OperatorMetadata, ActorLayer)], all: Array[Address], local: Address): Array[Address] = all
 }

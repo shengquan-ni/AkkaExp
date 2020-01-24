@@ -6,7 +6,7 @@ import akka.actor.Address
 
 trait DeploymentFilter extends Serializable {
 
-  def filter(prev:Array[(OperatorMetadata,ActorLayer)], all: Array[Address]):Array[Address]
+  def filter(prev: Array[(OperatorMetadata, ActorLayer)], all: Array[Address], local: Address):Array[Address]
 
 
 

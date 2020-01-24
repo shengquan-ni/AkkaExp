@@ -97,6 +97,18 @@ object App {
         |{"origin":"Scan","destination":"Count"},
         |{"origin":"Count","destination":"Sink"}]
         |}""".stripMargin,
+
+      s"""{
+         |"operators":[
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+         |{"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"},
+         |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Sum"},
+         |{"operatorID":"Sink","operatorType":"Sink"}],
+         |"links":[
+         |{"origin":"Scan","destination":"Filter"},
+         |{"origin":"Filter","destination":"GroupBy"},
+         |{"origin":"GroupBy","destination":"Sink"}]
+         |}""".stripMargin,
     )
 
     val demoUsage =

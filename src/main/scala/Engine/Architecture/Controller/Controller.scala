@@ -20,7 +20,7 @@ import Engine.Common.AmberTag.{AmberTag, LayerTag, LinkTag, OperatorTag, Workflo
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TupleProducer}
 import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
 import Engine.Operators.Count.CountMetadata
-import Engine.Operators.Filter.FilterMetadata
+import Engine.Operators.Filter.{FilterMetadata, FilterType}
 import Engine.Operators.GroupBy.{AggregationType, GroupByMetadata}
 import Engine.Operators.HashJoin.HashJoinMetadata
 import Engine.Operators.KeywordSearch.KeywordSearchMetadata
@@ -38,6 +38,7 @@ import com.google.common.base.Stopwatch
 import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
+import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -46,6 +47,8 @@ import scala.concurrent.duration._
 
 
 object Controller{
+
+  implicit def ord: Ordering[DateTime] = Ordering.by(_.getMillis)
 
   def props(json:String): Props = Props(fromJsonString(json))
 
@@ -71,6 +74,7 @@ object Controller{
       case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "KeywordMatcher" => new KeywordSearchMetadata(tag,Constants.defaultNumWorkers,json("attributeName").as[Int],json("keyword").as[String])
       case "Aggregation" => new CountMetadata(tag,Constants.defaultNumWorkers)
+      case "Filter" => new FilterMetadata[DateTime](tag,Constants.defaultNumWorkers,json("targetField").as[Int],FilterType.getType(json("filterType").as[String]),DateTime.parse(json("threshold").as[String]))
       case "Sink" => new SimpleSinkOperatorMetadata(tag)
       case "Generate" => new SimpleSourceOperatorMetadata(tag,Constants.defaultNumWorkers,json("limit").as[Int],json("delay").as[Int])
       case "HashJoin" => new HashJoinMetadata[String](tag,Constants.defaultNumWorkers,json("innerTableIndex").as[Int],json("outerTableIndex").as[Int])
@@ -102,7 +106,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
   def allUnCompletedPrincipalStates: Iterable[PrincipalState.Value] = principalStates.filter(x => x._2 != PrincipalState.Completed).values
   def availableNodes:Array[Address] = Await.result(context.actorSelection("/user/cluster-info") ? GetAvailableNodeAddresses,5.seconds).asInstanceOf[Array[Address]]
-  def getRandomNode(nodes:Array[Address]):Address = nodes(util.Random.nextInt(nodes.length))
+  def getPrincipalNode(nodes:Array[Address]):Address = self.path.address//nodes(util.Random.nextInt(nodes.length))
 
   //if checkpoint activated:
   private def insertCheckpoint(from:OperatorMetadata,to:OperatorMetadata): Unit ={
@@ -137,7 +141,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       val nodes = availableNodes
       for(k <- workflow.startOperators){
         val v = workflow.operators(k)
-        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getRandomNode(nodes)))),v.tag.operator)
+        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
       }
@@ -151,7 +155,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       val nodes = availableNodes
       for(k <- frontier){
         val v = workflow.operators(k)
-        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getRandomNode(nodes)))),v.tag.operator)
+        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
       }
@@ -202,7 +206,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             }
             case None =>
           }
-          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getRandomNode(nodes)))),v.tag.operator)
+          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
           principalBiMap.put(k,p)
           principalStates(p) = PrincipalState.Uninitialized
           AdvancedMessageSending.blockingAskWithRetry(principalBiMap.get(k),AckedPrincipalInitialization(prevInfo),10, y => y match {

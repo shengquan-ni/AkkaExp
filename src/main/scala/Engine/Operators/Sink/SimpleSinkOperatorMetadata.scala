@@ -2,9 +2,8 @@ package Engine.Operators.Sink
 
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.DeployStrategy.RandomDeployment
-import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
+import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, ForceLocal}
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLayer}
-import Engine.Architecture.LinkSemantics.LinkStrategy
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag}
 import Engine.Operators.OperatorMetadata
@@ -13,13 +12,12 @@ import akka.event.LoggingAdapter
 import akka.util.Timeout
 
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class SimpleSinkOperatorMetadata(tag:OperatorTag) extends OperatorMetadata(tag) {
   override lazy val topology: Topology = {
     new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SimpleSinkProcessor(), 1, FollowPrevious(), RandomDeployment())
+      new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SimpleSinkProcessor(), 1, ForceLocal(), RandomDeployment())
     ),
       Array(),
       Map())

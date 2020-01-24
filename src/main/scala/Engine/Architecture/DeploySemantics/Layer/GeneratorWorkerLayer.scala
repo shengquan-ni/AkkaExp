@@ -18,7 +18,7 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
   }
 
   def build(prev:Array[(OperatorMetadata,ActorLayer)],all:Array[Address])(implicit context:ActorContext): Unit ={
-    deployStrategy.initialize(deploymentFilter.filter(prev,all))
+    deployStrategy.initialize(deploymentFilter.filter(prev, all, context.self.path.address))
     layer = new Array[ActorRef](numWorkers)
     var idx = 0
     for(i <- 0 until numWorkers){

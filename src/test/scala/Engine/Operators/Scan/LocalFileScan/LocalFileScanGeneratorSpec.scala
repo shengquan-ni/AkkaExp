@@ -64,7 +64,7 @@ class LocalFileScanGeneratorSpec
     }
     val metadata=new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.Int)))
     val totalBytes = new File(smallFilePath).length()
-    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(smallFilePath,0,totalBytes,";",null, metadata),workerTag()))
+    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(smallFilePath,0,totalBytes,';',null, metadata),workerTag()))
     execActor ? AckedWorkerInitialization
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
@@ -85,7 +85,7 @@ class LocalFileScanGeneratorSpec
     }
     val metadata=new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.Int,FieldType.Int,FieldType.String)))
     val totalBytes = new File(largeFilePath).length()
-    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(largeFilePath,0,totalBytes,";",null, metadata),workerTag()))
+    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(largeFilePath,0,totalBytes,';',null, metadata),workerTag()))
     execActor ? AckedWorkerInitialization
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
@@ -107,7 +107,7 @@ class LocalFileScanGeneratorSpec
     }
     val metadata=new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.String)))
     val totalBytes = new File(largeFilePath).length()
-    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(largeFilePath,0,totalBytes,";",Array(2), metadata),workerTag()))
+    val execActor = system.actorOf(Generator.props(new LocalFileScanTupleProducer(largeFilePath,0,totalBytes,';',Array(2), metadata),workerTag()))
     execActor ? AckedWorkerInitialization
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))

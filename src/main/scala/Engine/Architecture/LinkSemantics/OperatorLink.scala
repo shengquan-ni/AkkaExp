@@ -26,7 +26,6 @@ class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetada
       if(to._1.requiredShuffle){
         linkStrategy = new HashBasedShuffle(sender,receiver,Constants.defaultBatchSize,to._1.getShuffleHashFunction(sender.tag))
       }else if(sender.layer.length == receiver.layer.length){
-        println("use local one2one")
         linkStrategy = new LocalOneToOne(sender,receiver,Constants.defaultBatchSize)
       }else{
         linkStrategy = new LocalRoundRobin(sender,receiver,Constants.defaultBatchSize)
