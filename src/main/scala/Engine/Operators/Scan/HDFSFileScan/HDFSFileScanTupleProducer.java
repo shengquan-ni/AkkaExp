@@ -13,6 +13,7 @@ import org.apache.hadoop.fs.Path;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Arrays;
 
 import static jdk.nashorn.internal.objects.Global.println;
 
@@ -62,7 +63,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         if(metadata != null) {
             return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
         }else{
-            println(Tuple.fromJavaArray(res));
+            println(Arrays.toString(res));
             System.in.read();
             return Tuple.fromJavaArray(res);
         }
