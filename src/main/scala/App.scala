@@ -111,6 +111,23 @@ object App {
          |{"origin":"GroupBy","destination":"Sort"},
          |{"origin":"Sort","destination":"Sink"}]
          |}""".stripMargin,
+      s"""{
+         |"operators":[
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
+         |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"Sort","operatorType":"Sort","targetField":0},
+         |{"operatorID":"Sink","operatorType":"Sink"}],
+         |"links":[
+         |{"origin":"Scan1","destination":"Join"},
+         |{"origin":"Scan2","destination":"Join"},
+         |{"origin":"Join","destination":"GroupBy1"},
+         |{"origin":"GroupBy1","destination":"GroupBy2"},
+         |{"origin":"GroupBy2","destination":"Sort"},
+         |{"origin":"Sort","destination":"Sink"}]
+         |}""".stripMargin
     )
 
     val demoUsage =
@@ -125,7 +142,7 @@ object App {
  7. set count breakpoint
       """
 
-    var current = 2
+    var current = 3
     var limit = "100000"
     var delay = "0"
     var conditionalbp:Option[String] = None
