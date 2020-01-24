@@ -29,6 +29,7 @@ import Engine.Operators.Projection.ProjectionMetadata
 import Engine.Operators.Scan.HDFSFileScan.{HDFSFileScanMetadata, HDFSFileScanTupleProducer}
 import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata
 import Engine.Operators.Sink.SimpleSinkOperatorMetadata
+import Engine.Operators.Sort.SortMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSelection, Address, Cancellable, Deploy, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -80,6 +81,7 @@ object Controller{
       case "HashJoin" => new HashJoinMetadata[String](tag,Constants.defaultNumWorkers,json("innerTableIndex").as[Int],json("outerTableIndex").as[Int])
       case "GroupBy" => new GroupByMetadata[String](tag,Constants.defaultNumWorkers,json("groupByField").as[Int],json("aggregateField").as[Int],AggregationType.valueOf(json("aggregationType").as[String]))
       case "Projection" => new ProjectionMetadata(tag,Constants.defaultNumWorkers,json("targetFields").as[Array[Int]])
+      case "Sort" => new SortMetadata[String](tag,json("targetField").as[Int])
       case t => throw new NotImplementedError("Unknown operator type: "+ t)
     }
   }
