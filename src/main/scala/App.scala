@@ -140,8 +140,6 @@ object App {
               throw new Exception()
             }
             current = res
-            countbp = null
-            conditionalbp = null
             println("current workflow: "+current)
           }catch{
             case _: Throwable =>
