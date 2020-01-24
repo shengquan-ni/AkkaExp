@@ -37,11 +37,9 @@ public class GroupByGlobalTupleProcessor<T> implements TupleProcessor {
                 case Max:
                     results.put(key,Math.max(results.get(key),value));
                     break;
-                case Count:
-                    counts.put(key,counts.get(key)+1);
-                    break;
                 case Average:
                     counts.put(key,counts.get(key)+1);
+                case Count:
                 case Sum:
                     results.put(key,results.get(key)+value);
                     break;
@@ -83,9 +81,8 @@ public class GroupByGlobalTupleProcessor<T> implements TupleProcessor {
             case Min:
             case Max:
             case Sum:
-                return Tuple.fromJavaArray(new Object[]{cur.getKey(),cur.getValue().toString()});
             case Count:
-                return Tuple.fromJavaArray(new Object[]{cur.getKey(),counts.get(cur.getKey()).toString()});
+                return Tuple.fromJavaArray(new Object[]{cur.getKey(),cur.getValue().toString()});
             case Average:
                 return Tuple.fromJavaArray(new Object[]{cur.getKey(),Double.toString(cur.getValue()/counts.get(cur.getKey()))});
             default:
