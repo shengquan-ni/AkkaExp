@@ -17,8 +17,8 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     private int outerTableIndex;
     private boolean isCurrentTableInner = false;
     private boolean isInnerTableFinished = false;
-    private HashMap<K, ArrayList<Tuple>> innerTableHashMap = null;
-    private Iterator<Tuple> currentEntry = null;
+    private HashMap<K, ArrayList<Object[]>> innerTableHashMap = null;
+    private Iterator<Object[]> currentEntry = null;
     private Object[] currentTuple = null;
 
     HashJoinTupleProcessor(LayerTag innerTableIdentifier, int innerTableIndex, int outerTableIndex){
@@ -36,7 +36,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             if(!innerTableHashMap.containsKey(key)) {
                 innerTableHashMap.put(key,new ArrayList<>());
             }
-            innerTableHashMap.get(key).add(tuple);
+            innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
         }else{
             if(!isInnerTableFinished) {
                 throw new AssertionError();
@@ -44,7 +44,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
                 K key = (K)tuple.get(outerTableIndex);
                 if(innerTableHashMap.containsKey(key)) {
                     currentEntry = innerTableHashMap.get(key).iterator();
-                    currentTuple = ArrayUtils.remove(tuple.toArray(),innerTableIndex);
+                    currentTuple = tuple.toArray();
                 }
             }
         }
@@ -77,7 +77,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public Tuple next() {
-        return new AmberTuple(ArrayUtils.addAll(currentTuple,currentEntry.next().toArray()));
+        return new AmberTuple(ArrayUtils.addAll(currentTuple,currentEntry.next()));
     }
 
     @Override
