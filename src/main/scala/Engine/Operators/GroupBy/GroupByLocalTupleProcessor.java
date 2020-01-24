@@ -33,9 +33,7 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
     public void accept(Tuple tuple) throws Exception {
         T key = tuple.getAs(groupByField);
         String valStr = tuple.getString(aggregateField);
-        if(valStr == null){
-            System.out.println(tuple);
-        }else{
+        if (valStr != null) {
             double value = Double.parseDouble(valStr);
             if(!results.containsKey(key)){
                 results.put(key,value);

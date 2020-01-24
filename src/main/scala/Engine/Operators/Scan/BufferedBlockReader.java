@@ -86,13 +86,8 @@ public class BufferedBlockReader {
         cursor = 0;
     }
 
-    public boolean hasNext(){
-        try {
-            return currentPos < blockSize || (currentPos == blockSize && (bufferSize>cursor || input.available() > 0));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
+    public boolean hasNext() throws IOException {
+        return currentPos <= blockSize && input.available() > 0;
     }
 
     public void close() throws IOException {
