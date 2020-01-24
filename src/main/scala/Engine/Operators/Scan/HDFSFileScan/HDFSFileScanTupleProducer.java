@@ -14,6 +14,8 @@ import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.net.URI;
 
+import static jdk.nashorn.internal.objects.Global.println;
+
 public class HDFSFileScanTupleProducer implements TupleProducer{
 
     private String host;
@@ -60,6 +62,8 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         if(metadata != null) {
             return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
         }else{
+            println(Tuple.fromJavaArray(res));
+            System.in.read();
             return Tuple.fromJavaArray(res);
         }
     }
