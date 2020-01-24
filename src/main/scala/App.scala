@@ -123,7 +123,7 @@ object App {
  7. set count breakpoint
       """
 
-    var current = 1
+    var current = 2
     var limit = "100000"
     var delay = "0"
     var conditionalbp:Option[String] = None
@@ -136,7 +136,7 @@ object App {
           try {
             print("please choose which workflow you want to execute (0 or 1):")
             val res = scala.io.StdIn.readInt()
-            if(res!=0 && res!=1){
+            if(res<0 || res>workflows.size){
               throw new Exception()
             }
             current = res
