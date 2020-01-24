@@ -49,6 +49,8 @@ public class BufferedBlockReader {
                         if(cursor-start > 0){
                             outputStream.write(buffer,start,cursor-start);
                             fields.add(outputStream.toString());
+                        }else if(outputStream.size()>0){
+                            fields.add(outputStream.toString());
                         }else{
                             fields.add(null);
                         }
@@ -61,6 +63,8 @@ public class BufferedBlockReader {
                     if(keptFields == null || keptFields.contains(index)){
                         if(cursor-start > 0){
                             outputStream.write(buffer,start,cursor-start);
+                            fields.add(outputStream.toString());
+                        }else if(outputStream.size()>0){
                             fields.add(outputStream.toString());
                         }else{
                             fields.add(null);
