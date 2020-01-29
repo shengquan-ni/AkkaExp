@@ -232,6 +232,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   private[this] def afterProcessingBatch(): Unit ={
+    println("finished a batch")
     processingIndex = 0
     synchronized{
       processingQueue.dequeue()
