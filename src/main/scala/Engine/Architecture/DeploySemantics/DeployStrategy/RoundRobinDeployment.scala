@@ -13,6 +13,7 @@ class RoundRobinDeployment extends DeployStrategy {
   var index = 0
   override def initialize(available: Array[Address]): Unit = {
     this.available = available
+    println("RoundRobin has "+available.length+" nodes")
   }
 
   override def next(): Address = {
