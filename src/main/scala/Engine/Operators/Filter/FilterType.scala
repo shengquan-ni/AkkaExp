@@ -5,7 +5,7 @@ import Engine.Common.AmberException.AmberException
 import scala.language.postfixOps
 import Ordering.Implicits._
 
-object FilterType extends Enumeration {
+object FilterType extends Enumeration with Serializable {
 
   case class Val[T:Ordering](validate: (T,T) => Boolean) extends super.Val
   def Equal[T:Ordering]: Val[T] = Val[T]((x, y) => x==y)

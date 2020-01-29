@@ -100,7 +100,6 @@ object App {
         |{"origin":"Scan","destination":"Count"},
         |{"origin":"Count","destination":"Sink"}]
         |}""".stripMargin,
-
       s"""{
          |"operators":[
          |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
