@@ -32,7 +32,6 @@ class FIFOAccessPort {
   def registerEnd(sender:ActorRef,end:Long): Boolean ={
     if(seqNumMap.contains(sender) && seqNumMap(sender)==end){
       val k = actorToEdge(sender)
-      println("Receives End from "+k)
       //try{
       //println(sender,end)
         endToBeReceived(k).remove(sender)
@@ -41,7 +40,6 @@ class FIFOAccessPort {
       //}
       if(endToBeReceived(k).isEmpty){
         endToBeReceived.remove(k)
-        println("Send End from "+k)
         true
       }else{
         false
