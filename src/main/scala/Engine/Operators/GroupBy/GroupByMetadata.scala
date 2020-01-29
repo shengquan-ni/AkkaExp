@@ -7,6 +7,7 @@ import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLay
 import Engine.Architecture.LinkSemantics.{AllToOne, HashBasedShuffle, LinkStrategy}
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag}
+import Engine.Common.AmberTuple.Tuple
 import Engine.Common.Constants
 import Engine.Operators.OperatorMetadata
 import akka.actor.ActorRef
@@ -30,4 +31,5 @@ class GroupByMetadata[T](tag:OperatorTag, val numWorkers:Int, val groupByField: 
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     breakpoint.partition(topology(0).layer.filter(states(_)!= WorkerState.Completed))
   }
+
 }
