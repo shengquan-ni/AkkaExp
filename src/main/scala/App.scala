@@ -131,9 +131,10 @@ object App {
          |{"origin":"Sort","destination":"Sink"}]
          |}""".stripMargin
     )
+    if(!options.contains('mainNodeAddr)) {
 
-    val demoUsage =
-      """demo usage =
+      val demoUsage =
+        """demo usage =
  0. choose
  1. configure
  2. show
@@ -144,104 +145,104 @@ object App {
  7. set count breakpoint
       """
 
-    var current = 1
-    var limit = "100000"
-    var delay = "0"
-    var conditionalbp:Option[String] = None
-    var countbp:Option[Int] = None
+      var current = 1
+      var limit = "100000"
+      var delay = "0"
+      var conditionalbp: Option[String] = None
+      var countbp: Option[Int] = None
 
-    while(true){
-      val input = scala.io.StdIn.readLine()
-      input match{
-        case "choose" =>
-          try {
-            print("please choose which workflow you want to execute (0 or 1):")
-            val res = scala.io.StdIn.readInt()
-            if(res<0 || res>workflows.size){
-              throw new Exception()
+      while (true) {
+        val input = scala.io.StdIn.readLine()
+        input match {
+          case "choose" =>
+            try {
+              print("please choose which workflow you want to execute (0 or 1):")
+              val res = scala.io.StdIn.readInt()
+              if (res < 0 || res > workflows.size) {
+                throw new Exception()
+              }
+              current = res
+              println("current workflow: " + current)
+            } catch {
+              case _: Throwable =>
+                println("failed to choose workflow!")
             }
-            current = res
-            println("current workflow: "+current)
-          }catch{
-            case _: Throwable =>
-              println("failed to choose workflow!")
-          }
-        case "configure" =>
-          if(current == 0){
-            try{
-              print("please enter how many tuples you want to generate:")
-              limit = scala.io.StdIn.readInt().toString
-              print("please enter the artificial delay of generating one tuple(ms):")
-              delay = scala.io.StdIn.readInt().toString
+          case "configure" =>
+            if (current == 0) {
+              try {
+                print("please enter how many tuples you want to generate:")
+                limit = scala.io.StdIn.readInt().toString
+                print("please enter the artificial delay of generating one tuple(ms):")
+                delay = scala.io.StdIn.readInt().toString
+                println("workflow is correctly configured!")
+              } catch {
+                case _: Throwable =>
+                  println("workflow is not correctly configured!")
+              }
+            } else {
               println("workflow is correctly configured!")
-            }catch{
-              case _: Throwable =>
-                println("workflow is not correctly configured!")
             }
-          }else{
-            println("workflow is correctly configured!")
-          }
-        case "set count breakpoint" =>
-          if(current!=1){
-            println("count breakpoint not supported for this workflow")
-          }else{
-            try{
-              print("please enter target number of tuples:")
-              countbp = Some(scala.io.StdIn.readInt())
-              println("count breakpoint set!")
-            }catch{
-              case _: Throwable =>
-                println("cannot set count breakpoint!")
+          case "set count breakpoint" =>
+            if (current != 1) {
+              println("count breakpoint not supported for this workflow")
+            } else {
+              try {
+                print("please enter target number of tuples:")
+                countbp = Some(scala.io.StdIn.readInt())
+                println("count breakpoint set!")
+              } catch {
+                case _: Throwable =>
+                  println("cannot set count breakpoint!")
+              }
             }
-          }
-        case "set conditional breakpoint" =>
-          if(current != 1) {
-            println("conditional breakpoint not supported for this workflow")
-          }else{
-            try{
-              print("please enter break condition (lambda function = (x) => x.contains(condition)):")
-              conditionalbp = Some(scala.io.StdIn.readLine().trim)
-              println("count breakpoint set!")
-            }catch{
-              case _: Throwable =>
-                println("cannot set count breakpoint!")
+          case "set conditional breakpoint" =>
+            if (current != 1) {
+              println("conditional breakpoint not supported for this workflow")
+            } else {
+              try {
+                print("please enter break condition (lambda function = (x) => x.contains(condition)):")
+                conditionalbp = Some(scala.io.StdIn.readLine().trim)
+                println("count breakpoint set!")
+              } catch {
+                case _: Throwable =>
+                  println("cannot set count breakpoint!")
+              }
             }
-          }
-        case "show" =>
-          val json = Json.parse(workflows(current).replace("<arg1>",limit).replace("<arg2>",delay))
-          println(Json.prettyPrint(json))
-        case "run" =>
-          if(current == 0){
-            controller = system.actorOf(Controller.props(workflows(current).replace("<arg1>",limit).replace("<arg2>",delay)))
-          }else{
-            controller = system.actorOf(Controller.props(workflows(current)))
-          }
-          controller ! AckedControllerInitialization
-          if(countbp.isDefined){
-            controller ! PassBreakpointTo("KeywordSearch",new CountGlobalBreakpoint("CountBreakpoint",countbp.get))
-          }
-          if(conditionalbp.isDefined){
-            controller ! PassBreakpointTo("KeywordSearch",new ConditionalGlobalBreakpoint("ConditionalBreakpoint",x => x.getString(15).contains(conditionalbp)))
-          }
-          controller ! Start
-          println("workflow started!")
-        case "pause" =>
-          if(controller == null){
-            println("workflow is not initialized")
-          }else{
-            controller ! Pause
-          }
-        case "resume" =>
-          if(controller == null){
-            println("workflow is not initialized")
-          }else{
-            controller ! Resume
-          }
-        case other =>
-          println("wrong command!")
-          println(demoUsage)
+          case "show" =>
+            val json = Json.parse(workflows(current).replace("<arg1>", limit).replace("<arg2>", delay))
+            println(Json.prettyPrint(json))
+          case "run" =>
+            if (current == 0) {
+              controller = system.actorOf(Controller.props(workflows(current).replace("<arg1>", limit).replace("<arg2>", delay)))
+            } else {
+              controller = system.actorOf(Controller.props(workflows(current)))
+            }
+            controller ! AckedControllerInitialization
+            if (countbp.isDefined) {
+              controller ! PassBreakpointTo("KeywordSearch", new CountGlobalBreakpoint("CountBreakpoint", countbp.get))
+            }
+            if (conditionalbp.isDefined) {
+              controller ! PassBreakpointTo("KeywordSearch", new ConditionalGlobalBreakpoint("ConditionalBreakpoint", x => x.getString(15).contains(conditionalbp)))
+            }
+            controller ! Start
+            println("workflow started!")
+          case "pause" =>
+            if (controller == null) {
+              println("workflow is not initialized")
+            } else {
+              controller ! Pause
+            }
+          case "resume" =>
+            if (controller == null) {
+              println("workflow is not initialized")
+            } else {
+              controller ! Resume
+            }
+          case other =>
+            println("wrong command!")
+            println(demoUsage)
+        }
       }
     }
-
   }
 }
