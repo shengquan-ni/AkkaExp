@@ -17,6 +17,10 @@ class LocalOneToOne(from:ActorLayer, to:ActorLayer, batchSize:Int) extends LinkS
     assert(from.isBuilt && to.isBuilt && from.layer.length == to.layer.length)
     val froms: Map[String, Array[ActorRef]] = from.layer.groupBy(actor => actor.path.address.hostPort)
     val tos: Map[String, Array[ActorRef]] = to.layer.groupBy(actor =>actor.path.address.hostPort)
+    println(from.tag)
+    froms.foreach { case (key, values) => println("key " + key + " - " + values.mkString("-"))}
+    println(to.tag)
+    tos.foreach { case (key, values) => println("key " + key + " - " + values.mkString("-"))}
     assert(froms.keySet == tos.keySet && froms.forall(x => x._2.length == tos(x._1).length))
     froms.foreach(x =>{
       for(i <- x._2.indices){
