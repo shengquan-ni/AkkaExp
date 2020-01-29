@@ -37,11 +37,11 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         this.metadata = metadata;
         this.startOffset = startOffset;
         this.endOffset = endOffset;
-        System.out.println(startOffset+" "+endOffset);
     }
 
     @Override
     public void initialize() throws Exception {
+        System.out.println(startOffset+" "+endOffset);
         FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         FSDataInputStream stream = fs.open(new Path(hdfsPath));
         stream.seek(startOffset);
