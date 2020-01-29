@@ -52,12 +52,12 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public void onUpstreamChanged(LayerTag from) {
-        isCurrentTableInner = innerTableIdentifier == from;
+        isCurrentTableInner = innerTableIdentifier.equals(from);
     }
 
     @Override
     public void onUpstreamExhausted(LayerTag from) {
-        isInnerTableFinished = innerTableIdentifier == from;
+        isInnerTableFinished = innerTableIdentifier.equals(from);
     }
 
     @Override
