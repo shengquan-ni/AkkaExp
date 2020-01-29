@@ -80,15 +80,9 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           receiver ! RequireAck(msg)
         }
       }
-      if(messagesOnTheWay.isEmpty){
-        self ! PoisonPill
-      }
     case AckOfEndSending =>
       handleOfEndSending._2.cancel()
       handleOfEndSending = null
-      if(messagesOnTheWay.isEmpty){
-        self ! PoisonPill
-      }
     case EndSendingTimedOut =>
       if(handleOfEndSending != null){
         handleOfEndSending = (handleOfEndSending._1,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut))
