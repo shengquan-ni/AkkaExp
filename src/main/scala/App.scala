@@ -93,7 +93,7 @@ object App {
 
       s"""{
         |"operators":[
-        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/10G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
         |"links":[
@@ -144,7 +144,7 @@ object App {
  7. set count breakpoint
       """
 
-    var current = 3
+    var current = 1
     var limit = "100000"
     var delay = "0"
     var conditionalbp:Option[String] = None
