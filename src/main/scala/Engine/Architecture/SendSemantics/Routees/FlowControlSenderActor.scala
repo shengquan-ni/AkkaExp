@@ -3,7 +3,7 @@ package Engine.Architecture.SendSemantics.Routees
 
 import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, RequireAck, Resume}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
-import akka.actor.{Actor, ActorRef, Cancellable, Props, Stash}
+import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
 import akka.util.Timeout
 
 import scala.collection.mutable
@@ -80,8 +80,15 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           receiver ! RequireAck(msg)
         }
       }
+      if(messagesOnTheWay.isEmpty){
+        self ! PoisonPill
+      }
     case AckOfEndSending =>
+      handleOfEndSending._2.cancel()
       handleOfEndSending = null
+      if(messagesOnTheWay.isEmpty){
+        self ! PoisonPill
+      }
     case EndSendingTimedOut =>
       if(handleOfEndSending != null){
         handleOfEndSending = (handleOfEndSending._1,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut))

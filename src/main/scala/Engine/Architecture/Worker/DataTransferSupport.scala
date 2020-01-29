@@ -35,6 +35,14 @@ trait DataTransferSupport extends BreakpointSupport {
     var i = 0
     while (i < output.length) {
       output(i).noMore()
+      i += 1
+    }
+  }
+
+
+  def cleanUpDataTransfer()(implicit sender:ActorRef):Unit = {
+    var i = 0
+    while (i < output.length) {
       output(i).dispose()
       i += 1
     }

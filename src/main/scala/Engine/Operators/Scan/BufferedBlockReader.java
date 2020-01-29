@@ -93,7 +93,7 @@ public class BufferedBlockReader {
     }
 
     public boolean hasNext() throws IOException {
-        return currentPos <= blockSize && input.available() > 0;
+        return currentPos <= blockSize && bufferSize != -1;
     }
 
     public void close() throws IOException {

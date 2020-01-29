@@ -54,10 +54,14 @@ public class LocalFileScanTupleProducer implements TupleProducer {
 
     @Override
     public Tuple next() throws IOException {
+        String[] res = reader.readLine();
+        if(res == null){
+            return null;
+        }
         if(metadata != null) {
-            return Tuple.fromJavaStringArray(reader.readLine(),metadata.tupleMetadata().fieldTypes());
+            return Tuple.fromJavaStringArray(res,metadata.tupleMetadata().fieldTypes());
         }else{
-            return Tuple.fromJavaArray(reader.readLine());
+            return Tuple.fromJavaArray(res);
         }
     }
 
