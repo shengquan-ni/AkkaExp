@@ -57,6 +57,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public void onUpstreamExhausted(LayerTag from) {
+        System.out.println(from);
         isInnerTableFinished = innerTableIdentifier == from;
     }
 
