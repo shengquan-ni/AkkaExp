@@ -343,6 +343,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           }catch{
             case e:Exception =>
               self ! ReportFailure(e)
+              log.info(e.toString)
               processTime += System.nanoTime()-processStart
               Breaks.break()
           }
@@ -364,6 +365,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
                 processTime += System.nanoTime()-processStart
                 Breaks.break()
               case e:Exception =>
+                log.info(e.toString)
                 self ! ReportFailure(e)
                 processTime += System.nanoTime()-processStart
                 Breaks.break()
