@@ -336,11 +336,14 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       }else{
         println("normal batch processed")
         dataProcessor.onUpstreamChanged(from)
+        println("upstream changed")
         //no tuple remains, we continue
         while (processingIndex < batch.length) {
           exitIfPaused()
           try {
+            println("ready")
             dataProcessor.accept(batch(processingIndex))
+            println(processingIndex)
           }catch{
             case e:Exception =>
               self ! ReportFailure(e)
