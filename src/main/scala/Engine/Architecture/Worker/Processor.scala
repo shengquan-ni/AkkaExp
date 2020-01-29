@@ -228,11 +228,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
 
   private[this] def beforeProcessingBatch(): Unit ={
-    println("ready for a batch")
   }
 
   private[this] def afterProcessingBatch(): Unit ={
-    println("finished a batch")
     processingIndex = 0
     synchronized{
       processingQueue.dequeue()
@@ -329,21 +327,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         }
       }
       if(batch == null){
-        println("null batch processed")
         dataProcessor.onUpstreamExhausted(from)
         self ! ReportUpstreamExhausted(from)
         aliveUpstreams.remove(from)
       }else{
-        println("normal batch processed")
         dataProcessor.onUpstreamChanged(from)
-        println("upstream changed")
         //no tuple remains, we continue
         while (processingIndex < batch.length) {
           exitIfPaused()
           try {
-            println("ready")
             dataProcessor.accept(batch(processingIndex))
-            println(processingIndex)
           }catch{
             case e:Exception =>
               self ! ReportFailure(e)
@@ -352,7 +345,6 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               Breaks.break()
           }
           processingIndex += 1
-          println(processingIndex.toString)
           while(dataProcessor.hasNext){
             exitIfPaused()
             try {
