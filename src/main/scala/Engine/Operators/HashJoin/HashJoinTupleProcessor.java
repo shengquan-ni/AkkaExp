@@ -68,8 +68,6 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public void initialize() {
-
-        System.out.println(innerTableIdentifier);
         innerTableHashMap = new HashMap<>();
     }
 
