@@ -67,6 +67,7 @@ class FIFOAccessPort {
         }
         if(endMap.contains(sender) && endMap(sender) == cur){
           val k = actorToEdge(sender)
+          println("Receives End from "+k)
           endToBeReceived(k).remove(sender)
           if(endToBeReceived(k).isEmpty){
             endToBeReceived.remove(k)

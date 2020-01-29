@@ -94,7 +94,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   def onSaveEndSending(seq: Long): Unit = {
     if(input.registerEnd(sender,seq)){
       synchronized {
-        val currentEdge = input.actorToEdge(sender)
+        val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
         if (dPThreadState == ThreadState.Idle) {
           dPThreadState = ThreadState.Running
