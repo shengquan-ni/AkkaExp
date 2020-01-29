@@ -139,8 +139,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
 
   override def receive: Receive = {
     case AckedControllerInitialization =>
-      log.info("start initialization")
       val nodes = availableNodes
+      log.info("start initialization --------cluster have "+nodes.length+" nodes---------")
       for(k <- workflow.startOperators){
         val v = workflow.operators(k)
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
