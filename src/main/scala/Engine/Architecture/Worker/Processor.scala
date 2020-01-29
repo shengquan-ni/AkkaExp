@@ -334,6 +334,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         self ! ReportUpstreamExhausted(from)
         aliveUpstreams.remove(from)
       }else{
+        println("normal batch processed")
         dataProcessor.onUpstreamChanged(from)
         //no tuple remains, we continue
         while (processingIndex < batch.length) {
