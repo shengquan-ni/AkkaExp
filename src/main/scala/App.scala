@@ -45,15 +45,15 @@ object App {
     val options = argsToOptionMap(Map(),args.toList)
     var config:Config = null
     var localIpAddress = "0.0.0.0"
-//    try{
-//      val query = new URL("http://checkip.amazonaws.com")
-//      val in:BufferedReader = new BufferedReader(new InputStreamReader(query.openStream()))
-//      localIpAddress = in.readLine()
-//    }catch{
-//      case exception: Exception =>
-//        val localhost: InetAddress = InetAddress.getLocalHost
-//        localIpAddress = localhost.getHostAddress
-//    }
+    try{
+      val query = new URL("http://checkip.amazonaws.com")
+      val in:BufferedReader = new BufferedReader(new InputStreamReader(query.openStream()))
+      localIpAddress = in.readLine()
+    }catch{
+      case exception: Exception =>
+        val localhost: InetAddress = InetAddress.getLocalHost
+        localIpAddress = localhost.getHostAddress
+    }
 
     if(!options.contains('mainNodeAddr)){
       //activate main node
