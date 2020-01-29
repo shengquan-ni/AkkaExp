@@ -228,7 +228,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
 
   private[this] def beforeProcessingBatch(): Unit ={
-
+    println("ready for a batch")
   }
 
   private[this] def afterProcessingBatch(): Unit ={
