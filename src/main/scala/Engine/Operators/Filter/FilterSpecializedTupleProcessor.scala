@@ -5,13 +5,13 @@ import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
 import com.github.nscala_time.time.Imports._
 
-class FilterSpecializedTupleProcessor(val targetField:Int, val filterType:FilterType.Val[DateTime], val threshold:DateTime) extends TupleProcessor {
+class FilterSpecializedTupleProcessor(val targetField:Int, val filterType:Int, val threshold:DateTime) extends TupleProcessor {
   var _tuple:Tuple = _
   var nextFlag = false
 
   override def accept(tuple: Tuple): Unit = {
     val str = tuple.getString(targetField)
-    if (str!=null && filterType.validate(DateTime.parse(str),threshold)) {
+    if (str!=null && DateTime.parse(str) > threshold) {
       nextFlag = true
       _tuple = tuple
     }

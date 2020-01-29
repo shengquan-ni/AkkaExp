@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class FilterMetadata[T : Ordering](tag:OperatorTag, val numWorkers:Int, val targetField:Int, val filterType: FilterType.Val[T], val threshold:T) extends OperatorMetadata(tag){
   override lazy val topology: Topology = {
     new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterSpecializedTupleProcessor(targetField,filterType.asInstanceOf[FilterType.Val[DateTime]],threshold.asInstanceOf[DateTime]),
+      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterSpecializedTupleProcessor(targetField,1,threshold.asInstanceOf[DateTime]),
         numWorkers,
         UseAll(),
         RoundRobinDeployment())
