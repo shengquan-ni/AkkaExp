@@ -16,7 +16,7 @@ class LocalOneToOne(from:ActorLayer, to:ActorLayer, batchSize:Int) extends LinkS
     assert(from.isBuilt && to.isBuilt && from.layer.length == to.layer.length)
     val froms = from.layer.groupBy(actor => actor.path.address.hostPort)
     val tos = to.layer.groupBy(actor =>actor.path.address.hostPort)
-    assert(froms.keySet == tos.keySet && froms.forall(x => x._2.length == tos(x._1).length))
+    //assert(froms.keySet == tos.keySet && froms.forall(x => x._2.length == tos(x._1).length))
     froms.foreach(x =>{
       for(i <- x._2.indices){
         AdvancedMessageSending.blockingAskWithRetry(x._2(i),
