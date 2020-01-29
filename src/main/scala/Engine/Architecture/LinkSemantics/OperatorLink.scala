@@ -5,6 +5,7 @@ import Engine.Common.AmberMessage.PrincipalMessage.{GetInputLayer, GetOutputLaye
 import Engine.Common.AmberTag.LinkTag
 import Engine.Common.Constants
 import Engine.Operators.OperatorMetadata
+import Engine.Operators.Sink.SimpleSinkOperatorMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -25,7 +26,10 @@ class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetada
       //TODO: use type matching to generate a 'smarter' strategy based on the operators
       if(to._1.requiredShuffle){
         linkStrategy = new HashBasedShuffle(sender,receiver,Constants.defaultBatchSize,to._1.getShuffleHashFunction(sender.tag))
-      }else if(sender.layer.length == receiver.layer.length){
+      }else if(to._1.isInstanceOf[SimpleSinkOperatorMetadata]){
+        linkStrategy = new AllToOne(sender,receiver,Constants.defaultBatchSize)
+      }
+      else if(sender.layer.length == receiver.layer.length){
         linkStrategy = new LocalOneToOne(sender,receiver,Constants.defaultBatchSize)
       }else{
         linkStrategy = new LocalRoundRobin(sender,receiver,Constants.defaultBatchSize)
