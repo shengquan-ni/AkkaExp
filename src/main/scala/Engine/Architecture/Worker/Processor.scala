@@ -339,12 +339,13 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             dataProcessor.accept(batch(processingIndex))
           }catch{
             case e:Exception =>
-              println(batch(processingIndex))
               self ! ReportFailure(e)
               log.info(e.toString)
               processTime += System.nanoTime()-processStart
               Breaks.break()
-            case _:Any => println(batch(processingIndex))
+            case other:Any =>
+              println(other)
+              println(batch(processingIndex))
           }
           processingIndex += 1
           while(dataProcessor.hasNext){
