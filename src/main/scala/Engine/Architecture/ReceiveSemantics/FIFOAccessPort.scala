@@ -41,6 +41,7 @@ class FIFOAccessPort {
       //}
       if(endToBeReceived(k).isEmpty){
         endToBeReceived.remove(k)
+        println("Send End from "+k)
         true
       }else{
         false
