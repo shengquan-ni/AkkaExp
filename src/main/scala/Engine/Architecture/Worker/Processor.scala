@@ -96,7 +96,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       synchronized {
         val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
-        println("null batch added to DP. ThreadState: "+ThreadState)
+        println("null batch added to DP. ThreadState: "+dPThreadState)
         if (dPThreadState == ThreadState.Idle) {
           dPThreadState = ThreadState.Running
           println("null batch revoked DP")
