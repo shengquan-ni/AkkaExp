@@ -349,6 +349,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               Breaks.break()
           }
           processingIndex += 1
+          println(processingIndex.toString)
           while(dataProcessor.hasNext){
             exitIfPaused()
             try {
