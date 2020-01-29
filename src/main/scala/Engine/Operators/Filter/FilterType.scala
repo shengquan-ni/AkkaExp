@@ -7,7 +7,7 @@ import Ordering.Implicits._
 
 object FilterType extends Enumeration with Serializable {
 
-  case class Val[T:Ordering](validate: (T,T) => Boolean) extends super.Val
+  case class Val[T:Ordering](validate: (T,T) => Boolean) extends super.Val with Serializable
   def Equal[T:Ordering]: Val[T] = Val[T]((x, y) => x==y)
   def Greater[T:Ordering]: Val[T] = Val[T]((x, y) => x>y)
   def GreaterOrEqual[T:Ordering]: Val[T] = Val[T]((x, y) => x>=y)
