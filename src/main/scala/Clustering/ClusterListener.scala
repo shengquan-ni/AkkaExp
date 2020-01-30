@@ -1,5 +1,6 @@
 package Clustering
 
+import Engine.Common.Constants
 import akka.actor.{Actor, ActorLogging, Address, ExtendedActorSystem}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.{InitialStateAsEvents, MemberEvent, MemberRemoved, MemberUp, UnreachableMember}
@@ -30,8 +31,10 @@ class ClusterListener extends Actor with ActorLogging  {
       }else{
         availableNodeAddresses.add(member.address)
       }
-      log.info("Member is Up: {}", member.address)
+      Constants.dataset += 10
+      Constants.defaultNumWorkers += 2
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
+      println("dataset: "+Constants.dataset+" numWorkers: "+Constants.defaultNumWorkers)
     case UnreachableMember(member) =>
       availableNodeAddresses.remove(member.address)
       log.info("Member detected as unreachable: {}", member)
