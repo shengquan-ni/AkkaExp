@@ -25,7 +25,7 @@ class GroupByMetadata[T](tag:OperatorTag, val numWorkers:Int, val groupByField: 
       partialLayer,
       finalLayer
     ),Array(
-      new HashBasedShuffle(partialLayer,finalLayer,Constants.defaultBatchSize,x => x.get(groupByField).hashCode())
+      new HashBasedShuffle(partialLayer,finalLayer,Constants.defaultBatchSize,x => {val tmp = x.get(groupByField).hashCode();println(x.get(groupByField),tmp);tmp})
     ),Map())
   }
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
