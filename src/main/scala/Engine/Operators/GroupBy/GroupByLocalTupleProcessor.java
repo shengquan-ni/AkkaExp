@@ -15,7 +15,6 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
     private int aggregateField;
     private AggregationType aggregationType;
 
-
     private HashMap<T,Double> results;
     private HashMap<T,Integer> counts;
 
@@ -41,7 +40,7 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
             }else{
                 switch (aggregationType) {
                     case Min:
-                        results.put(key,Math.min(results.get(key),value));
+                        results.replace(key,Math.min(results.get(key),value));
                         break;
                     case Max:
                         results.put(key,Math.max(results.get(key),value));

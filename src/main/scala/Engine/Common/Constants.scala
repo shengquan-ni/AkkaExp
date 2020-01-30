@@ -3,6 +3,6 @@ package Engine.Common
 object Constants {
   val defaultBatchSize = 400
   val remoteHDFSPath = "hdfs://10.138.0.2:8020"
-  val defaultNumWorkers = 100
-  val dataset = 500
+  val defaultNumWorkers = 4
+  val dataset = 20
 }
