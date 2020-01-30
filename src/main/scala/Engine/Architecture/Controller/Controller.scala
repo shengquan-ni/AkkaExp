@@ -30,7 +30,7 @@ import Engine.Operators.Scan.HDFSFileScan.{HDFSFileScanMetadata, HDFSFileScanTup
 import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata
 import Engine.Operators.Sink.SimpleSinkOperatorMetadata
 import Engine.Operators.Sort.SortMetadata
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSelection, Address, Cancellable, Deploy, Props, Stash}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSelection, Address, Cancellable, Deploy, PoisonPill, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
@@ -274,6 +274,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
+              self ! PoisonPill
             }else{
               context.become(receive)
               self ! ContinuedInitialization

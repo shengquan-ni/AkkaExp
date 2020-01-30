@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, filePath:String, delimiter: Char, indicesToKeep:Array[Int], tableMetadata: TableMetadata) extends FileScanMetadata(tag,numWorkers,filePath,delimiter,indicesToKeep,tableMetadata)  {
   override val totalBytes: Long = FileSystem.get(new URI(host),new Configuration()).getFileStatus(new Path(filePath)).getLen
+  println("Read from HDFS: "+filePath)
   override lazy val topology: Topology = {
     new Topology(Array(new GeneratorWorkerLayer(
       LayerTag(tag,"main"),
