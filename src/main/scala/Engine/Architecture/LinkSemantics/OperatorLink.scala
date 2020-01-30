@@ -23,12 +23,11 @@ class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetada
   def link()(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     val sender = Await.result(from._2 ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     val receiver = Await.result(to._2 ? GetInputLayer,timeout.duration).asInstanceOf[ActorLayer]
-    println(from,to)
     if(linkStrategy == null){
       //TODO: use type matching to generate a 'smarter' strategy based on the operators
       if(to._1.requiredShuffle){
         linkStrategy = new HashBasedShuffle(sender,receiver,Constants.defaultBatchSize,to._1.getShuffleHashFunction(sender.tag))
-      }else if(to._1.isInstanceOf[SimpleSinkOperatorMetadata] || to._1.isInstanceOf[SortMetadata[String]]){
+      }else if(to._1.isInstanceOf[SimpleSinkOperatorMetadata] || to._1.isInstanceOf[SortMetadata[_]]){
         linkStrategy = new AllToOne(sender,receiver,Constants.defaultBatchSize)
       }
       else if(sender.layer.length == receiver.layer.length){
