@@ -119,13 +119,15 @@ object App {
          |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
          |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"Sort","operatorType":"Sort","targetField":0},
          |{"operatorID":"Sink","operatorType":"Sink"}],
          |"links":[
          |{"origin":"Scan1","destination":"Join"},
          |{"origin":"Scan2","destination":"Join"},
          |{"origin":"Join","destination":"GroupBy1"},
-         |{"origin":"GroupBy1","destination":"Sort"},
+         |{"origin":"GroupBy1","destination":"GroupBy2"},
+         |{"origin":"GroupBy2","destination":"Sort"},
          |{"origin":"Sort","destination":"Sink"}]
          |}""".stripMargin
     )
