@@ -2,7 +2,7 @@ package Engine.Operators.Sort
 
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.DeployStrategy.RandomDeployment
-import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
+import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, ForceLocal}
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLayer}
 import Engine.Architecture.LinkSemantics.LinkStrategy
 import Engine.Architecture.Worker.WorkerState
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class SortMetadata[T : Ordering](tag:OperatorTag, val targetField:Int) extends OperatorMetadata(tag) {
   override lazy val topology: Topology = {
     new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SortTupleProcessor[T](targetField), 1, FollowPrevious(), RandomDeployment())
+      new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SortTupleProcessor[T](targetField), 1, ForceLocal(), RandomDeployment())
     ),
       Array(),
       Map())

@@ -2,7 +2,7 @@ package Engine.Operators.GroupBy
 
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.DeployStrategy.{RandomDeployment, RoundRobinDeployment}
-import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, UseAll}
+import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, ForceLocal, UseAll}
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLayer}
 import Engine.Architecture.LinkSemantics.{AllToOne, HashBasedShuffle, LinkStrategy}
 import Engine.Architecture.Worker.WorkerState
@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext
 class GroupByMetadata[T](tag:OperatorTag, val numWorkers:Int, val groupByField: Int, val aggregateField: Int, val aggregationType: AggregationType) extends OperatorMetadata(tag){
   override lazy val topology: Topology = {
     val partialLayer = new ProcessorWorkerLayer(LayerTag(tag,"localGroupBy"),_ => new GroupByLocalTupleProcessor[T](groupByField,aggregateField,aggregationType), numWorkers, UseAll(),RoundRobinDeployment())
-    val finalLayer = new ProcessorWorkerLayer(LayerTag(tag,"globalGroupBy"),_ => new GroupByGlobalTupleProcessor[T](aggregationType),1, FollowPrevious(),RandomDeployment())
+    val finalLayer = new ProcessorWorkerLayer(LayerTag(tag,"globalGroupBy"),_ => new GroupByGlobalTupleProcessor[T](aggregationType),1, ForceLocal(),RandomDeployment())
     new Topology(Array(
       partialLayer,
       finalLayer
