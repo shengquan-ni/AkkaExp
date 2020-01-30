@@ -1,6 +1,6 @@
 package Clustering
 
-import akka.actor.{Actor, ActorLogging, Address}
+import akka.actor.{Actor, ActorLogging, Address, ExtendedActorSystem}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.{InitialStateAsEvents, MemberEvent, MemberRemoved, MemberUp, UnreachableMember}
 
@@ -25,6 +25,9 @@ class ClusterListener extends Actor with ActorLogging  {
 
   def receive = {
     case MemberUp(member) =>
+      println(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress)
+      println(member.address.hasLocalScope)
+      println(member.address.system)
       availableNodeAddresses.add(member.address)
       log.info("Member is Up: {}", member.address)
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
