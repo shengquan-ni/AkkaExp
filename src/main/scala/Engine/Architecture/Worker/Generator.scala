@@ -112,7 +112,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
         exitIfPaused()
         try {
           transferTuple(dataProducer.next())
-          generateTime += 1
+          generatedCount += 1
         }catch{
           case e:BreakpointException =>
             self ! LocalBreakpointTriggered
