@@ -2,7 +2,6 @@ package Engine.Operators.Scan;
 
 
 import com.google.common.primitives.Ints;
-import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,7 +15,7 @@ public class BufferedBlockReader {
     private long blockSize;
     private long currentPos;
     private int cursor;
-    private int bufferSize;
+    private int bufferSize = 0;
     private byte[] buffer = new byte[4096]; //4k buffer
     private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     private List<String> fields = new ArrayList<>();

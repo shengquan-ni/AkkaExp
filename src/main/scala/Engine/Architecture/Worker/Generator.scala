@@ -28,6 +28,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   val dataGenerateExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   var isGeneratingFinished = false
 
+  @elidable(INFO) var generatedCount = 0L
   @elidable(INFO) var generateTime = 0L
   @elidable(INFO) var generateStart = 0L
 
@@ -40,7 +41,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
 
   override def onCompleted(): Unit = {
     super.onCompleted()
-    ElidableStatement.info{log.info("completed its job. total: {} ms, generating: {} ms",(System.nanoTime()-startTime)/1000000,generateTime/1000000)}
+    ElidableStatement.info{log.info("completed its job. total: {} ms, generating: {} ms, generated {} tuples",(System.nanoTime()-startTime)/1000000,generateTime/1000000,generatedCount)}
   }
 
 
@@ -111,6 +112,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
         exitIfPaused()
         try {
           transferTuple(dataProducer.next())
+          generateTime += 1
         }catch{
           case e:BreakpointException =>
             self ! LocalBreakpointTriggered
