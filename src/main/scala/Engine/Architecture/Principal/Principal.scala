@@ -369,7 +369,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         while(currentLayer.nonEmpty){
           currentLayer.foreach{ x =>
             val tmp:Array[(OperatorMetadata,ActorLayer)] = inLinks(x).map(y =>(null,y)).toArray
-            tmp.foreach(x => println(x._2.tag))
+            println(tmp.flatMap(x => x._2.layer.map(y => y.path.address)).distinct.intersect(all))
             x.build(tmp,all)
           }
           currentLayer = inLinks.filter(x => !x._1.isBuilt && x._2.forall(_.isBuilt)).keys
