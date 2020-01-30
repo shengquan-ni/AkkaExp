@@ -139,6 +139,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             //try to resume it
             sender ! Resume
           case WorkerState.Completed =>
+            log.info(sender+" completed")
             if (whenAllWorkersCompleted) {
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
