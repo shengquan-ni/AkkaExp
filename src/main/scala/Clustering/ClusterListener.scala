@@ -25,10 +25,11 @@ class ClusterListener extends Actor with ActorLogging  {
 
   def receive = {
     case MemberUp(member) =>
-      println(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress)
-      println(member.address.hasLocalScope)
-      println(member.address.system)
-      availableNodeAddresses.add(member.address)
+      if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
+        availableNodeAddresses.add(self.path.address)
+      }else{
+        availableNodeAddresses.add(member.address)
+      }
       log.info("Member is Up: {}", member.address)
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
     case UnreachableMember(member) =>
