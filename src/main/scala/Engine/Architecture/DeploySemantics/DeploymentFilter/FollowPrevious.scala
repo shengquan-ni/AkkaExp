@@ -16,6 +16,8 @@ class FollowPrevious extends DeploymentFilter {
     tmp.foreach(x => println(x.hostPort))
     println("_____________________")
     all.foreach(x => println(x.hostPort))
+    println("_____________________")
+    println(local.hostPort)
     val result = tmp.distinct.intersect(all)
     if(result.isEmpty) all else result //fall back to UseAll when there is nothing to follow
   }
