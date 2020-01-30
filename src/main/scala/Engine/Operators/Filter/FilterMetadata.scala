@@ -21,7 +21,7 @@ class FilterMetadata[T : Ordering](tag:OperatorTag, val numWorkers:Int, val targ
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterSpecializedTupleProcessor(targetField,1,threshold.asInstanceOf[DateTime]),
         numWorkers,
-        UseAll(),
+        FollowPrevious(),
         RoundRobinDeployment())
     ),Array(),Map())
   }

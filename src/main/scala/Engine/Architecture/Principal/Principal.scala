@@ -139,7 +139,6 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             //try to resume it
             sender ! Resume
           case WorkerState.Completed =>
-            log.info(sender+" completed")
             if (whenAllWorkersCompleted) {
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
@@ -367,11 +366,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         currentLayer.foreach(x => x.build(prev,all))
         currentLayer = inLinks.filter(x => x._2.forall(_.isBuilt)).keys
         while(currentLayer.nonEmpty){
-          currentLayer.foreach{ x =>
-            val tmp:Array[(OperatorMetadata,ActorLayer)] = inLinks(x).map(y =>(null,y)).toArray
-            println(tmp.flatMap(x => x._2.layer.map(y => y.path.address)).distinct.intersect(all))
-            x.build(tmp,all)
-          }
+          currentLayer.foreach(x => x.build(inLinks(x).map(y =>(null,y)).toArray,all))
           currentLayer = inLinks.filter(x => !x._1.isBuilt && x._2.forall(_.isBuilt)).keys
         }
       }

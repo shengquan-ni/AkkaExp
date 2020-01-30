@@ -22,7 +22,7 @@ class ProjectionMetadata(tag:OperatorTag, val numWorkers:Int, val targetFields:A
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new ProjectionTupleProcessor(targetFields),
         numWorkers,
-        UseAll(),
+        FollowPrevious(),
         RoundRobinDeployment())
     ),Array(),Map())
   }

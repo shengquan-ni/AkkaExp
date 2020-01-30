@@ -22,7 +22,7 @@ class KeywordSearchMetadata(tag:OperatorTag, val numWorkers:Int, val targetField
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new KeywordSearchTupleProcessor(targetField,keyword),
         numWorkers,
-        UseAll(),
+        FollowPrevious(),
         RoundRobinDeployment())
     ),Array(),Map())
   }
