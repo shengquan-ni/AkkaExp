@@ -23,6 +23,7 @@ class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetada
   def link()(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     val sender = Await.result(from._2 ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     val receiver = Await.result(to._2 ? GetInputLayer,timeout.duration).asInstanceOf[ActorLayer]
+    println(from,to)
     if(linkStrategy == null){
       //TODO: use type matching to generate a 'smarter' strategy based on the operators
       if(to._1.requiredShuffle){
