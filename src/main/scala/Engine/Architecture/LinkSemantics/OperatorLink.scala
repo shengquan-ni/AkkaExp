@@ -6,6 +6,7 @@ import Engine.Common.AmberTag.LinkTag
 import Engine.Common.Constants
 import Engine.Operators.OperatorMetadata
 import Engine.Operators.Sink.SimpleSinkOperatorMetadata
+import Engine.Operators.Sort.SortMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -26,7 +27,7 @@ class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetada
       //TODO: use type matching to generate a 'smarter' strategy based on the operators
       if(to._1.requiredShuffle){
         linkStrategy = new HashBasedShuffle(sender,receiver,Constants.defaultBatchSize,to._1.getShuffleHashFunction(sender.tag))
-      }else if(to._1.isInstanceOf[SimpleSinkOperatorMetadata]){
+      }else if(to._1.isInstanceOf[SimpleSinkOperatorMetadata] || to._1.isInstanceOf[SortMetadata]){
         linkStrategy = new AllToOne(sender,receiver,Constants.defaultBatchSize)
       }
       else if(sender.layer.length == receiver.layer.length){
