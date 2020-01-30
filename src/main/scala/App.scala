@@ -93,7 +93,7 @@ object App {
 
       s"""{
         |"operators":[
-        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
         |"links":[
@@ -102,7 +102,7 @@ object App {
         |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
          |{"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"},
          |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Sum"},
          |{"operatorID":"Sort","operatorType":"Sort","targetField":0},
@@ -115,8 +115,8 @@ object App {
          |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/${Constants.dataset}G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
          |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
@@ -145,7 +145,7 @@ object App {
  7. set count breakpoint
       """
 
-      var current = 1
+      var current = 3
       var limit = "100000"
       var delay = "0"
       var conditionalbp: Option[String] = None
@@ -215,7 +215,7 @@ object App {
             if (current == 0) {
               controller = system.actorOf(Controller.props(workflows(current).replace("<arg1>", limit).replace("<arg2>", delay)))
             } else {
-              controller = system.actorOf(Controller.props(workflows(current)))
+              controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Constants.dataset.toString)))
             }
             controller ! AckedControllerInitialization
             if (countbp.isDefined) {
