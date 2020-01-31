@@ -36,10 +36,22 @@ class ClusterListener extends Actor with ActorLogging  {
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
       println("dataset: "+Constants.dataset+" numWorkers: "+Constants.defaultNumWorkers)
     case UnreachableMember(member) =>
-      availableNodeAddresses.remove(member.address)
+      if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
+        availableNodeAddresses.remove(self.path.address)
+      }else{
+        availableNodeAddresses.remove(member.address)
+      }
+      Constants.dataset -= 10
+      Constants.defaultNumWorkers -= 2
       log.info("Member detected as unreachable: {}", member)
     case MemberRemoved(member, previousStatus) =>
-      availableNodeAddresses.remove(member.address)
+      if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
+        availableNodeAddresses.remove(self.path.address)
+      }else{
+        availableNodeAddresses.remove(member.address)
+      }
+      Constants.dataset -= 10
+      Constants.defaultNumWorkers -= 2
       log.info("Member is Removed: {} after {}",
         member.address, previousStatus)
     case _: MemberEvent => // ignore
