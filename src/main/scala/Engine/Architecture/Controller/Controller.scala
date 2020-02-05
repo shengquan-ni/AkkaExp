@@ -271,6 +271,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           if(principalStates.values.forall(_ == PrincipalState.Completed)) {
             timer.stop()
             log.info("workflow completed! Time Elapsed: "+timer.toString())
+            timer.reset()
             saveRemoveAskHandle()
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
@@ -328,6 +329,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           timer.stop()
           frontier.clear()
           log.info("workflow completed! Time Elapsed: "+timer.toString())
+          timer.reset()
           saveRemoveAskHandle()
           if(frontier.isEmpty){
             context.parent ! ReportState(ControllerState.Completed)
@@ -341,6 +343,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           timer2.stop()
           frontier.clear()
           log.info("workflow paused! Time Elapsed: "+timer2.toString())
+          timer2.reset()
           saveRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
           context.become(paused)
