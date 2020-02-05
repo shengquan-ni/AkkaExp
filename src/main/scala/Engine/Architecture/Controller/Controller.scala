@@ -409,8 +409,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
 
   private[this] def completed:Receive = {
     case msg =>
-      log.info("received: {} after workflow completed!",msg)
-      if(sender !=self){
+      //log.info("received: {} after workflow completed!",msg)
+      if(sender !=self && !principalStates.keySet.contains(sender)){
         sender ! ReportState(ControllerState.Completed)
       }
   }

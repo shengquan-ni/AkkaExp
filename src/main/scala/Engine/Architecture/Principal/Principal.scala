@@ -346,7 +346,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def completed:Receive={
     case msg =>
-      log.info("received {} from {} after complete",msg,sender)
+      //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){
         sender ! ReportState(PrincipalState.Completed)
       }
