@@ -102,7 +102,7 @@ object App {
         |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/50G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
          |{"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"},
          |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Sum"},
          |{"operatorID":"Sort","operatorType":"Sort","targetField":0},
@@ -115,8 +115,8 @@ object App {
          |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/50G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/50G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
          |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
