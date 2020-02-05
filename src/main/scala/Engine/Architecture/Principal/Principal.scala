@@ -185,7 +185,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case WorkerMessage.ReportState(state) =>
-      log.info("pausing: "+ sender +" to "+ state)
+      //log.info("pausing: "+ sender +" to "+ state)
       if(!allowedStatesOnPausing(state) && state != WorkerState.Pausing){
         sender ! Pause
       }else if(setWorkerState(sender,state)) {
