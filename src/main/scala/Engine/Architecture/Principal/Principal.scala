@@ -345,7 +345,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case Pause => context.parent ! ReportState(PrincipalState.Paused)
     case QueryState => sender ! ReportState(PrincipalState.Paused)
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
