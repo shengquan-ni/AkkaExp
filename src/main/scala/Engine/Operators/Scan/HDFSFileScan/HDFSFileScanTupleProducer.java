@@ -10,10 +10,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URI;
+import java.net.URL;
 import java.util.Arrays;
 
 import static jdk.nashorn.internal.objects.Global.println;
@@ -42,9 +41,11 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
     @Override
     public void initialize() throws Exception {
         System.out.println(startOffset+" "+endOffset);
-        FileSystem fs = FileSystem.get(new URI(host),new Configuration());
-        FSDataInputStream stream = fs.open(new Path(hdfsPath));
-        stream.seek(startOffset);
+        //FileSystem fs = FileSystem.get(new URI(host),new Configuration());
+        //FSDataInputStream stream = fs.open(new Path(hdfsPath));
+        //stream.seek(startOffset);
+        URL url = new URL("http://35.185.246.62:9870/webhdfs/v1"+hdfsPath+"?op=OPEN&offset="+startOffset);
+        InputStream stream = url.openStream();
         reader = new BufferedBlockReader(stream,endOffset-startOffset,separator,indicesToKeep);
         if(startOffset > 0)
             reader.readLine();

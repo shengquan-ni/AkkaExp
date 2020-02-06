@@ -5,8 +5,9 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
-//TO turn off this, use: WARNING
-scalacOptions ++= Seq("-Xelide-below", "INFO")
+//To turn on, use: INFO
+//To turn off, use: WARNING
+scalacOptions ++= Seq("-Xelide-below", "WARNING")
 scalacOptions ++= Seq("-feature")
 
 val akkaVersion = "2.5.24"
