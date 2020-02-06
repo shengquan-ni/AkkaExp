@@ -20,6 +20,7 @@ import akka.event.LoggingAdapter
 import akka.util.Timeout
 import akka.pattern.after
 import akka.pattern.ask
+import com.google.common.base.Stopwatch
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -49,6 +50,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var periodicallyAskHandle:Cancellable = _
   var workersTriggeredBreakpoint:Iterable[ActorRef] = _
   var layerCompletedCounter:mutable.HashMap[LayerTag,Int] = _
+  val timer = new Stopwatch()
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -91,6 +93,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           setWorkerState(sender,state)
           context.parent ! ReportState(PrincipalState.Running)
           context.become(running)
+          timer.start()
           unstashAll()
         case _ => //throw new AmberException("Invalid worker state received!")
       }
@@ -140,6 +143,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             sender ! Resume
           case WorkerState.Completed =>
             if (whenAllWorkersCompleted) {
+              timer.stop()
+              log.info(metadata.tag.toString+" completed! Time Elapsed: "+timer.toString())
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
               unstashAll()

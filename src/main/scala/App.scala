@@ -75,6 +75,7 @@ object App {
         akka.remote.artery.canonical.hostname = $localIpAddress
         akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2552" ]
         """).withFallback(ConfigFactory.load("clustered"))
+      Constants.masterNodeAddr = addr.toString
     }
     val system: ActorSystem = ActorSystem("Amber",config)
     val info = system.actorOf(Props[ClusterListener],"cluster-info")

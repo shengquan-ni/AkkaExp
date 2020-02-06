@@ -27,31 +27,49 @@ class ClusterListener extends Actor with ActorLogging  {
   def receive = {
     case MemberUp(member) =>
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
-        availableNodeAddresses.add(self.path.address)
+        if(Constants.masterNodeAddr != null){
+          availableNodeAddresses.add(self.path.address)
+          Constants.dataset += 10
+          Constants.defaultNumWorkers += 2
+        }
       }else{
-        availableNodeAddresses.add(member.address)
+        if(Constants.masterNodeAddr != member.address.host.get){
+          availableNodeAddresses.add(member.address)
+          Constants.dataset += 10
+          Constants.defaultNumWorkers += 2
+        }
       }
-      Constants.dataset += 10
-      Constants.defaultNumWorkers += 2
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
       println("dataset: "+Constants.dataset+" numWorkers: "+Constants.defaultNumWorkers)
     case UnreachableMember(member) =>
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
-        availableNodeAddresses.remove(self.path.address)
+        if(Constants.masterNodeAddr != null) {
+          availableNodeAddresses.remove(self.path.address)
+          Constants.dataset -= 10
+          Constants.defaultNumWorkers -= 2
+        }
       }else{
-        availableNodeAddresses.remove(member.address)
+        if(Constants.masterNodeAddr != member.address.host.get) {
+          availableNodeAddresses.remove(member.address)
+          Constants.dataset -= 10
+          Constants.defaultNumWorkers -= 2
+        }
       }
-      Constants.dataset -= 10
-      Constants.defaultNumWorkers -= 2
       log.info("Member detected as unreachable: {}", member)
     case MemberRemoved(member, previousStatus) =>
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
-        availableNodeAddresses.remove(self.path.address)
+        if(Constants.masterNodeAddr != null) {
+          availableNodeAddresses.remove(self.path.address)
+          Constants.dataset -= 10
+          Constants.defaultNumWorkers -= 2
+        }
       }else{
-        availableNodeAddresses.remove(member.address)
+        if(Constants.masterNodeAddr != member.address.host.get) {
+          availableNodeAddresses.remove(member.address)
+          Constants.dataset -= 10
+          Constants.defaultNumWorkers -= 2
+        }
       }
-      Constants.dataset -= 10
-      Constants.defaultNumWorkers -= 2
       log.info("Member is Removed: {} after {}",
         member.address, previousStatus)
     case _: MemberEvent => // ignore

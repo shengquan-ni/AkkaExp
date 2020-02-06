@@ -103,7 +103,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   var periodicallyAskHandle:Cancellable = _
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
   val timer = new Stopwatch()
-  val timer2 = new Stopwatch()
+  val pauseTimer = new Stopwatch()
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
@@ -290,7 +290,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       self ! Pause
       log.info(bp)
     case Pause =>
-      timer2.start()
+      pauseTimer.start()
       workflow.startOperators.foreach(principalBiMap.get(_) ! Pause)
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
       log.info("received pause signal")
@@ -340,10 +340,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           }
           unstashAll()
         }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)){
-          timer2.stop()
+          pauseTimer.stop()
           frontier.clear()
-          log.info("workflow paused! Time Elapsed: "+timer2.toString())
-          timer2.reset()
+          log.info("workflow paused! Time Elapsed: "+pauseTimer.toString())
+          pauseTimer.reset()
           saveRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
           context.become(paused)
