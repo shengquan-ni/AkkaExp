@@ -51,6 +51,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var workersTriggeredBreakpoint:Iterable[ActorRef] = _
   var layerCompletedCounter:mutable.HashMap[LayerTag,Int] = _
   val timer = new Stopwatch()
+  val stage1Timer = new Stopwatch()
+  val stage2Timer = new Stopwatch()
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -94,6 +96,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           context.parent ! ReportState(PrincipalState.Running)
           context.become(running)
           timer.start()
+          stage1Timer.start()
           unstashAll()
         case _ => //throw new AmberException("Invalid worker state received!")
       }
@@ -130,6 +133,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.become(collectingBreakpoints)
             }else{
               //no tau involved since we know a very small tau works best
+              stage1Timer.stop()
+              stage2Timer.start()
               unCompletedWorkers.foreach(worker => worker ! Pause)
               saveRemoveAskHandle()
               periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
@@ -175,7 +180,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case Resume => context.parent ! ReportState(PrincipalState.Running)
     case QueryState => sender ! ReportState(PrincipalState.Running)
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
@@ -219,7 +224,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         isUserPaused = true
       }
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
@@ -228,7 +233,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case EnforceStateCheck =>
       workersTriggeredBreakpoint.foreach(x => x ! QueryTriggeredBreakpoints)//query all
     case WorkerMessage.ReportState(state) =>
-      log.info("collecting: "+ sender +" to "+ state)
+      //log.info("collecting: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
           if(unCompletedWorkerStates.forall(_ == WorkerState.Paused)){
             //all breakpoint resolved, it's safe to report to controller and then Pause(on triggered, or user paused) else Resume
@@ -246,7 +251,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               log.info("no global breakpoint triggered, continue")
               self ! Resume
             }else{
-              log.info("user paused or global breakpoint triggered, pause")
+              stage2Timer.stop()
+              log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
+
             }
           }
       }
@@ -282,7 +289,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         isUserPaused = true
       }
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
@@ -299,7 +306,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case WorkerMessage.ReportState(state) =>
-      log.info("resuming: "+ sender +" to "+ state)
+      //log.info("resuming: "+ sender +" to "+ state)
       if(!allowedStatesOnResuming.contains(state)){
         sender ! Resume
       }else if(setWorkerState(sender,state)) {
@@ -322,7 +329,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
     case QueryState => sender ! ReportState(PrincipalState.Resuming)
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
@@ -385,7 +392,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       sender ! AckWithInformation(metadata)
     case QueryState => sender ! ReportState(PrincipalState.Uninitialized)
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
@@ -411,7 +418,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
     case QueryState => sender ! ReportState(PrincipalState.Initializing)
     case msg =>
-      log.info("stashing: "+ msg)
+      //log.info("stashing: "+ msg)
       stash()
   }
 
