@@ -103,7 +103,7 @@ object App {
         |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/20G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
          |{"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"},
          |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Sum"},
          |{"operatorID":"Sort","operatorType":"Sort","targetField":0},

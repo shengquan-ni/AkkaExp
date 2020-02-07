@@ -29,14 +29,14 @@ class ClusterListener extends Actor with ActorLogging  {
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null){
           availableNodeAddresses.add(self.path.address)
-          Constants.dataset += 10
-          Constants.defaultNumWorkers += 2
+          Constants.dataset += Constants.dataVolumePerNode
+          Constants.defaultNumWorkers += Constants.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get){
           availableNodeAddresses.add(member.address)
-          Constants.dataset += 10
-          Constants.defaultNumWorkers += 2
+          Constants.dataset += Constants.dataVolumePerNode
+          Constants.defaultNumWorkers += Constants.numWorkerPerNode
         }
       }
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
@@ -45,14 +45,14 @@ class ClusterListener extends Actor with ActorLogging  {
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null) {
           availableNodeAddresses.remove(self.path.address)
-          Constants.dataset -= 10
-          Constants.defaultNumWorkers -= 2
+          Constants.dataset -= Constants.dataVolumePerNode
+          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get) {
           availableNodeAddresses.remove(member.address)
-          Constants.dataset -= 10
-          Constants.defaultNumWorkers -= 2
+          Constants.dataset -= Constants.dataVolumePerNode
+          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
         }
       }
       log.info("Member detected as unreachable: {}", member)
@@ -60,14 +60,14 @@ class ClusterListener extends Actor with ActorLogging  {
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null) {
           availableNodeAddresses.remove(self.path.address)
-          Constants.dataset -= 10
-          Constants.defaultNumWorkers -= 2
+          Constants.dataset -= Constants.dataVolumePerNode
+          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get) {
           availableNodeAddresses.remove(member.address)
-          Constants.dataset -= 10
-          Constants.defaultNumWorkers -= 2
+          Constants.dataset -= Constants.dataVolumePerNode
+          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
         }
       }
       log.info("Member is Removed: {} after {}",

@@ -7,4 +7,7 @@ object Constants {
   var defaultNumWorkers = 0
   var dataset = 0
   var masterNodeAddr:String = null
+
+  var numWorkerPerNode = 1
+  var dataVolumePerNode = 10
 }
