@@ -44,7 +44,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         //FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         //FSDataInputStream stream = fs.open(new Path(hdfsPath));
         //stream.seek(startOffset);
-        URL url = new URL("http://35.185.246.62:9870/webhdfs/v1"+hdfsPath+"?op=OPEN&offset="+startOffset);
+        URL url = new URL("http://35.247.55.120:9870/webhdfs/v1"+hdfsPath+"?op=OPEN&offset="+startOffset);
         InputStream stream = url.openStream();
         reader = new BufferedBlockReader(stream,endOffset-startOffset,separator,indicesToKeep);
         if(startOffset > 0)
