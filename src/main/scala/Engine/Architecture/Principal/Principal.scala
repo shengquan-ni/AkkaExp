@@ -13,7 +13,7 @@ import Engine.Common.AmberMessage.ControllerMessage.ReportGlobalBreakpointTrigge
 import Engine.Common.AmberMessage.WorkerMessage
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
 import Engine.Common.AmberTag.{LayerTag, OperatorTag}
-import Engine.Common.{AdvancedMessageSending, AmberUtils, TableMetadata}
+import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
 import Engine.Operators.OperatorMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
 import akka.event.LoggingAdapter
@@ -39,7 +39,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
 
-  val tau:FiniteDuration = 1.second
+  val tau:FiniteDuration = Constants.defaultTau
   var workerLayers: Array[ActorLayer] = _
   var workerEdges: Array[LinkStrategy] = _
   var layerDependencies: mutable.HashMap[String,mutable.HashSet[String]] = _
