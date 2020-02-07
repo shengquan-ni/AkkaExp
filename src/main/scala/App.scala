@@ -144,6 +144,7 @@ object App {
  5. resume
  6. set conditional breakpoint
  7. set count breakpoint
+ 8. set tau
       """
 
       var current = 3
@@ -239,6 +240,8 @@ object App {
             } else {
               controller ! Resume
             }
+          case "set tau" =>
+            Constants.defaultTau = scala.io.StdIn.readInt().milliseconds
           case other =>
             println("wrong command!")
             println(demoUsage)

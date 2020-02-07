@@ -1,5 +1,6 @@
 package Engine.Common
 
+import scala.concurrent.duration._
 
 object Constants {
   val defaultBatchSize = 400
@@ -10,4 +11,5 @@ object Constants {
 
   var numWorkerPerNode = 1
   var dataVolumePerNode = 10
+  var defaultTau: FiniteDuration = 10.milliseconds
 }

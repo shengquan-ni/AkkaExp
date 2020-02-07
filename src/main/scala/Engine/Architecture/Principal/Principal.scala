@@ -137,7 +137,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                 stage1Timer.stop()
                 stage2Timer.start()
               }
-              unCompletedWorkers.foreach(worker => worker ! Pause)
+              context.system.scheduler.scheduleOnce(tau,() => unCompletedWorkers.foreach(worker => worker ! Pause))
               saveRemoveAskHandle()
               periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
               context.become(pausing)
