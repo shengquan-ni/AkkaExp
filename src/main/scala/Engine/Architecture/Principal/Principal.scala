@@ -133,8 +133,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.become(collectingBreakpoints)
             }else{
               //no tau involved since we know a very small tau works best
-              stage1Timer.stop()
-              stage2Timer.start()
+              if(!stage2Timer.isRunning){
+                stage1Timer.stop()
+                stage2Timer.start()
+              }
               unCompletedWorkers.foreach(worker => worker ! Pause)
               saveRemoveAskHandle()
               periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
