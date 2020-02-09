@@ -251,9 +251,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             unstashAll()
             if(!isUserPaused){
               log.info("no global breakpoint triggered, continue")
+              stage2Timer.stop()
+              stage1Timer.start()
               self ! Resume
             }else{
               stage2Timer.stop()
+              stage1Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
 
             }
