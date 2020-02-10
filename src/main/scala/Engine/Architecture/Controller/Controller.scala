@@ -291,8 +291,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       log.info(bp)
     case Pause =>
       pauseTimer.start()
-      workflow.startOperators.foreach(principalBiMap.get(_) ! Pause)
-      frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
+      workflow.operators.foreach(principalBiMap.get(_) ! Pause)
+      //workflow.startOperators.foreach(principalBiMap.get(_) ! Pause)
+      //frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
       log.info("received pause signal")
       saveRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
