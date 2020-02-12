@@ -22,4 +22,8 @@ object ControlMessage{
   final case class AckWithSequenceNumber(sequenceNumber: Long)
 
   final case class AckOfEndSending()
+
+  final case class StashOutput()
+
+  final case class ReleaseOutput()
 }

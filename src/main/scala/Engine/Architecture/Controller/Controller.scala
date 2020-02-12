@@ -99,6 +99,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
   val stashedFrontier = new mutable.HashSet[OperatorTag]
+  val stashedNodes = new mutable.HashSet[ActorRef]()
   val linksToIgnore = new mutable.HashSet[(OperatorTag,OperatorTag)]
   var periodicallyAskHandle:Cancellable = _
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
@@ -178,6 +179,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           stashedFrontier.clear()
         }else{
           log.info("fully initialized!")
+          for(i <- workflow.operators){
+            if(i._2.isInstanceOf[HDFSFileScanMetadata]){
+              val node = principalBiMap.get(i._1)
+              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
+              stashedNodes.add(node)
+            }
+          }
         }
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
@@ -268,6 +276,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       state match{
         case PrincipalState.Completed =>
           log.info(sender+" completed")
+          if(stashedNodes.contains(sender)){
+            AdvancedMessageSending.nonBlockingAskWithRetry(sender,ReleaseOutput,10,0)
+            stashedNodes.remove(sender)
+          }
           if(principalStates.values.forall(_ == PrincipalState.Completed)) {
             timer.stop()
             log.info("workflow completed! Time Elapsed: "+timer.toString())

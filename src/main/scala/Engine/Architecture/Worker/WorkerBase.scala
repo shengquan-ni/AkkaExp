@@ -2,8 +2,8 @@ package Engine.Architecture.Worker
 
 
 import Engine.Common.AmberException.AmberException
-import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, Pause, QueryState, RequireAck, Resume, Start}
-import Engine.Common.AmberMessage.WorkerMessage.{AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking, AckedWorkerInitialization}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, Pause, QueryState, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
 import akka.event.LoggingAdapter
@@ -68,6 +68,15 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   def onBreakpointTriggered(): Unit = {
     context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
+  }
+
+  final def allowStashOrReleaseOutput:Receive = {
+    case StashOutput =>
+      sender ! Ack
+      pauseDataTransfer()
+    case ReleaseOutput =>
+      sender ! Ack
+      resumeDataTransfer()
   }
 
   final def allowModifyBreakpoints:Receive = {

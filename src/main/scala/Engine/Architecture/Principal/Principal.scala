@@ -100,6 +100,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         case _ => //throw new AmberException("Invalid worker state received!")
       }
+    case StashOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
+    case ReleaseOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
     case GetInputLayer => sender ! workerLayers.head.clone()
     case GetOutputLayer => sender ! workerLayers.last.clone()
     case QueryState => sender ! ReportState(PrincipalState.Ready)
