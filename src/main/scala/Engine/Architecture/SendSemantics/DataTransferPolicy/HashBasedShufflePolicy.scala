@@ -37,7 +37,7 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
     }
   }
 
-  override def resume(): Unit = {
+  override def resume()(implicit sender:ActorRef): Unit = {
     for(i <- routees){
       i.resume()
     }

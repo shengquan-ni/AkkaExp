@@ -38,7 +38,7 @@ class OneToOnePolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
     routee.pause()
   }
 
-  override def resume(): Unit = {
+  override def resume()(implicit sender:ActorRef): Unit = {
     routee.resume()
   }
 

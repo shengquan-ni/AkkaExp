@@ -36,7 +36,7 @@ class RoundRobinPolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
     }
   }
 
-  override def resume(): Unit = {
+  override def resume()(implicit sender:ActorRef): Unit = {
     for(i <- routees){
       i.resume()
     }

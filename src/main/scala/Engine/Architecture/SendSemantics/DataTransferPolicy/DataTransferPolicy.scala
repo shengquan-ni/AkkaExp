@@ -18,7 +18,7 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
 
   def pause():Unit
 
-  def resume():Unit
+  def resume()(implicit sender:ActorRef):Unit
 
   def initialize(linkTag:LinkTag, next:Array[BaseRoutee])(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Unit = {
     this.tag = linkTag
