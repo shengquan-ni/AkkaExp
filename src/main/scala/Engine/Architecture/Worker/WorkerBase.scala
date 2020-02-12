@@ -165,6 +165,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   def ready:Receive =
+    allowStashOrReleaseOutput orElse
     allowUpdateOutputLinking orElse //update linking
     allowModifyBreakpoints orElse //modify break points
     disallowQueryBreakpoint orElse  //query specific breakpoint
@@ -181,6 +182,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   } orElse discardOthers
 
   def pausedBeforeStart:Receive =
+    allowStashOrReleaseOutput orElse
     allowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] {
@@ -203,6 +205,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
 
   def paused:Receive =
+    allowStashOrReleaseOutput orElse
     allowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] {
@@ -228,6 +231,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
 
   def running:Receive=
+    allowStashOrReleaseOutput orElse
     disallowUpdateOutputLinking orElse
     disallowModifyBreakpoints orElse
     disallowQueryBreakpoint orElse
@@ -254,6 +258,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
 
  def breakpointTriggered:Receive =
+   allowStashOrReleaseOutput orElse
    allowUpdateOutputLinking orElse
    allowQueryBreakpoint orElse
    allowQueryTriggeredBreakpoints orElse[Any, Unit] {
@@ -282,6 +287,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   } orElse stashOthers
 
   def completed:Receive=
+    allowStashOrReleaseOutput orElse
     disallowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     allowQueryBreakpoint orElse[Any, Unit] {
