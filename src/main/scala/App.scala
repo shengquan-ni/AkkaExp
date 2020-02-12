@@ -220,9 +220,9 @@ object App {
               controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Constants.dataset.toString)))
             }
             controller ! AckedControllerInitialization
-            if (countbp.isDefined && current == 2) {
-              controller ! PassBreakpointTo("Filter", new CountGlobalBreakpoint("CountBreakpoint", countbp.get))
-            }
+            //if (countbp.isDefined && current == 2) {
+            //  controller ! PassBreakpointTo("Filter", new CountGlobalBreakpoint("CountBreakpoint", countbp.get))
+            //}
             if (conditionalbp.isDefined) {
               controller ! PassBreakpointTo("KeywordSearch", new ConditionalGlobalBreakpoint("ConditionalBreakpoint", x => x.getString(15).contains(conditionalbp)))
             }
