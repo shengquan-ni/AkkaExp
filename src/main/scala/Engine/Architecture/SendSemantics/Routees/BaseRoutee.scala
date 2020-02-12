@@ -16,7 +16,7 @@ abstract class BaseRoutee(val receiver:ActorRef) extends Serializable {
 
   def pause()
 
-  def resume()
+  def resume()(implicit sender: ActorRef)
 
   def schedule(msg:EndSending)(implicit sender: ActorRef)
 

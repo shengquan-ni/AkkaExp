@@ -12,7 +12,7 @@ abstract class ActorRoutee(receiver: ActorRef) extends BaseRoutee(receiver) {
     senderActor ! Pause
   }
 
-  override def resume(): Unit = {
+  override def resume()(implicit sender: ActorRef): Unit = {
     senderActor ! Resume
   }
 

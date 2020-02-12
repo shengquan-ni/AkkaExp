@@ -23,7 +23,7 @@ trait DataTransferSupport extends BreakpointSupport {
     }
   }
 
-  def resumeDataTransfer():Unit = {
+  def resumeDataTransfer()(implicit sender:ActorRef):Unit = {
     var i = 0
     while (i < output.length) {
       output(i).resume()

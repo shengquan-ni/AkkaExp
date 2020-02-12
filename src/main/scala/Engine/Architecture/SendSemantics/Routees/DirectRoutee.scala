@@ -8,24 +8,42 @@ import akka.event.LoggingAdapter
 import akka.util.Timeout
 import akka.pattern.ask
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 
 class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
+  val stash = new ArrayBuffer[Any]
+  var isPaused = false
   override def schedule(msg: DataMessage)(implicit sender: ActorRef): Unit = {
-    receiver ! msg
+    if(isPaused){
+      stash.append(msg)
+    }else{
+      receiver ! msg
+    }
   }
 
   override def pause(): Unit = {
-
+    isPaused = true
   }
 
-  override def resume(): Unit = {
-
+  override def resume()(implicit sender: ActorRef): Unit = {
+    isPaused = false
+    for(i <- stash){
+      i match{
+        case d:DataMessage => receiver ! d
+        case e:EndSending => receiver ! e
+      }
+    }
+    stash.clear()
   }
 
   override def schedule(msg: EndSending)(implicit sender: ActorRef): Unit = {
-    receiver ! msg
+    if(isPaused){
+      stash.append(msg)
+    }else{
+      receiver ! msg
+    }
   }
 
   override def initialize(tag:LinkTag)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
