@@ -185,6 +185,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(metadata.tag,layer),10,0)
         }
       }
+    case StashOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
+    case ReleaseOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
     case Resume => context.parent ! ReportState(PrincipalState.Running)
     case QueryState => sender ! ReportState(PrincipalState.Running)
     case msg =>
@@ -367,6 +373,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
   final def completed:Receive={
+    case StashOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
+    case ReleaseOutput =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){
