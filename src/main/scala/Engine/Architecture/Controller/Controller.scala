@@ -180,7 +180,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         }else{
           log.info("fully initialized!")
           for(i <- workflow.operators){
-            if(i._2.isInstanceOf[HDFSFileScanMetadata]){
+            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
               val node = principalBiMap.get(i._1)
               AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
               stashedNodes.add(node)
