@@ -39,9 +39,9 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
     writer = new Array[BufferedWriter](numBuckets)
     for(i <- 0 until numBuckets){
       val file = new File("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp")
-      file.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
+      file.getParentFile.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
       file.createNewFile()
-      //writer(i) = new BufferedWriter(new FileWriter(file))
+      writer(i) = new BufferedWriter(new FileWriter(file))
     }
   }
 

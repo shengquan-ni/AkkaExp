@@ -183,22 +183,23 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     case PrincipalMessage.ReportState(state) =>
       assert(state == PrincipalState.Ready)
       principalStates(sender) = state
-      if(principalStates.size == workflow.operators.size && principalStates.values.forall(_ == PrincipalState.Ready)){
+      if(principalStates.values.forall(_ == PrincipalState.Ready)){
         frontier.clear()
-        if(stashedFrontier.nonEmpty) {
+        if(principalStates.size == workflow.operators.size){
+          log.info("fully initialized!")
+          //          for(i <- workflow.operators){
+          //            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
+          //              val node = principalBiMap.get(i._1)
+          //              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
+          //              stashedNodes.add(node)
+          //            }
+          //          }
+        }else{
           log.info("partially initialized!")
           frontier ++= stashedFrontier
           stashedFrontier.clear()
-        }else{
-          log.info("fully initialized!")
-//          for(i <- workflow.operators){
-//            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
-//              val node = principalBiMap.get(i._1)
-//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-//              stashedNodes.add(node)
-//            }
-//          }
         }
+
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         unstashAll()
