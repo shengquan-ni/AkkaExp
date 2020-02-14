@@ -94,7 +94,7 @@ object App {
 
       s"""{
         |"operators":[
-        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
         |"links":[
