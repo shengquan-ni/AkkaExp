@@ -389,6 +389,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final override def receive: Receive = {
     case AckedPrincipalInitialization(prev:Array[(OperatorMetadata,ActorLayer)]) =>
+      log.info("start initialization!")
       workerLayers = metadata.topology.layers
       workerEdges = metadata.topology.links
       val all = availableNodes
