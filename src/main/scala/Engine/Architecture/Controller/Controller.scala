@@ -3,7 +3,7 @@ package Engine.Architecture.Controller
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
+import Engine.Architecture.DeploySemantics.DeployStrategy.{OneOnEach, RoundRobinDeployment}
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
 import Engine.FaultTolerance.Materializer.{HashBasedMaterializer, OutputMaterializer}
@@ -122,10 +122,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     val numWorkers = topology.layers.last.numWorkers
     val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,path+"/"+i,'|',null)
     val lastLayer = topology.layers.last
-    val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),OneOnEach())
+    val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),RoundRobinDeployment())
     topology.layers :+= materializerLayer
     topology.links :+= new LocalPartialToOne(lastLayer,materializerLayer,Constants.defaultBatchSize)
-    val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,"from_checkpoint"),scanGen,topology.layers.last.numWorkers,FollowPrevious(),OneOnEach())
+    val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,"from_checkpoint"),scanGen,topology.layers.last.numWorkers,FollowPrevious(),RoundRobinDeployment())
     val firstLayer = to.topology.layers.head
     to.topology.layers +:= scanLayer
     to.topology.links +:= new HashBasedShuffle(scanLayer,firstLayer,Constants.defaultBatchSize,hashFunc)
