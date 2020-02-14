@@ -31,7 +31,10 @@ class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) ex
   }
 
   override def initialize(): Unit = {
-    writer = new BufferedWriter(new FileWriter(new File(outputPath)))
+    val file = new File(outputPath)
+    file.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
+    file.createNewFile()
+    writer = new BufferedWriter(new FileWriter(file))
   }
 
   override def hasNext: Boolean = false
