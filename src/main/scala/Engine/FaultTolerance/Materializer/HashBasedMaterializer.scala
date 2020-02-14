@@ -41,6 +41,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
       val file = new File("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp")
       file.getParentFile.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
       file.createNewFile()
+      println(file.exists())
       writer(i) = new BufferedWriter(new FileWriter(file))
     }
   }
