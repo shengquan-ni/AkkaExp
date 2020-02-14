@@ -6,8 +6,7 @@ import Engine.Common.TupleProcessor
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
-
-import java.io.{FileWriter,BufferedWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.net.URI
 
 class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tuple => Int, val numBuckets:Int, val remoteHDFS:String = null) extends TupleProcessor {
@@ -38,8 +37,9 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
 
   override def initialize(): Unit = {
     writer = new Array[BufferedWriter](numBuckets)
+
     for(i <- 0 until numBuckets){
-      writer(i) = new BufferedWriter(new FileWriter(outputPath+"/"+index+"/"+i+".tmp"))
+      writer(i) = new BufferedWriter(new FileWriter(new File(outputPath+"/"+index+"/"+i+".tmp")))
     }
   }
 

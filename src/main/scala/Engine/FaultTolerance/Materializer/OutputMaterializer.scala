@@ -6,8 +6,7 @@ import Engine.Common.TupleProcessor
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
-
-import java.io.{FileWriter,BufferedWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.net.URI
 
 class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) extends TupleProcessor {
@@ -32,7 +31,7 @@ class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) ex
   }
 
   override def initialize(): Unit = {
-    writer = new BufferedWriter(new FileWriter(outputPath))
+    writer = new BufferedWriter(new FileWriter(new File(outputPath)))
   }
 
   override def hasNext: Boolean = false
