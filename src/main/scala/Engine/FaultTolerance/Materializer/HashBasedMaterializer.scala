@@ -15,11 +15,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
 
   override def accept(tuple: Tuple): Unit = {
     val index = (hashFunc(tuple) % numBuckets + numBuckets) % numBuckets
-    try{
-      writer(index).write(tuple.mkString("|"))
-    }catch{
-      case e:Exception => println(index, writer.length)
-    }
+    writer(index).write(tuple.mkString("|"))
   }
 
   override def onUpstreamChanged(from: LayerTag): Unit = {
@@ -33,7 +29,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
     if(remoteHDFS != null){
       val fs = FileSystem.get(new URI(remoteHDFS),new Configuration())
       for(i <- 0 until numBuckets) {
-        fs.copyFromLocalFile(new Path(outputPath+"/"+index+"/"+i+".tmp"),new Path(outputPath+"/"+i+"/"+index+".tmp"))
+        fs.copyFromLocalFile(new Path("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp"),new Path("/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp"))
       }
       fs.close()
     }
