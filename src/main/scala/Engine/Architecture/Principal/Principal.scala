@@ -125,6 +125,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
   final def running:Receive = {
+    case e:Exception => e.printStackTrace()
     case WorkerMessage.ReportState(state) =>
       log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
