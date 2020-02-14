@@ -412,6 +412,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       context.become(initializing)
       unstashAll()
       sender ! AckWithInformation(metadata)
+      log.info("initialized!")
     case QueryState => sender ! ReportState(PrincipalState.Uninitialized)
     case msg =>
       //log.info("stashing: "+ msg)
