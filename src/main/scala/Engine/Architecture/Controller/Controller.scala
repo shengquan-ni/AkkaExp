@@ -143,17 +143,29 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     case AckedControllerInitialization =>
       val nodes = availableNodes
       log.info("start initialization --------cluster have "+nodes.length+" nodes---------")
+      val operatorsToWait = new mutable.HashSet[OperatorTag]
       for(k <- workflow.startOperators){
         val v = workflow.operators(k)
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
+        if(withCheckpoint && workflow.outLinks.contains(k)){
+          for(n <- workflow.outLinks(k)){
+            if(workflow.operators(n).requiredShuffle){
+              insertCheckpoint(workflow.operators(k),workflow.operators(n))
+              operatorsToWait.add(k)
+              linksToIgnore.add((k,n))
+            }
+          }
+        }
       }
       workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
         case other => throw new AmberException("principal didn't return updated metadata")
       } ))
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
+      stashedFrontier ++= operatorsToWait.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
+      frontier --= stashedFrontier
     case ContinuedInitialization =>
       log.info("continue initialization")
       val nodes = availableNodes
@@ -195,13 +207,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         frontier --= next
         val prevInfo = next.flatMap(workflow.inLinks(_).map(x => (workflow.operators(x),Await.result(principalBiMap.get(x)?GetOutputLayer,5.seconds).asInstanceOf[ActorLayer]))).toArray
         val nodes = availableNodes
-        val operatorsToWait = new ArrayBuffer[OperatorTag]
+        val operatorsToWait = new mutable.HashSet[OperatorTag]
         for(k <- next){
           if(withCheckpoint && workflow.outLinks.contains(k)){
             for(n <- workflow.outLinks(k)){
               if(workflow.operators(n).requiredShuffle){
                 insertCheckpoint(workflow.operators(k),workflow.operators(n))
-                operatorsToWait.append(k)
+                operatorsToWait.add(k)
                 linksToIgnore.add((k,n))
               }
             }
