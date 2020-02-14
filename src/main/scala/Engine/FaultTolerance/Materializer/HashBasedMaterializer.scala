@@ -37,10 +37,11 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
 
   override def initialize(): Unit = {
     writer = new Array[BufferedWriter](numBuckets)
-
+    println("????")
     for(i <- 0 until numBuckets){
       writer(i) = new BufferedWriter(new FileWriter(new File(outputPath+"/"+index+"/"+i+".tmp")))
     }
+    println("!!!!!!!!!")
   }
 
   override def hasNext: Boolean = false
