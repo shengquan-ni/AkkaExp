@@ -38,12 +38,10 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
   override def initialize(): Unit = {
     writer = new Array[BufferedWriter](numBuckets)
     for(i <- 0 until numBuckets){
-      val file = new File("/home/12198/1000"+i+".tmp")
+      val file = new File("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp")
       file.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
       file.createNewFile()
-      println("??")
-      writer(i) = new BufferedWriter(new FileWriter(file))
-      println("!!")
+      //writer(i) = new BufferedWriter(new FileWriter(file))
     }
   }
 
