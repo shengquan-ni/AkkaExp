@@ -51,9 +51,9 @@ object Controller{
 
   implicit def ord: Ordering[DateTime] = Ordering.by(_.getMillis)
 
-  def props(json:String): Props = Props(fromJsonString(json))
+  def props(json:String, withCheckpoint:Boolean = false): Props = Props(fromJsonString(json,withCheckpoint))
 
-  private def fromJsonString(jsonString:String):Controller ={
+  private def fromJsonString(jsonString:String, withCheckpoint:Boolean):Controller ={
     val json: JsValue = Json.parse(jsonString)
     val tag:WorkflowTag = WorkflowTag("sample")
     val linkArray:JsArray = (json \ "links").as[JsArray]
@@ -63,7 +63,7 @@ object Controller{
         .map { case (k,v) => (k,v.map(_._2).toSet)}
     val operatorArray:JsArray = (json \ "operators").as[JsArray]
     val operators:mutable.Map[OperatorTag,OperatorMetadata] = mutable.Map(operatorArray.value.map(x => (OperatorTag(tag,x("operatorID").as[String]),jsonToOperatorMetadata(tag,x))):_*)
-    new Controller(tag,new Workflow(operators,links))
+    new Controller(tag,new Workflow(operators,links),withCheckpoint)
 
   }
 
@@ -89,7 +89,7 @@ object Controller{
 
 
 
-class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:Boolean = false) extends Actor with ActorLogging with Stash {
+class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:Boolean) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
@@ -179,13 +179,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           stashedFrontier.clear()
         }else{
           log.info("fully initialized!")
-          for(i <- workflow.operators){
-            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
-              val node = principalBiMap.get(i._1)
-              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-              stashedNodes.add(node)
-            }
-          }
+//          for(i <- workflow.operators){
+//            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
+//              val node = principalBiMap.get(i._1)
+//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
+//              stashedNodes.add(node)
+//            }
+//          }
         }
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)

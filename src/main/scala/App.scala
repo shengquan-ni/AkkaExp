@@ -217,7 +217,7 @@ object App {
             if (current == 0) {
               controller = system.actorOf(Controller.props(workflows(current).replace("<arg1>", limit).replace("<arg2>", delay)))
             } else {
-              controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Constants.dataset.toString)))
+              controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Constants.dataset.toString),true))
             }
             controller ! AckedControllerInitialization
             //if (countbp.isDefined && current == 2) {
