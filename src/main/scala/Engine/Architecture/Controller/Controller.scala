@@ -8,7 +8,7 @@ import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
 import Engine.FaultTolerance.Materializer.{HashBasedMaterializer, OutputMaterializer}
 import Engine.FaultTolerance.Scanner.HDFSFolderScanTupleProducer
-import Engine.Architecture.LinkSemantics.{FullRoundRobin, HashBasedShuffle, LocalPartialToOne, OperatorLink}
+import Engine.Architecture.LinkSemantics.{FullRoundRobin, HashBasedShuffle, LocalOneToOne, LocalPartialToOne, OperatorLink}
 import Engine.Architecture.Principal.{Principal, PrincipalState}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControllerMessage._
@@ -124,11 +124,11 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     val lastLayer = topology.layers.last
     val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),RoundRobinDeployment())
     topology.layers :+= materializerLayer
-    topology.links :+= new LocalPartialToOne(lastLayer,materializerLayer,Constants.defaultBatchSize)
+    topology.links :+= new LocalOneToOne(lastLayer,materializerLayer,Constants.defaultBatchSize)
     val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,"from_checkpoint"),scanGen,topology.layers.last.numWorkers,FollowPrevious(),RoundRobinDeployment())
     val firstLayer = to.topology.layers.head
     to.topology.layers +:= scanLayer
-    to.topology.links +:= new HashBasedShuffle(scanLayer,firstLayer,Constants.defaultBatchSize,hashFunc)
+    to.topology.links +:= new LocalOneToOne(scanLayer,firstLayer,Constants.defaultBatchSize)
   }
 
 
