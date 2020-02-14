@@ -18,7 +18,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
     try{
       writer(index).write(tuple.mkString("|"))
     }catch{
-      case Exception => println(index, writer.length)
+      case e:Exception => println(index, writer.length)
     }
   }
 
