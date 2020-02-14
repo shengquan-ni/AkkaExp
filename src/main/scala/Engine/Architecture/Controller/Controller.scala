@@ -197,7 +197,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         val nodes = availableNodes
         val operatorsToWait = new ArrayBuffer[OperatorTag]
         for(k <- next){
-          if(withCheckpoint){
+          if(withCheckpoint && workflow.outLinks.contains(k)){
             for(n <- workflow.outLinks(k)){
               if(workflow.operators(n).requiredShuffle){
                 insertCheckpoint(workflow.operators(k),workflow.operators(n))
