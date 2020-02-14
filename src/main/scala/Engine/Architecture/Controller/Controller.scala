@@ -152,6 +152,17 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         if(withCheckpoint && workflow.outLinks.contains(k)){
           for(n <- workflow.outLinks(k)){
             if(workflow.operators(n).requiredShuffle){
+              val v = workflow.operators(n)
+              v.runtimeCheck(workflow) match {
+                case Some(dependencies) => dependencies.foreach { x =>
+                  if (startDependencies.contains(x._1)) {
+                    startDependencies(x._1) ++= x._2
+                  } else {
+                    startDependencies.put(x._1, x._2)
+                  }
+                }
+                case None =>
+              }
               insertCheckpoint(workflow.operators(k),workflow.operators(n))
               operatorsToWait.add(k)
               linksToIgnore.add((k,n))
