@@ -124,7 +124,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     val numWorkers = topology.originalLayers.last.numWorkers
     val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,path+"/"+i,'|',null)
     val lastLayer = topology.originalLayers.last
-    val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),RoundRobinDeployment())
+    val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers,Constants.remoteHDFSPath),numWorkers,FollowPrevious(),RoundRobinDeployment())
     topology.extraLayers :+= materializerLayer
     topology.links :+= new LocalOneToOne(lastLayer,materializerLayer,Constants.defaultBatchSize)
     val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,from.tag.operator),scanGen,topology.originalLayers.last.numWorkers,FollowPrevious(),RoundRobinDeployment())
@@ -163,7 +163,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               val topology = workflow.operators(n).topology
               val layerTag = LayerTag(n,"checkpoint")
               val layerTag2 = LayerTag(n,"from_checkpoint")
-              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
               topology.extraLayers :+= materializerLayer
               topology.links = Array()
               topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
@@ -191,9 +191,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       for(k <- frontier){
         val v = workflow.operators(k)
         if(v.tag.operator.contains("Join")){
-          println("Inner table: "+v.topology.layers(2).tag+" !!!")
-          v.asInstanceOf[HashJoinMetadata[String]].innerTableTag = v.topology.layers(2).tag
-          v.topology.dependencies(v.topology.layers(1).tag) = mutable.HashSet(v.topology.layers(2).tag)
+          println("Inner table: "+v.topology.layers(1).tag+" !!!")
+          v.asInstanceOf[HashJoinMetadata[String]].innerTableTag = v.topology.layers(1).tag
+          v.topology.dependencies(v.topology.layers(2).tag) = mutable.HashSet(v.topology.layers(1).tag)
         }
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
@@ -210,7 +210,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               val topology = workflow.operators(n).topology
               val layerTag = LayerTag(n,"checkpoint")
               val layerTag2 = LayerTag(n,"from_checkpoint")
-              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
               topology.extraLayers :+= materializerLayer
               topology.links = Array()
               topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
@@ -273,7 +273,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
                 val topology = workflow.operators(n).topology
                 val layerTag = LayerTag(n,"checkpoint")
                 val layerTag2 = LayerTag(n,"from_checkpoint")
-                val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+                val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
                 topology.extraLayers :+= materializerLayer
                 topology.links = Array()
                 topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
