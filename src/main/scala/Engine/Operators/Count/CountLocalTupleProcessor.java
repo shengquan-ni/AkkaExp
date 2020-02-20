@@ -28,6 +28,7 @@ public class CountLocalTupleProcessor implements TupleProcessor {
 
     @Override
     public void noMore() {
+
         nextFlag = true;
     }
 

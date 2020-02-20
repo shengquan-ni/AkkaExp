@@ -1,9 +1,13 @@
 package Engine.Common.AmberMessage
 
+import Engine.Common.AmberTag.LayerTag
+
 
 object ControlMessage{
 
   final case class Start()
+
+  final case class ReleaseDependency(layer: LayerTag)
 
   final case class Pause()
 

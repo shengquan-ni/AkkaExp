@@ -11,13 +11,14 @@ import Engine.FaultTolerance.Scanner.HDFSFolderScanTupleProducer
 import Engine.Architecture.LinkSemantics.{FullRoundRobin, HashBasedShuffle, LocalOneToOne, LocalPartialToOne, OperatorLink}
 import Engine.Architecture.Principal.{Principal, PrincipalState}
 import Engine.Common.AmberException.AmberException
+import Engine.Common.AmberField.FieldType
 import Engine.Common.AmberMessage.ControllerMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.PrincipalMessage
 import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, AssignBreakpoint, GetOutputLayer, ReportPrincipalPartialCompleted}
 import Engine.Common.AmberMessage.StateMessage.EnforceStateCheck
 import Engine.Common.AmberTag.{AmberTag, LayerTag, LinkTag, OperatorTag, WorkflowTag}
-import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TupleProducer}
+import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata, TupleMetadata, TupleProducer}
 import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
 import Engine.Operators.Count.CountMetadata
 import Engine.Operators.Filter.{FilterMetadata, FilterType}
@@ -105,6 +106,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
   val timer = new Stopwatch()
   val pauseTimer = new Stopwatch()
+  var currentStageStartOperators:Iterable[OperatorTag] = _
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
@@ -116,18 +118,18 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   private def insertCheckpoint(from:OperatorMetadata,to:OperatorMetadata): Unit ={
     //insert checkpoint barrier between 2 operators and delete the link between them
     val topology = from.topology
-    val hashFunc = to.getShuffleHashFunction(topology.layers.last.tag)
+    val hashFunc = to.getShuffleHashFunction(topology.originalLayers.last.tag)
     val layerTag = LayerTag(from.tag,"checkpoint")
     val path:String = layerTag.getGlobalIdentity
-    val numWorkers = topology.layers.last.numWorkers
+    val numWorkers = topology.originalLayers.last.numWorkers
     val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,path+"/"+i,'|',null)
-    val lastLayer = topology.layers.last
+    val lastLayer = topology.originalLayers.last
     val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),RoundRobinDeployment())
-    topology.layers :+= materializerLayer
+    topology.extraLayers :+= materializerLayer
     topology.links :+= new LocalOneToOne(lastLayer,materializerLayer,Constants.defaultBatchSize)
-    val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,"from_checkpoint"),scanGen,topology.layers.last.numWorkers,FollowPrevious(),RoundRobinDeployment())
-    val firstLayer = to.topology.layers.head
-    to.topology.layers +:= scanLayer
+    val scanLayer = new GeneratorWorkerLayer(LayerTag(to.tag,from.tag.operator),scanGen,topology.originalLayers.last.numWorkers,FollowPrevious(),RoundRobinDeployment())
+    val firstLayer = to.topology.originalLayers.head
+    to.topology.extraLayers +:= scanLayer
     to.topology.links +:= new LocalOneToOne(scanLayer,firstLayer,Constants.defaultBatchSize)
   }
 
@@ -157,6 +159,19 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               insertCheckpoint(workflow.operators(k),workflow.operators(n))
               operatorsToWait.add(k)
               linksToIgnore.add((k,n))
+            }else if(n.operator.contains("GroupBy")){
+              val topology = workflow.operators(n).topology
+              val layerTag = LayerTag(n,"checkpoint")
+              val layerTag2 = LayerTag(n,"from_checkpoint")
+              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              topology.extraLayers :+= materializerLayer
+              topology.links = Array()
+              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              topology.extraLayers :+= scanLayer
+              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
             }
           }
         }
@@ -165,28 +180,63 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
         case other => throw new AmberException("principal didn't return updated metadata")
       } ))
+      currentStageStartOperators = workflow.startOperators
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
       stashedFrontier ++= operatorsToWait.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
       frontier --= stashedFrontier
     case ContinuedInitialization =>
       log.info("continue initialization")
       val nodes = availableNodes
+      val operatorsToWait = new mutable.HashSet[OperatorTag]
       for(k <- frontier){
         val v = workflow.operators(k)
+        if(v.tag.operator.contains("Join")){
+          v.asInstanceOf[HashJoinMetadata[String]].innerTableTag = v.topology.layers(2).tag
+          v.topology.dependencies(v.topology.layers(1).tag) = mutable.HashSet(v.topology.layers(2).tag)
+        }
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
+        if(withCheckpoint && workflow.outLinks.contains(k)){
+          for(n <- workflow.outLinks(k)){
+            if(workflow.operators(n).requiredShuffle){
+              val v = workflow.operators(n)
+              v.runtimeCheck(workflow)
+              insertCheckpoint(workflow.operators(k),workflow.operators(n))
+              operatorsToWait.add(k)
+              linksToIgnore.add((k,n))
+            }else if(n.operator.contains("GroupBy")){
+              val topology = workflow.operators(n).topology
+              val layerTag = LayerTag(n,"checkpoint")
+              val layerTag2 = LayerTag(n,"from_checkpoint")
+              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              topology.extraLayers :+= materializerLayer
+              topology.links = Array()
+              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+              topology.extraLayers :+= scanLayer
+              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
+            }
+          }
+        }
       }
-      workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
+      frontier.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
         case other => throw new AmberException("principal didn't return updated metadata")
       } ))
-      frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
+      self ! Start
+      currentStageStartOperators = frontier.toArray.toIterable
+      val next = frontier.flatMap(workflow.outLinks(_))
+      frontier.clear()
+      frontier ++= next
+      stashedFrontier ++= operatorsToWait.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
+      frontier --= stashedFrontier
     case PrincipalMessage.ReportState(state) =>
       assert(state == PrincipalState.Ready)
       principalStates(sender) = state
-      if(principalStates.values.forall(_ == PrincipalState.Ready)){
-        frontier.clear()
+      if(frontier.isEmpty && allUnCompletedPrincipalStates.forall(_ == PrincipalState.Ready)){
         if(principalStates.size == workflow.operators.size){
           log.info("fully initialized!")
           //          for(i <- workflow.operators){
@@ -218,6 +268,19 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
                 insertCheckpoint(workflow.operators(k),workflow.operators(n))
                 operatorsToWait.add(k)
                 linksToIgnore.add((k,n))
+              }else if(n.operator.contains("GroupBy")){
+                val topology = workflow.operators(n).topology
+                val layerTag = LayerTag(n,"checkpoint")
+                val layerTag2 = LayerTag(n,"from_checkpoint")
+                val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+                topology.extraLayers :+= materializerLayer
+                topology.links = Array()
+                topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+                val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+                val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+                topology.extraLayers :+= scanLayer
+                topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+                topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
               }
             }
           }
@@ -259,7 +322,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     case Start =>
       log.info("received start signal")
       timer.start()
-      workflow.startOperators.foreach { x =>
+      currentStageStartOperators.foreach { x =>
         if(!startDependencies.contains(x))
           AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x), Start, 10, 0)
       }
@@ -336,7 +399,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             startDependencies(i) -= from
             if(startDependencies(i).isEmpty){
               startDependencies -= i
-              AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(i), Start, 10, 0)
+              AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(i), ReleaseDependency(layer), 10, 0)
             }
           }
         }

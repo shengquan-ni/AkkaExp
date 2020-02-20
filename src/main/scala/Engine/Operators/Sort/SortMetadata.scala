@@ -22,7 +22,7 @@ class SortMetadata[T : Ordering](tag:OperatorTag, val targetField:Int) extends O
       new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SortTupleProcessor[T](targetField), 1, ForceLocal(), RandomDeployment())
     ),
       Array(),
-      Map())
+      mutable.HashMap())
   }
 
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {

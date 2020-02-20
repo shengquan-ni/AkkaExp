@@ -76,6 +76,7 @@ class ControllerSpec
       |{"tableName":"D:\\test.txt","operatorID":"Scan1","operatorType":"LocalScanSource","delimiter":"|","indicesToKeep":null},
       |{"tableName":"D:\\test.txt","operatorID":"Scan2","operatorType":"LocalScanSource","delimiter":"|","indicesToKeep":null},
       |{"attributeName":15,"keyword":"package","operatorID":"KeywordSearch","operatorType":"KeywordMatcher"},
+      |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
       |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":0},
       |{"operatorID":"Count","operatorType":"Aggregation"},
       |{"operatorID":"Sink","operatorType":"Sink"}],
@@ -83,7 +84,8 @@ class ControllerSpec
       |{"origin":"Scan1","destination":"KeywordSearch"},
       |{"origin":"KeywordSearch","destination":"Join"},
       |{"origin":"Scan2","destination":"Join"},
-      |{"origin":"Join","destination":"Count"},
+      |{"origin":"Join","destination":"GroupBy"},
+      |{"origin":"GroupBy","destination":"Count"},
       |{"origin":"Count","destination":"Sink"}]
       |}""".stripMargin
 
@@ -283,11 +285,13 @@ class ControllerSpec
 
   "A controller" should "execute the workflow4 normally" in {
     val parent = TestProbe()
-    val controller = parent.childActorOf(Controller.props(logicalPlan4))
+    val controller = parent.childActorOf(Controller.props(logicalPlan4,false))
     controller ! AckedControllerInitialization
     parent.expectMsg(ReportState(ControllerState.Ready))
     controller ! Start
     parent.expectMsg(ReportState(ControllerState.Running))
+    //parent.expectMsg(20.seconds, ReportState(ControllerState.Ready))
+    //parent.expectMsg(20.seconds,ReportState(ControllerState.Running))
     parent.expectMsg(1.minute, ReportState(ControllerState.Completed))
     parent.ref ! PoisonPill
   }

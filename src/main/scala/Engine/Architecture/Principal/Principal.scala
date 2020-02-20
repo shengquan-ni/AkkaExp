@@ -2,7 +2,7 @@ package Engine.Architecture.Principal
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.DeploySemantics.Layer.ActorLayer
+import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer}
 import Engine.Architecture.LinkSemantics.LinkStrategy
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberException.AmberException
@@ -44,6 +44,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var workerEdges: Array[LinkStrategy] = _
   var layerDependencies: mutable.HashMap[String,mutable.HashSet[String]] = _
   var workerStateMap: mutable.AnyRefMap[ActorRef,WorkerState.Value] = _
+  var startedLayers:mutable.HashSet[LayerTag] = new mutable.HashSet[LayerTag]
   var layerMetadata:Array[TableMetadata] = _
   var isUserPaused = false
   var globalBreakpoints = new mutable.AnyRefMap[String,GlobalBreakpoint]
@@ -53,6 +54,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val timer = new Stopwatch()
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
+  val layerWorkerMap = new mutable.HashMap[LayerTag,mutable.HashSet[ActorRef]]
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -88,7 +90,26 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   final def ready:Receive = {
     case Start =>
       sender ! Ack
-      allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
+      metadata.topology.layers.filter(x => !metadata.topology.dependencies.contains(x.tag))
+        .foreach(layer => {
+          startedLayers.add(layer.tag)
+          layer.layer.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
+        })
+    case ReleaseDependency(layer) =>
+      sender ! Ack
+      metadata.topology.dependencies.foreach(dep => {
+        if(dep._2.contains(layer)){
+          dep._2.remove(layer)
+          if(dep._2.isEmpty){
+            metadata.topology.dependencies.remove(dep._1)
+          }
+        }
+      })
+      metadata.topology.layers.filter(x => !metadata.topology.dependencies.contains(x.tag) && !startedLayers.contains(x.tag))
+        .foreach(layer =>{
+          startedLayers.add(layer.tag)
+          layer.layer.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
+        })
     case WorkerMessage.ReportState(state) =>
       state match{
         case WorkerState.Running =>
@@ -106,8 +127,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case ReleaseOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
-    case GetInputLayer => sender ! workerLayers.head.clone()
-    case GetOutputLayer => sender ! workerLayers.last.clone()
+    case GetInputLayer =>
+      sender ! workerLayers.filter(x => x.tag == metadata.topology.originalLayers.head.tag)(0).clone()
+    case GetOutputLayer =>
+      sender ! workerLayers.filter(x => x.tag == metadata.topology.originalLayers.last.tag)(0).clone()
     case QueryState => sender ! ReportState(PrincipalState.Ready)
     case Resume => context.parent ! ReportState(PrincipalState.Ready)
     case AssignBreakpoint(breakpoint) =>
@@ -126,6 +149,21 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def running:Receive = {
     case e:Exception => e.printStackTrace()
+    case ReleaseDependency(layer) =>
+      sender ! Ack
+      metadata.topology.dependencies.foreach(dep => {
+        if(dep._2.contains(layer)){
+          dep._2.remove(layer)
+          if(dep._2.isEmpty){
+            metadata.topology.dependencies.remove(dep._1)
+          }
+        }
+      })
+      metadata.topology.layers.filter(x => !metadata.topology.dependencies.contains(x.tag) && !startedLayers.contains(x.tag))
+        .foreach(layer =>{
+          startedLayers.add(layer.tag)
+          layer.layer.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
+        })
     case WorkerMessage.ReportState(state) =>
       log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
@@ -156,6 +194,27 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             //try to resume it
             sender ! Resume
           case WorkerState.Completed =>
+            for(i <- layerWorkerMap){
+              if(i._2.contains(sender)){
+                i._2.remove(sender)
+                if(i._2.isEmpty){
+                  layerWorkerMap.remove(i._1)
+                  metadata.topology.dependencies.foreach(dep => {
+                    if(dep._2.contains(i._1)){
+                      dep._2.remove(i._1)
+                      if(dep._2.isEmpty){
+                        metadata.topology.dependencies.remove(dep._1)
+                      }
+                    }
+                  })
+                }
+              }
+            }
+            metadata.topology.layers.filter(x => x.isInstanceOf[GeneratorWorkerLayer] && !metadata.topology.dependencies.contains(x.tag) && !startedLayers.contains(x.tag))
+              .foreach(layer =>{
+                startedLayers.add(layer.tag)
+                layer.layer.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
+              })
             if (whenAllWorkersCompleted) {
               timer.stop()
               log.info(metadata.tag.toString+" completed! Time Elapsed: "+timer.toString())
@@ -394,15 +453,21 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       workerLayers = metadata.topology.layers
       workerEdges = metadata.topology.links
       val all = availableNodes
-      if(workerEdges.isEmpty){
-        workerLayers.foreach(x => x.build(prev,all))
+      if(workerEdges.isEmpty || metadata.tag.operator.contains("GroupBy")){
+        workerLayers.foreach(x => {
+          log.info("building "+x.tag)
+          x.build(prev,all)
+        })
       }else{
         val inLinks: Map[ActorLayer, Set[ActorLayer]] = workerEdges.groupBy(x => x.to).map(x=> (x._1,x._2.map(_.from).toSet))
         var currentLayer:Iterable[ActorLayer] = workerEdges.filter(x => workerEdges.forall(_.to != x.from)).map(_.from)
         currentLayer.foreach(x => x.build(prev,all))
         currentLayer = inLinks.filter(x => x._2.forall(_.isBuilt)).keys
         while(currentLayer.nonEmpty){
-          currentLayer.foreach(x => x.build(inLinks(x).map(y =>(null,y)).toArray,all))
+          currentLayer.foreach(x => {
+            log.info("building "+x.tag)
+            x.build(inLinks(x).map(y =>(null,y)).toArray,all)
+          })
           currentLayer = inLinks.filter(x => !x._1.isBuilt && x._2.forall(_.isBuilt)).keys
         }
       }
@@ -434,6 +499,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
          sender ! AckedWorkerInitialization
       }else if(setWorkerState(sender,state)){
         if(whenAllUncompletedWorkersBecome(WorkerState.Ready)){
+          for(i <- metadata.topology.layers){
+            layerWorkerMap(i.tag)= mutable.HashSet(i.layer.toSeq:_*)
+          }
           saveRemoveAskHandle()
           workerEdges.foreach(x => x.link())
           context.parent ! ReportState(PrincipalState.Ready)

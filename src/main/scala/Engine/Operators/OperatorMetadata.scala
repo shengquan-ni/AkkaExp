@@ -16,8 +16,10 @@ import scala.concurrent.ExecutionContext
 
 abstract class OperatorMetadata(val tag: OperatorTag) extends Serializable {
 
-  class Topology(var layers:Array[ActorLayer],var links: Array[LinkStrategy],var dependencies:Map[LayerTag,Set[LayerTag]]) extends Serializable {
+  class Topology(val originalLayers:Array[ActorLayer],var links: Array[LinkStrategy],var dependencies:mutable.HashMap[LayerTag,mutable.HashSet[LayerTag]]) extends Serializable {
     assert(!dependencies.exists(x => x._2.contains(x._1)))
+    var extraLayers:Array[ActorLayer] = Array()
+    def layers: Array[ActorLayer] = originalLayers ++ extraLayers
   }
 
   lazy val topology:Topology = null

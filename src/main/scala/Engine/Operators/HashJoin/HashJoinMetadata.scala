@@ -29,7 +29,7 @@ class HashJoinMetadata[K](tag:OperatorTag, val numWorkers:Int, val innerTableInd
         numWorkers,
         UseAll(),
         RoundRobinDeployment())
-    ),Array(),Map())
+    ),Array(),mutable.HashMap())
   }
 
   override def requiredShuffle: Boolean = true

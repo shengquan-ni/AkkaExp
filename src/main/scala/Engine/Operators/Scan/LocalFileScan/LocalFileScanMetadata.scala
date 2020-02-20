@@ -33,7 +33,7 @@ class LocalFileScanMetadata(tag:OperatorTag, numWorkers:Int, filePath:String, de
       UseAll(), // it's source operator
       RoundRobinDeployment())),
       Array(),
-      Map())
+      mutable.HashMap())
   }
 
 

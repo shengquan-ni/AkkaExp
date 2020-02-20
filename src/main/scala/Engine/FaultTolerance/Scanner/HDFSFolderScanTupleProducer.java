@@ -11,9 +11,14 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Objects;
 
 public class HDFSFolderScanTupleProducer implements TupleProducer{
 
@@ -23,6 +28,7 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
     private TableMetadata metadata;
     private BufferedBlockReader reader = null;
     private RemoteIterator<LocatedFileStatus> files = null;
+    //private Iterator<String> files;
     private FileSystem fs = null;
 
     public HDFSFolderScanTupleProducer(String host, String hdfsPath, char delimiter, TableMetadata metadata){
@@ -37,6 +43,9 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
             Path current = files.next().getPath();
             long endOffset = fs.getFileStatus(current).getLen();
             InputStream stream = fs.open(current);
+//            String fileName = "D:\\"+hdfsPath.substring(0, hdfsPath.indexOf('/'))+"\\0\\"+files.next();
+//            long endOffset = new File(fileName).length();
+//            InputStream stream = new FileInputStream(fileName);
             reader = new BufferedBlockReader(stream,endOffset,separator,null);
         }
     }
@@ -44,12 +53,18 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
     @Override
     public void initialize() throws Exception {
         fs = FileSystem.get(new URI(host),new Configuration());
-        files = fs.listFiles(new Path(hdfsPath),true);
-        ReadNextFileIfExists();
+//        files = fs.listFiles(new Path(hdfsPath),true);
+//        files = Arrays.asList(Objects.requireNonNull(new File("D:\\"+hdfsPath.substring(0, hdfsPath.indexOf('/'))+"\\0").list())).iterator();
+//        ReadNextFileIfExists();
     }
 
     @Override
     public boolean hasNext() throws IOException {
+        if(files == null){
+        files = fs.listFiles(new Path("/amber-akka-tmp/"+hdfsPath),true);
+            //files = Arrays.asList(Objects.requireNonNull(new File("D:\\"+hdfsPath.substring(0, hdfsPath.indexOf('/'))+"\\0").list())).iterator();
+            ReadNextFileIfExists();
+        }
         if(reader == null){
             ReadNextFileIfExists();
         }
@@ -58,10 +73,14 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
 
     @Override
     public Tuple next() throws Exception {
+        String[] res = reader.readLine();
+        if(res == null){
+            return null;
+        }
         if(metadata != null) {
-            return Tuple.fromJavaStringArray(reader.readLine(), metadata.tupleMetadata().fieldTypes());
+            return Tuple.fromJavaStringArray(res, metadata.tupleMetadata().fieldTypes());
         }else{
-            return Tuple.fromJavaArray(reader.readLine());
+            return Tuple.fromJavaArray(res);
         }
     }
 

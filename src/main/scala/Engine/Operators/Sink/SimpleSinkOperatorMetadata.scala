@@ -20,7 +20,7 @@ class SimpleSinkOperatorMetadata(tag:OperatorTag) extends OperatorMetadata(tag) 
       new ProcessorWorkerLayer(LayerTag(tag, "main"), _ => new SimpleSinkProcessor(), 1, ForceLocal(), RandomDeployment())
     ),
       Array(),
-      Map())
+      mutable.HashMap())
   }
 
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {

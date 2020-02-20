@@ -14,7 +14,7 @@ class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) ex
   var writer:BufferedWriter = _
 
   override def accept(tuple: Tuple): Unit = {
-    writer.write(tuple.mkString("|"))
+    writer.write(tuple.mkString("","|","\n"))
   }
 
   override def onUpstreamChanged(from: LayerTag): Unit = {

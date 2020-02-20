@@ -15,7 +15,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
 
   override def accept(tuple: Tuple): Unit = {
     val index = (hashFunc(tuple) % numBuckets + numBuckets) % numBuckets
-    writer(index).write(tuple.mkString("|"))
+    writer(index).write(tuple.mkString("","|","\n"))
   }
 
   override def onUpstreamChanged(from: LayerTag): Unit = {
@@ -39,6 +39,7 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
     writer = new Array[BufferedWriter](numBuckets)
     for(i <- 0 until numBuckets){
       val file = new File("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp")
+      //val file = new File("D:\\"+outputPath+"\\"+0+"\\"+0+".tmp")
       file.getParentFile.mkdirs() // If the directory containing the file and/or its parent(s) does not exist
       file.createNewFile()
       writer(i) = new BufferedWriter(new FileWriter(file))

@@ -31,13 +31,13 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     @SuppressWarnings("unchecked")
     @Override
     public void accept(Tuple tuple) {
-        if(isCurrentTableInner){
-            K key = (K)tuple.get(innerTableIndex);
-            if(!innerTableHashMap.containsKey(key)) {
-                innerTableHashMap.put(key,new ArrayList<>());
+        if(isCurrentTableInner) {
+            K key = (K) tuple.get(innerTableIndex);
+            if (!innerTableHashMap.containsKey(key)) {
+                innerTableHashMap.put(key, new ArrayList<>());
             }
-            innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
-        }else{
+            innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(), innerTableIndex));
+        } else{
             if(!isInnerTableFinished) {
                 throw new AssertionError();
             }else{
@@ -62,7 +62,6 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public void noMore() {
-
     }
 
     @Override

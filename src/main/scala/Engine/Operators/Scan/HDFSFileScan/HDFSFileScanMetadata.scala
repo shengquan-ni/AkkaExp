@@ -36,7 +36,7 @@ class HDFSFileScanMetadata (tag:OperatorTag, numWorkers:Int, val host:String, fi
       UseAll(), // it's source operator
       RoundRobinDeployment())),
       Array(),
-      Map())
+      mutable.HashMap())
   }
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     breakpoint.partition(topology(0).layer.filter(states(_)!= WorkerState.Completed))

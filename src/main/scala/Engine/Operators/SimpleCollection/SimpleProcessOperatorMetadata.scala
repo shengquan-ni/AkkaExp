@@ -19,7 +19,7 @@ class SimpleProcessOperatorMetadata(tag:OperatorTag, numWorkers:Int) extends Ope
   override lazy val topology: Topology = {
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new SimpleTupleProcessor(),numWorkers,FollowPrevious(),RandomDeployment())
-    ),Array(),Map())
+    ),Array(),mutable.HashMap())
   }
 
   override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
