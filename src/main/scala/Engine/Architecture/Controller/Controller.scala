@@ -191,6 +191,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       for(k <- frontier){
         val v = workflow.operators(k)
         if(v.tag.operator.contains("Join")){
+          println("Inner table: "+v.topology.layers(2).tag+" !!!")
           v.asInstanceOf[HashJoinMetadata[String]].innerTableTag = v.topology.layers(2).tag
           v.topology.dependencies(v.topology.layers(1).tag) = mutable.HashSet(v.topology.layers(2).tag)
         }
