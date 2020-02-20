@@ -28,8 +28,11 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
     }
     if(remoteHDFS != null){
       val fs = FileSystem.get(new URI(remoteHDFS),new Configuration())
+      fs.setReplication(new Path("/amber-akka-tmp/"),2)
       for(i <- 0 until numBuckets) {
+        println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
         fs.copyFromLocalFile(new Path("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp"),new Path("/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp"))
+        println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
       }
       fs.close()
     }
