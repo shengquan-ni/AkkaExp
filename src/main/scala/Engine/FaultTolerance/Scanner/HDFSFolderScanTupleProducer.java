@@ -62,7 +62,11 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
     public boolean hasNext() throws IOException {
         if(files == null){
             System.out.println("open file system = "+"/amber-akka-tmp/"+hdfsPath);
-        files = fs.listFiles(new Path("/amber-akka-tmp/"+hdfsPath),true);
+            try{
+                files = fs.listFiles(new Path("/amber-akka-tmp/"+hdfsPath),true);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
             //files = Arrays.asList(Objects.requireNonNull(new File("D:\\"+hdfsPath.substring(0, hdfsPath.indexOf('/'))+"\\0").list())).iterator();
             System.out.println("get file");
             ReadNextFileIfExists();
