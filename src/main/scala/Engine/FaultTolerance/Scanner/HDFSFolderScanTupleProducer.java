@@ -74,7 +74,7 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
             ReadNextFileIfExists();
             System.out.println("got file");
         }
-        if(reader == null){
+        if(reader == null || !reader.hasNext()){
             ReadNextFileIfExists();
         }
         return reader != null && reader.hasNext();
