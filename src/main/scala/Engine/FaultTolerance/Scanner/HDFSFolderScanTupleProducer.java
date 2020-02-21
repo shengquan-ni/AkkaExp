@@ -52,7 +52,6 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
 
     @Override
     public void initialize() throws Exception {
-        fs = FileSystem.get(new URI(host),new Configuration());
 //        files = fs.listFiles(new Path(hdfsPath),true);
 //        files = Arrays.asList(Objects.requireNonNull(new File("D:\\"+hdfsPath.substring(0, hdfsPath.indexOf('/'))+"\\0").list())).iterator();
 //        ReadNextFileIfExists();
@@ -63,6 +62,7 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
         if(files == null){
             System.out.println("open file system = "+"/amber-akka-tmp/"+hdfsPath);
             try{
+                fs = FileSystem.get(new URI(host),new Configuration());
                 files = fs.listFiles(new Path("/amber-akka-tmp/"+hdfsPath),true);
             }catch(Exception e){
                 e.printStackTrace();
