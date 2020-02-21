@@ -360,11 +360,11 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             stashedNodes.remove(sender)
           }
           if(principalStates.values.forall(_ == PrincipalState.Completed)) {
-            timer.stop()
-            log.info("workflow completed! Time Elapsed: "+timer.toString())
-            timer.reset()
             saveRemoveAskHandle()
             if(frontier.isEmpty){
+              timer.stop()
+              log.info("workflow completed! Time Elapsed: "+timer.toString())
+              timer.reset()
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
               self ! PoisonPill
