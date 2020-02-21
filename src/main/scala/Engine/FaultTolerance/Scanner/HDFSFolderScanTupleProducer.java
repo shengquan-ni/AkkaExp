@@ -62,7 +62,9 @@ public class HDFSFolderScanTupleProducer implements TupleProducer{
         if(files == null){
             System.out.println("open file system = "+"/amber-akka-tmp/"+hdfsPath);
             try{
-                fs = FileSystem.get(new URI(host),new Configuration());
+                Configuration conf = new Configuration();
+                conf.setBoolean("fs.hdfs.impl.disable.cache", true);
+                fs = FileSystem.get(new URI(host),conf);
                 files = fs.listFiles(new Path("/amber-akka-tmp/"+hdfsPath),true);
             }catch(Exception e){
                 e.printStackTrace();
