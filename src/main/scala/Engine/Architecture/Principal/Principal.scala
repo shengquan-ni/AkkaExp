@@ -165,7 +165,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           layer.layer.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
         })
     case WorkerMessage.ReportState(state) =>
-      log.info("running: "+ sender +" to "+ state)
+      //log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
         state match {
           case WorkerState.LocalBreakpointTriggered =>
