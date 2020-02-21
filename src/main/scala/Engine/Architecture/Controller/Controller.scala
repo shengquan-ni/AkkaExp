@@ -160,18 +160,18 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               operatorsToWait.add(k)
               linksToIgnore.add((k,n))
             }else if(n.operator.contains("GroupBy")){
-              val topology = workflow.operators(n).topology
-              val layerTag = LayerTag(n,"checkpoint")
-              val layerTag2 = LayerTag(n,"from_checkpoint")
-              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-              topology.extraLayers :+= materializerLayer
-              topology.links = Array()
-              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
-              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
-              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-              topology.extraLayers :+= scanLayer
-              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
-              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
+//              val topology = workflow.operators(n).topology
+//              val layerTag = LayerTag(n,"checkpoint")
+//              val layerTag2 = LayerTag(n,"from_checkpoint")
+//              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//              topology.extraLayers :+= materializerLayer
+//              topology.links = Array()
+//              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+//              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+//              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//              topology.extraLayers :+= scanLayer
+//              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+//              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
             }
           }
         }
@@ -207,18 +207,18 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               operatorsToWait.add(k)
               linksToIgnore.add((k,n))
             }else if(n.operator.contains("GroupBy")){
-              val topology = workflow.operators(n).topology
-              val layerTag = LayerTag(n,"checkpoint")
-              val layerTag2 = LayerTag(n,"from_checkpoint")
-              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-              topology.extraLayers :+= materializerLayer
-              topology.links = Array()
-              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
-              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
-              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-              topology.extraLayers :+= scanLayer
-              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
-              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
+//              val topology = workflow.operators(n).topology
+//              val layerTag = LayerTag(n,"checkpoint")
+//              val layerTag2 = LayerTag(n,"from_checkpoint")
+//              val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//              topology.extraLayers :+= materializerLayer
+//              topology.links = Array()
+//              topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+//              val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+//              val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//              topology.extraLayers :+= scanLayer
+//              topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+//              topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
             }
           }
         }
@@ -270,18 +270,18 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
                 operatorsToWait.add(k)
                 linksToIgnore.add((k,n))
               }else if(n.operator.contains("GroupBy")){
-                val topology = workflow.operators(n).topology
-                val layerTag = LayerTag(n,"checkpoint")
-                val layerTag2 = LayerTag(n,"from_checkpoint")
-                val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-                topology.extraLayers :+= materializerLayer
-                topology.links = Array()
-                topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
-                val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
-                val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
-                topology.extraLayers :+= scanLayer
-                topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
-                topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
+//                val topology = workflow.operators(n).topology
+//                val layerTag = LayerTag(n,"checkpoint")
+//                val layerTag2 = LayerTag(n,"from_checkpoint")
+//                val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(n.getGlobalIdentity,i,x => x.get(0).hashCode(),Constants.defaultNumWorkers,Constants.remoteHDFSPath),Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//                topology.extraLayers :+= materializerLayer
+//                topology.links = Array()
+//                topology.links :+= new LocalOneToOne(topology.originalLayers(0),materializerLayer,Constants.defaultBatchSize)
+//                val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,n.getGlobalIdentity+"/"+i,'|',new TableMetadata("scan",new TupleMetadata(Array(FieldType.String,FieldType.Double))))
+//                val scanLayer = new GeneratorWorkerLayer(layerTag2,scanGen,Constants.defaultNumWorkers,FollowPrevious(),RoundRobinDeployment())
+//                topology.extraLayers :+= scanLayer
+//                topology.links :+= new LocalOneToOne(scanLayer,topology.originalLayers(1),Constants.defaultBatchSize)
+//                topology.dependencies(layerTag2) = mutable.HashSet(layerTag)
               }
             }
           }
