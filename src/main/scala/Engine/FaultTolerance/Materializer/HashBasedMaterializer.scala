@@ -35,7 +35,6 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
           //Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
           println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
         }
-        fs.close()
       }catch{
         case e:Exception =>
           println(e)
