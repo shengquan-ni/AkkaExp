@@ -237,14 +237,14 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       unstashAll()
     case ReportWorkerPartialCompleted(worker,layer) =>
       sender ! Ack
-      AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(worker,layer),10,0)
-      if(layerCompletedCounter.contains(layer)){
-        layerCompletedCounter(layer) -= 1
-        if(layerCompletedCounter(layer) == 0){
-          layerCompletedCounter -= layer
-          AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(metadata.tag,layer),10,0)
-        }
-      }
+//      AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(worker,layer),10,0)
+//      if(layerCompletedCounter.contains(layer)){
+//        layerCompletedCounter(layer) -= 1
+//        if(layerCompletedCounter(layer) == 0){
+//          layerCompletedCounter -= layer
+//          AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(metadata.tag,layer),10,0)
+//        }
+//      }
     case StashOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
