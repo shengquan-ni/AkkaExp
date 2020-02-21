@@ -322,7 +322,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   private[this] def ready:Receive ={
     case Start =>
       log.info("received start signal")
-      timer.start()
+      if(!timer.isRunning) {
+        timer.start()
+      }
       currentStageStartOperators.foreach { x =>
         if(!startDependencies.contains(x))
           AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x), Start, 10, 0)
