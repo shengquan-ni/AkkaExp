@@ -27,22 +27,27 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
       writer(i).close()
     }
     if(remoteHDFS != null){
-      try{
-        val fs = FileSystem.get(new URI(remoteHDFS),new Configuration())
-        for(i <- 0 until numBuckets) {
-          println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-          fs.copyFromLocalFile(new Path("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp"),new Path("/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp"))
-          //Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-          println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-        }
-      }catch{
-        case e:Exception =>
-          println(e)
-          for(i <- 0 until numBuckets) {
-            println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-            Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-            println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
-          }
+//      try{
+//        val fs = FileSystem.get(new URI(remoteHDFS),new Configuration())
+//        for(i <- 0 until numBuckets) {
+//          println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//          fs.copyFromLocalFile(new Path("/home/12198/"+outputPath+"/"+index+"/"+i+".tmp"),new Path("/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp"))
+//          //Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//          println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//        }
+//      }catch{
+//        case e:Exception =>
+//          println(e)
+//          for(i <- 0 until numBuckets) {
+//            println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//            Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//            println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+//          }
+//      }
+      for(i <- 0 until numBuckets) {
+        println("start to write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+        Runtime.getRuntime.exec("hadoop fs -cp file://"+"home/12198/"+outputPath+"/"+index+"/"+i+".tmp"+" hdfs://10.138.0.2:8020"+"/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
+        println("finished write "+ "/amber-akka-tmp/"+outputPath+"/"+i+"/"+index+".tmp")
       }
     }
   }
