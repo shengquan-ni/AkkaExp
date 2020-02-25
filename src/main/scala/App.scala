@@ -151,7 +151,7 @@ object App {
          |{"origin":"GroupBy1","destination":"GroupBy2"},
          |{"origin":"GroupBy2","destination":"Sort"},
          |{"origin":"Sort","destination":"Sink"}]
-         |}""".stripMargin，
+         |}""".stripMargin
 
     )
     if(!options.contains('mainNodeAddr)) {
