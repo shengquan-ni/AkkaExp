@@ -4,6 +4,7 @@ package Engine.Architecture.SendSemantics.Routees
 import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, RequireAck, Resume}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
+import akka.cluster.Gossip.Timestamp
 import akka.util.Timeout
 
 import scala.collection.mutable
@@ -19,7 +20,7 @@ object FlowControlSenderActor{
   final val sendingTimeout:FiniteDuration = 30.seconds
 //  final val activateBackPressureThreshold = 512
 //  final val deactivateBackPressureThreshold = 32
-  final val logicalTimeGap = 16
+  final val timeGap = 5000000000L
   final case class EndSendingTimedOut()
   final case class MessageTimedOut(seq:Long)
 }
@@ -38,14 +39,14 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var handleOfEndSending:(Long,Cancellable) = _
 //  var backPressureActivated = false
 
-  val messagesOnTheWay = new mutable.LongMap[(Cancellable,DataMessage)]
+  val messagesOnTheWay = new mutable.LongMap[(Cancellable, DataMessage, Long)]
   val messagesToBeSent = new mutable.Queue[DataMessage]
 
   override def receive: Receive = {
     case msg:DataMessage =>
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
-        messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
+        messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg,System.nanoTime())
         receiver ! RequireAck(msg)
       }else{
         messagesToBeSent.enqueue(msg)
@@ -63,7 +64,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       if(messagesOnTheWay.contains(seq)) {
         messagesOnTheWay(seq)._1.cancel()
         messagesOnTheWay.remove(seq)
-        if (maxSentSequenceNumber-seq < logicalTimeGap) {
+        if (System.nanoTime()-messagesOnTheWay(seq)._3 < timeGap) {
           if (windowSize < ssThreshold) {
             windowSize = Math.min(windowSize * 2, ssThreshold)
           } else {
@@ -76,7 +77,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
         if(messagesOnTheWay.size < windowSize && messagesToBeSent.nonEmpty){
           val msg = messagesToBeSent.dequeue()
           maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
-          messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
+          messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg,System.nanoTime())
           receiver ! RequireAck(msg)
         }
       }
@@ -94,7 +95,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       if(messagesOnTheWay.contains(seq)){
         //resend the data message
         val msg = messagesOnTheWay(seq)._2
-        messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
+        messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg,System.nanoTime())
         receiver ! RequireAck(msg)
       }
     case Resume =>
