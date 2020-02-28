@@ -4,7 +4,6 @@ package Engine.Architecture.SendSemantics.Routees
 import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, RequireAck, Resume}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
-import akka.cluster.Gossip.Timestamp
 import akka.util.Timeout
 
 import scala.collection.mutable
