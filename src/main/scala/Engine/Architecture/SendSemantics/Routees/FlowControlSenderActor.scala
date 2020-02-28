@@ -62,7 +62,6 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case AckWithSequenceNumber(seq) =>
       if(messagesOnTheWay.contains(seq)) {
         messagesOnTheWay(seq)._1.cancel()
-        messagesOnTheWay.remove(seq)
         if (System.nanoTime()-messagesOnTheWay(seq)._3 < timeGap) {
           if (windowSize < ssThreshold) {
             windowSize = Math.min(windowSize * 2, ssThreshold)
@@ -73,6 +72,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           ssThreshold /= 2
           windowSize = Math.max(minWindowSize,Math.min(ssThreshold,maxWindowSize))
         }
+        messagesOnTheWay.remove(seq)
         if(messagesOnTheWay.size < windowSize && messagesToBeSent.nonEmpty){
           val msg = messagesToBeSent.dequeue()
           maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
