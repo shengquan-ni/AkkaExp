@@ -81,6 +81,8 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
     @Override
     public void dispose() {
-
+        innerTableHashMap = null;
+        currentEntry = null;
+        currentTuple = null;
     }
 }
