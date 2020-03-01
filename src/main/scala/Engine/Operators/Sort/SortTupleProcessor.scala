@@ -25,7 +25,8 @@ class SortTupleProcessor[T:Ordering](val targetField:Int) extends TupleProcessor
   }
 
   override def dispose(): Unit = {
-
+    results = null
+    iter = null
   }
 
   override def initialize(): Unit = {
