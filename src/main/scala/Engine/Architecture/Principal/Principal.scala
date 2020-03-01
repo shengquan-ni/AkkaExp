@@ -14,6 +14,7 @@ import Engine.Common.AmberMessage.WorkerMessage
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
 import Engine.Common.AmberTag.{LayerTag, OperatorTag}
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
+import Engine.Operators.GroupBy.GroupByMetadata
 import Engine.Operators.OperatorMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
 import akka.event.LoggingAdapter
@@ -50,6 +51,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var periodicallyAskHandle:Cancellable = _
   var workersTriggeredBreakpoint:Iterable[ActorRef] = _
   var layerCompletedCounter:mutable.HashMap[LayerTag,Int] = _
+  var groupByFirstLayer:mutable.HashSet[ActorRef] = _
   val timer = new Stopwatch()
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
@@ -155,6 +157,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             //try to resume it
             sender ! Resume
           case WorkerState.Completed =>
+            if(metadata.isInstanceOf[GroupByMetadata[String]]){
+              groupByFirstLayer.remove(sender)
+              if(groupByFirstLayer.isEmpty){
+                metadata.topology.layers.head.layer.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(x,ReleaseOutput,10,0))
+              }
+            }
             if (whenAllWorkersCompleted) {
               timer.stop()
               log.info(metadata.tag.toString+" completed! Time Elapsed: "+timer.toString())
@@ -431,6 +439,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
          sender ! AckedWorkerInitialization
       }else if(setWorkerState(sender,state)){
         if(whenAllUncompletedWorkersBecome(WorkerState.Ready)){
+          if(metadata.isInstanceOf[GroupByMetadata[String]]){
+            groupByFirstLayer = mutable.HashSet[ActorRef](metadata.topology.layers.head.layer.toSeq:_*)
+            groupByFirstLayer.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(x,StashOutput,10,0))
+          }
           saveRemoveAskHandle()
           workerEdges.foreach(x => x.link())
           context.parent ! ReportState(PrincipalState.Ready)
