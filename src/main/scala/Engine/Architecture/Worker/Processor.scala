@@ -211,6 +211,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
 
+  override def postStop(): Unit = {
+    processingQueue.clear()
+    input.endToBeReceived.clear()
+    input.actorToEdge.clear()
+    input.seqNumMap.clear()
+    input.endMap.clear()
+    aliveUpstreams.clear()
+  }
+
+
 
   override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse super.ready
 
