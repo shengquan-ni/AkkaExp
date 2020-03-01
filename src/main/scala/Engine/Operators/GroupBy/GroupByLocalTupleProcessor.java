@@ -104,6 +104,7 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
 
     @Override
     public void dispose() throws Exception {
-
+        results = null;
+        counts = null;
     }
 }
