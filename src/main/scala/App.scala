@@ -12,12 +12,14 @@ import Engine.Architecture.Controller.Controller
 import Engine.Common.AmberMessage.ControlMessage.{Pause, Resume, Start}
 import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo}
 import Engine.Common.Constants
+import Engine.Common.Config
 import akka.util.Timeout
 import play.api.libs.json.Json
 
 import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import java.net.Socket
 
 
 object App {
@@ -56,7 +58,14 @@ object App {
 //    }
 
     val localhost: InetAddress = InetAddress.getLocalHost
+    print(s"localhost is ${localhost}")
     localIpAddress = localhost.getHostAddress
+
+    var soc:Socket = null
+    soc = new Socket(Engine.Common.Config.thirdPartyIP, Engine.Common.Config.thirdPartyPort)
+    localIpAddress = soc.getLocalAddress().getHostAddress()
+    soc.close();
+
 
     if(!options.contains('mainNodeAddr)){
       //activate main node
