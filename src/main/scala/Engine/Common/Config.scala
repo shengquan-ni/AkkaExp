@@ -7,4 +7,12 @@ object Config {
    */
   val thirdPartyIP: String = "128.195.52.129"
   val thirdPartyPort:Int = 9870
+
+  /**
+   * Put HDFS connection detials below.
+   */
+  val remoteHDFSPath = "hdfs://10.138.0.2:8020"
+  val remoteHDFSIP = "10.138.0.2"
+  val dataset = 5;
+
 }

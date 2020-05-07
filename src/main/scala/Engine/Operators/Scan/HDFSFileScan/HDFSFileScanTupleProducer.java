@@ -16,7 +16,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 
-import static jdk.nashorn.internal.objects.Global.println;
 
 public class HDFSFileScanTupleProducer implements TupleProducer{
 
@@ -45,7 +44,7 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
         //FileSystem fs = FileSystem.get(new URI(host),new Configuration());
         //FSDataInputStream stream = fs.open(new Path(hdfsPath));
         //stream.seek(startOffset);
-        URL url = new URL("http://"+ Constants.remoteHDFSIP()+":9870/webhdfs/v1"+hdfsPath+"?op=OPEN&offset="+startOffset);
+        URL url = new URL("http://"+ Engine.Common.Config.remoteHDFSIP()+":9870/webhdfs/v1"+hdfsPath+"?op=OPEN&offset="+startOffset);
         InputStream stream = url.openStream();
         reader = new BufferedBlockReader(stream,endOffset-startOffset,separator,indicesToKeep);
         if(startOffset > 0)

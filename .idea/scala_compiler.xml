@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="amber">
-      <option name="postfixOps" value="true" />
-    </profile>
+    <profile name="sbt 1" modules="akkaexp_2155" />
     <profile name="sbt 2" modules="Amber">
       <option name="featureWarnings" value="true" />
       <parameters>

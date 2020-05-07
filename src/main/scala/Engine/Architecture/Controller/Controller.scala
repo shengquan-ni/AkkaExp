@@ -120,7 +120,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     val layerTag = LayerTag(from.tag,"checkpoint")
     val path:String = layerTag.getGlobalIdentity
     val numWorkers = topology.layers.last.numWorkers
-    val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Constants.remoteHDFSPath,path+"/"+i,'|',null)
+    val scanGen:Int => TupleProducer = i => new HDFSFolderScanTupleProducer(Engine.Common.Config.remoteHDFSPath,path+"/"+i,'|',null)
     val lastLayer = topology.layers.last
     val materializerLayer = new ProcessorWorkerLayer(layerTag,i=>new HashBasedMaterializer(path,i,hashFunc,numWorkers),numWorkers,FollowPrevious(),OneOnEach())
     topology.layers :+= materializerLayer

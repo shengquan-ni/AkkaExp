@@ -57,9 +57,9 @@ object App {
 //        localIpAddress = localhost.getHostAddress
 //    }
 
-    val localhost: InetAddress = InetAddress.getLocalHost
+    /* val localhost: InetAddress = InetAddress.getLocalHost
     print(s"localhost is ${localhost}")
-    localIpAddress = localhost.getHostAddress
+    localIpAddress = localhost.getHostAddress */
 
     var soc:Socket = null
     soc = new Socket(Engine.Common.Config.thirdPartyIP, Engine.Common.Config.thirdPartyPort)
@@ -103,7 +103,7 @@ object App {
 
       s"""{
         |"operators":[
-        |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+        |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
         |{"operatorID":"Count","operatorType":"Aggregation"},
         |{"operatorID":"Sink","operatorType":"Sink"}],
         |"links":[
@@ -112,7 +112,7 @@ object App {
         |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/lineitem.tbl","operatorID":"Scan","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[4,8,10]},
          |{"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"},
          |{"operatorID":"GroupBy","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Sum"},
          |{"operatorID":"Sort","operatorType":"Sort","targetField":0},
@@ -125,8 +125,8 @@ object App {
          |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
          |{"operatorID":"Join","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
@@ -142,9 +142,9 @@ object App {
          |}""".stripMargin,
       s"""{
          |"operators":[
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
-         |{"host":"${Constants.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan3","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/customer.tbl","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/<arg3>G/orders.tbl","operatorID":"Scan3","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,1]},
          |{"operatorID":"Join1","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"Join2","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
@@ -160,6 +160,29 @@ object App {
          |{"origin":"GroupBy1","destination":"GroupBy2"},
          |{"origin":"GroupBy2","destination":"Sort"},
          |{"origin":"Sort","destination":"Sink"}]
+         |}""".stripMargin,
+      s"""{
+         |"operators":[
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/store_sales.dat","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
+         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan3","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
+         |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"Join1","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":0},
+         |{"operatorID":"Join2","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
+         |{"operatorID":"GroupBy3","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"GroupBy4","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+         |{"operatorID":"Sink","operatorType":"Sink"}],
+         |"links":[
+         |{"origin":"Scan3","destination":"GroupBy1"},
+         |{"origin":"GroupBy1","destination":"GroupBy2"},
+         |{"origin":"Scan2","destination":"Join1"},
+         |{"origin":"Scan1","destination":"Join1"},
+         |{"origin":"GroupBy2","destination":"Join2"},
+         |{"origin":"Join1","destination":"Join2"},
+         |{"origin":"Join2","destination":"GroupBy3"},
+         |{"origin":"GroupBy3","destination":"GroupBy4"},
+         |{"origin":"GroupBy4","destination":"Sink"}]
          |}""".stripMargin
 
     )
@@ -189,7 +212,7 @@ object App {
         input match {
           case "choose" =>
             try {
-              print("please choose which workflow you want to execute (0 or 1):")
+              print("please choose which workflow you want to execute:")
               val res = scala.io.StdIn.readInt()
               if (res < 0 || res > workflows.size) {
                 throw new Exception()
@@ -248,7 +271,7 @@ object App {
             if (current == 0) {
               controller = system.actorOf(Controller.props(workflows(current).replace("<arg1>", limit).replace("<arg2>", delay)))
             } else {
-              controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Constants.dataset.toString)))
+              controller = system.actorOf(Controller.props(workflows(current).replace("<arg3>", Engine.Common.Config.dataset.toString)))
             }
             controller ! AckedControllerInitialization
             //if (countbp.isDefined && current == 2) {
