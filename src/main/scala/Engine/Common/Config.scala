@@ -11,8 +11,8 @@ object Config {
   /**
    * Put HDFS connection detials below.
    */
-  val remoteHDFSPath = "hdfs://10.138.0.2:8020"
-  val remoteHDFSIP = "10.138.0.2"
+  val remoteHDFSPath = "hdfs://128.195.52.129:9871"
+  val remoteHDFSIP = "128.195.52.129"
   val dataset = 5;
 
 }
