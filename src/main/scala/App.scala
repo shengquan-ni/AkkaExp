@@ -161,28 +161,47 @@ object App {
          |{"origin":"GroupBy2","destination":"Sort"},
          |{"origin":"Sort","destination":"Sink"}]
          |}""".stripMargin,
+//      s"""{
+//         |"operators":[
+//         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/store_sales.dat","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
+//         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
+//         |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan3","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
+//         |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+//         |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+//         |{"operatorID":"Join1","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":0},
+//         |{"operatorID":"Join2","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
+//         |{"operatorID":"GroupBy3","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+//         |{"operatorID":"GroupBy4","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
+//         |{"operatorID":"Sink","operatorType":"Sink"}],
+//         |"links":[
+//         |{"origin":"Scan3","destination":"GroupBy1"},
+//         |{"origin":"GroupBy1","destination":"GroupBy2"},
+//         |{"origin":"Scan2","destination":"Join1"},
+//         |{"origin":"Scan1","destination":"Join1"},
+//         |{"origin":"GroupBy2","destination":"Join2"},
+//         |{"origin":"Join1","destination":"Join2"},
+//         |{"origin":"Join2","destination":"GroupBy3"},
+//         |{"origin":"GroupBy3","destination":"GroupBy4"},
+//         |{"origin":"GroupBy4","destination":"Sink"}]
+//         |}""".stripMargin,
       s"""{
          |"operators":[
          |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/store_sales.dat","operatorID":"Scan1","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0]},
          |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan2","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
          |{"host":"${Engine.Common.Config.remoteHDFSPath}","tableName":"/datasets/tpcds/<arg3>G/date_dim.dat","operatorID":"Scan3","operatorType":"HDFSScanSource","delimiter":"|","indicesToKeep":[0,8]},
          |{"operatorID":"GroupBy1","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
-         |{"operatorID":"GroupBy2","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"Join1","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":0},
          |{"operatorID":"Join2","operatorType":"HashJoin","innerTableIndex":0,"outerTableIndex":1},
          |{"operatorID":"GroupBy3","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
-         |{"operatorID":"GroupBy4","operatorType":"GroupBy","groupByField":1,"aggregateField":0,"aggregationType":"Count"},
          |{"operatorID":"Sink","operatorType":"Sink"}],
          |"links":[
          |{"origin":"Scan3","destination":"GroupBy1"},
-         |{"origin":"GroupBy1","destination":"GroupBy2"},
+         |{"origin":"GroupBy1","destination":"Join2"},
          |{"origin":"Scan2","destination":"Join1"},
          |{"origin":"Scan1","destination":"Join1"},
-         |{"origin":"GroupBy2","destination":"Join2"},
          |{"origin":"Join1","destination":"Join2"},
          |{"origin":"Join2","destination":"GroupBy3"},
-         |{"origin":"GroupBy3","destination":"GroupBy4"},
-         |{"origin":"GroupBy4","destination":"Sink"}]
+         |{"origin":"GroupBy3","destination":"Sink"}]
          |}""".stripMargin
 
     )
