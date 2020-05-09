@@ -32,6 +32,9 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     @Override
     public void accept(Tuple tuple) {
         if(isCurrentTableInner){
+            if(innerTableIdentifier.operator().contains("Join1")) {
+                System.out.println("Group1 is outputting ####### " + tuple.toString());
+            }
             K key = (K)tuple.get(innerTableIndex);
             if(!innerTableHashMap.containsKey(key)) {
                 innerTableHashMap.put(key,new ArrayList<>());

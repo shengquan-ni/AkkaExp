@@ -6,7 +6,7 @@ import Engine.Common.TupleProcessor
 
 class SimpleSinkProcessor extends TupleProcessor{
   override def accept(tuple: Tuple): Unit = {
-    println("Sink################SINK###############: "+ tuple.toString)
+    println("Sink################: "+ tuple.toString)
   }
 
   override def noMore(): Unit = {
