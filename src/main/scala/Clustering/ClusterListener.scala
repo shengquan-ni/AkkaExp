@@ -29,30 +29,30 @@ class ClusterListener extends Actor with ActorLogging  {
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null){
           availableNodeAddresses.add(self.path.address)
-          Constants.dataset += Constants.dataVolumePerNode
-          Constants.defaultNumWorkers += Constants.numWorkerPerNode
+          Engine.Common.Config.dataset += Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers += Engine.Common.Config.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get){
           availableNodeAddresses.add(member.address)
-          Constants.dataset += Constants.dataVolumePerNode
-          Constants.defaultNumWorkers += Constants.numWorkerPerNode
+          Engine.Common.Config.dataset += Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers += Engine.Common.Config.numWorkerPerNode
         }
       }
       println("---------Now we have "+availableNodeAddresses.size+" nodes in the cluster---------")
-      println("dataset: "+Constants.dataset+" numWorkers: "+Constants.defaultNumWorkers)
+      println("dataset: "+Engine.Common.Config.dataset+" numWorkers: "+Constants.defaultNumWorkers)
     case UnreachableMember(member) =>
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null) {
           availableNodeAddresses.remove(self.path.address)
-          Constants.dataset -= Constants.dataVolumePerNode
-          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
+          Engine.Common.Config.dataset -= Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers -= Engine.Common.Config.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get) {
           availableNodeAddresses.remove(member.address)
-          Constants.dataset -= Constants.dataVolumePerNode
-          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
+          Engine.Common.Config.dataset -= Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers -= Engine.Common.Config.numWorkerPerNode
         }
       }
       log.info("Member detected as unreachable: {}", member)
@@ -60,14 +60,14 @@ class ClusterListener extends Actor with ActorLogging  {
       if(context.system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress == member.address){
         if(Constants.masterNodeAddr != null) {
           availableNodeAddresses.remove(self.path.address)
-          Constants.dataset -= Constants.dataVolumePerNode
-          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
+          Engine.Common.Config.dataset -= Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers -= Engine.Common.Config.numWorkerPerNode
         }
       }else{
         if(Constants.masterNodeAddr != member.address.host.get) {
           availableNodeAddresses.remove(member.address)
-          Constants.dataset -= Constants.dataVolumePerNode
-          Constants.defaultNumWorkers -= Constants.numWorkerPerNode
+          Engine.Common.Config.dataset -= Engine.Common.Config.dataVolumePerNode
+          Constants.defaultNumWorkers -= Engine.Common.Config.numWorkerPerNode
         }
       }
       log.info("Member is Removed: {} after {}",

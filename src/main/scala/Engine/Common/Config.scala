@@ -9,10 +9,15 @@ object Config {
   val thirdPartyPort:Int = 9870
 
   /**
-   * Put HDFS connection detials below.
+   * Put HDFS connection details below.
    */
   val remoteHDFSPath = "hdfs://128.195.52.129:9871"
   val remoteHDFSIP = "128.195.52.129"
-  val dataset = 5;
+  var dataset = 5;
 
+  /**
+   * Automate number of workers per operator and data to be processed
+   */
+  var numWorkerPerNode = 8
+  var dataVolumePerNode = 0
 }
