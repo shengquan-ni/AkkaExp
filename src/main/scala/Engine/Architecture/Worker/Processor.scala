@@ -344,6 +344,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         while (processingIndex < batch.length) {
           exitIfPaused()
           try {
+            println(s"DATA####: ${tag.operator} received ${batch(processingIndex).toString()}")
             dataProcessor.accept(batch(processingIndex))
           }catch{
             case e:Exception =>
