@@ -53,6 +53,12 @@ object Controller{
 
   def props(json:String, withCheckpoint:Boolean = false): Props = Props(fromJsonString(json,withCheckpoint))
 
+  /**
+   * Creates a Controller from workflow JSON. Invoked by props method of Controller class.
+   * @param jsonString
+   * @param withCheckpoint
+   * @return
+   */
   private def fromJsonString(jsonString:String, withCheckpoint:Boolean):Controller ={
     val json: JsValue = Json.parse(jsonString)
     val tag:WorkflowTag = WorkflowTag("sample")
@@ -67,6 +73,12 @@ object Controller{
 
   }
 
+  /**
+   * Creates operator metadata given an operator's JSON
+   * @param workflowTag
+   * @param json
+   * @return
+   */
   private def jsonToOperatorMetadata(workflowTag: WorkflowTag, json:JsValue): OperatorMetadata ={
     val id = json("operatorID").as[String]
     val tag = OperatorTag(workflowTag.workflow,id)
@@ -143,13 +155,23 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     case AckedControllerInitialization =>
       val nodes = availableNodes
       log.info("start initialization --------cluster have "+nodes.length+" nodes---------")
+
+      // Create principal actor for each class and put their ref in a map
       for(k <- workflow.startOperators){
         val v = workflow.operators(k)
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
       }
+
+      /**
+       * placing the actors of the starting operators on the proper machines and linking the layers. When the principals of starting operators respond that they are ready, the
+       * next operators in topological order will be sent ''AckedPrincipalInitialization''.
+       */
       workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
+        //here we are updating the operator metadata in the controller. the new operator metadata has
+        // ''built'' layers i.e. the actors are created and placed on machines. The ActorLayer class
+        // within the metadata has an array of ActorRef now.
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
         case other => throw new AmberException("principal didn't return updated metadata")
       } ))
@@ -224,6 +246,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             case AckWithInformation(z) => workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
             case other => throw new AmberException("principal didn't return updated metadata")
           })
+
+          // the subsequent operators will now be linked
           for (from <- workflow.inLinks(k)) {
             if(!linksToIgnore.contains(from,k)){
               val edge = new OperatorLink((workflow.operators(from), principalBiMap.get(from)), (workflow.operators(k), principalBiMap.get(k)))

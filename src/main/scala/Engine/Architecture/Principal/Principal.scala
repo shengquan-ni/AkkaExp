@@ -393,8 +393,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       workerEdges = metadata.topology.links
       val all = availableNodes
       if(workerEdges.isEmpty){
+        // if a worker has only one layer, then build it according to the previous operator's last layer
         workerLayers.foreach(x => x.build(prev,all))
       }else{
+        // else build all the layers in a topological order
         val inLinks: Map[ActorLayer, Set[ActorLayer]] = workerEdges.groupBy(x => x.to).map(x=> (x._1,x._2.map(_.from).toSet))
         var currentLayer:Iterable[ActorLayer] = workerEdges.filter(x => workerEdges.forall(_.to != x.from)).map(_.from)
         currentLayer.foreach(x => x.build(prev,all))
@@ -406,6 +408,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
       layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> x._2.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
+
+      //once workers are placed on their respective machines, they have to be initialized.
       allWorkers.foreach(x => x ! AckedWorkerInitialization)
       saveRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
@@ -432,6 +436,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }else if(setWorkerState(sender,state)){
         if(whenAllUncompletedWorkersBecome(WorkerState.Ready)){
           saveRemoveAskHandle()
+
+          //once all workers have been created and put on machines, the
+          // subsequent layers have to be linked.
           workerEdges.foreach(x => x.link())
           context.parent ! ReportState(PrincipalState.Ready)
           context.become(ready)

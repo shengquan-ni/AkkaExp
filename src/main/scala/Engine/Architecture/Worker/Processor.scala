@@ -56,6 +56,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
+    println(s"ACTOR TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms")
   }
 
   private[this] def waitProcessing:Receive={
@@ -344,7 +345,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         while (processingIndex < batch.length) {
           exitIfPaused()
           try {
-            println(s"DATA####: ${tag.operator} received ${batch(processingIndex).toString()}")
+            // println(s"DATA####: ${tag.operator} received ${batch(processingIndex).toString()}")
             dataProcessor.accept(batch(processingIndex))
           }catch{
             case e:Exception =>

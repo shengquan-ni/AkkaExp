@@ -12,7 +12,13 @@ import akka.util.Timeout
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks
 
+/**
+ * Class that keeps track of different DataTransferPolicies for a worker actor
+ */
 trait DataTransferSupport extends BreakpointSupport {
+  /**
+   * Policies corresponding to different downstream layers.
+   */
   var output = new Array[DataTransferPolicy](0)
 
   def pauseDataTransfer():Unit = {
@@ -50,6 +56,12 @@ trait DataTransferSupport extends BreakpointSupport {
     output = Array()
   }
 
+  /**
+   * Every worker has a member object of type DataTransferSupport to which the actor passes
+   * an outgoing tuple. Thereafter, DataTransfer support takes care of how and where to send the tuple.
+   * @param tuple
+   * @param sender
+   */
   def transferTuple(tuple: Tuple)(implicit sender:ActorRef): Unit ={
     if(tuple != null){
       var i = 0
@@ -63,6 +75,7 @@ trait DataTransferSupport extends BreakpointSupport {
       }
       i = 0
       if(!tupleFaulted) {
+        // for all policies i.e. for all downstream layers, call DataTransferPolicy.accept()
         while (i < output.length) {
           output(i).accept(tuple)
           i += 1
@@ -74,6 +87,17 @@ trait DataTransferSupport extends BreakpointSupport {
     }
   }
 
+  /**
+   * updates the DataTransferPolicy for an actor and one of the downstream layers.
+   * @param policy
+   * @param tag
+   * @param receivers
+   * @param ac
+   * @param sender
+   * @param timeout
+   * @param ec
+   * @param log
+   */
   def updateOutput(policy:DataTransferPolicy, tag:LinkTag, receivers:Array[BaseRoutee])
                   (implicit ac:ActorContext,
                    sender: ActorRef,

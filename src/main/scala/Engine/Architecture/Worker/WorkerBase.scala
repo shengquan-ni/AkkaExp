@@ -27,6 +27,9 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   }
 
+  /**
+   * Generator will override this to have its implementation of producing tuples
+   */
   def onStart(): Unit ={
     startTime = System.nanoTime()
     context.parent ! ReportState(WorkerState.Running)

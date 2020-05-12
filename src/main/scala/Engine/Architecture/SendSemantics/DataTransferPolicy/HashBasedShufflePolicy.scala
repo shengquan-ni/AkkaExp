@@ -11,6 +11,7 @@ import akka.util.Timeout
 import scala.concurrent.ExecutionContext
 
 class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends DataTransferPolicy(batchSize) {
+  // routees are the receiver workers of this policy
   var routees:Array[BaseRoutee] = _
   var sequenceNum:Array[Long] = _
   var batches:Array[Array[Tuple]] = _

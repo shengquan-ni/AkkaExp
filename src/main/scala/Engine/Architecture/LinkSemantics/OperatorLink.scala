@@ -16,6 +16,12 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 //ugly design, but I don't know how to make it better
+/**
+ * used to link first and last layers of subsequent operators. Based on the ''to'' operator, it first creates the appropriate
+ * ''LinkStrategy'' class and then calls the ''link'' function of that class.
+ * @param from Upstream operator's OperatorMetadata and principal actor
+ * @param to Downstream operator's OperatorMetadata and principal actor
+ */
 class OperatorLink(val from: (OperatorMetadata,ActorRef), val to:(OperatorMetadata,ActorRef)) extends Serializable {
   implicit val timeout:Timeout = 5.seconds
   var linkStrategy:LinkStrategy = _

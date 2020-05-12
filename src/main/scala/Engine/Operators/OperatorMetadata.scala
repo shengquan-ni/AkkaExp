@@ -16,6 +16,13 @@ import scala.concurrent.ExecutionContext
 
 abstract class OperatorMetadata(val tag: OperatorTag) extends Serializable {
 
+  /**
+   * An operator's topology contains the layers of actors withing the operator (eg: Groupby has 2 layers), how are the layers connected and
+   * what is the dependency between the layers. The ''assert'' statement makes sure that there is no cyclic dependency between the layers
+   * @param layers
+   * @param links
+   * @param dependencies
+   */
   class Topology(var layers:Array[ActorLayer],var links: Array[LinkStrategy],var dependencies:Map[LayerTag,Set[LayerTag]]) extends Serializable {
     assert(!dependencies.exists(x => x._2.contains(x._1)))
   }
