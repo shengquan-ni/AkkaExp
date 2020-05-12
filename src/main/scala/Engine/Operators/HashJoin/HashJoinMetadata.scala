@@ -41,12 +41,12 @@ class HashJoinMetadata[K](tag:OperatorTag, val numWorkers:Int, val innerTableInd
       }else{
         t:Tuple => t.get(outerTableIndex)
       }
-    }
-
-    if(layerTag == innerTableTag){
-      t:Tuple => t.get(innerTableIndex).hashCode()
-    }else{
-      t:Tuple => t.get(outerTableIndex).hashCode()
+    } else {
+      if(layerTag == innerTableTag){
+        t:Tuple => t.get(innerTableIndex).hashCode()
+      }else{
+        t:Tuple => t.get(outerTableIndex).hashCode()
+      }
     }
   }
 
