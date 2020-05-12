@@ -13,7 +13,7 @@ object Config {
    */
   val remoteHDFSPath = "hdfs://128.195.52.129:9871"
   val remoteHDFSIP = "128.195.52.129"
-  var dataset = 5;
+  var dataset = 10;
 
   /**
    * Automate number of workers per operator and data to be processed
