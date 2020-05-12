@@ -37,9 +37,9 @@ class HashJoinMetadata[K](tag:OperatorTag, val numWorkers:Int, val innerTableInd
   override def getShuffleHashFunction(layerTag: LayerTag): Tuple => Int = {
     if(tag.operator.contains("Join2")) {
       if(layerTag == innerTableTag){
-        t:Tuple => t.get(innerTableIndex)
+        t:Tuple => t.get(innerTableIndex).toString.toInt
       }else{
-        t:Tuple => t.get(outerTableIndex)
+        t:Tuple => t.get(outerTableIndex).toString.toInt
       }
     } else {
       if(layerTag == innerTableTag){
