@@ -42,7 +42,7 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
    */
   def initialize(linkTag:LinkTag, next:Array[BaseRoutee])(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Unit = {
     this.tag = linkTag
-    next.foreach(x => log.info("link: {}",x))
+    //next.foreach(x => log.info("link: {}",x))
   }
 
   def dispose():Unit
