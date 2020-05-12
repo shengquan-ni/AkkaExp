@@ -251,7 +251,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       context.become(breakpointTriggered,discardOld = false)
       unstashAll()
     case ExecutionCompleted =>
-      log.info("received complete")
+      //log.info("received complete")
       onCompleted()
       context.become(completed)
       unstashAll()

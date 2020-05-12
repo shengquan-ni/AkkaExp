@@ -18,6 +18,6 @@ object Config {
   /**
    * Automate number of workers per operator and data to be processed
    */
-  var numWorkerPerNode = 8
+  var numWorkerPerNode = 12
   var dataVolumePerNode = 0
 }

@@ -35,6 +35,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
 
+  var tupleToIdentifyJoin:String = ""
+
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
 
@@ -56,7 +58,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
-    println(s" ${tag.getGlobalIdentity} ACTOR TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms")
+    println(s" ${tag.getGlobalIdentity} ACTOR for Joining ${tupleToIdentifyJoin} TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms")
   }
 
   private[this] def waitProcessing:Receive={
@@ -346,6 +348,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           exitIfPaused()
           try {
             // println(s"DATA####: ${tag.operator} received ${batch(processingIndex).toString()}")
+            if(tag.operator.contains("Join2") && tupleToIdentifyJoin.isEmpty) {
+              tupleToIdentifyJoin = batch(processingIndex).toString()
+            }
             dataProcessor.accept(batch(processingIndex))
           }catch{
             case e:Exception =>
