@@ -14,7 +14,7 @@ object Config {
    */
 //  val remoteHDFSPath = "hdfs://128.195.52.129:9871"
 //  val remoteHDFSIP = "128.195.52.129"
-  val remoteHDFSPath = "hdfs://ec2-18-216-84-85.us-east-2.compute.amazonaws.com:9870"
+  val remoteHDFSPath = "hdfs://ec2-18-216-84-85.us-east-2.compute.amazonaws.com:8020"
   val remoteHDFSIP = "ec2-18-216-84-85.us-east-2.compute.amazonaws.com"
   var dataset = 20
 
