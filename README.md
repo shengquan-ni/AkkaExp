@@ -21,6 +21,9 @@
 
 ### Local port forwarding to AWS EMR master node: 
        ssh -i <key name>.pem -N -L 8157:127.0.0.1:8088 hadoop@ec2-############.compute.amazonaws.com
+       
+### HDFS commands:
+       http://fibrevillage.com/storage/630-using-hdfs-command-line-to-manage-files-and-directories-on-hadoop
 
 ## Using Hadoop on AWS EC2: (https://www.novixys.com/blog/setup-apache-hadoop-cluster-aws-ec2/)
 1. Install Hadoop (All nodes)
