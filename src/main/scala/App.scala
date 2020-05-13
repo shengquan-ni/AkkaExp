@@ -75,6 +75,7 @@ object App {
         akka.remote.artery.canonical.port = 2552
         akka.remote.artery.canonical.hostname = $localIpAddress
         akka.cluster.seed-nodes = [ "akka.tcp://Amber@$localIpAddress:2552" ]
+        akka.actor.allow-java-serialization = on
         """).withFallback(ConfigFactory.load("clustered"))
     }else{
       //activate any node
@@ -83,6 +84,7 @@ object App {
         akka.remote.netty.tcp.hostname = $localIpAddress
         akka.remote.artery.canonical.hostname = $localIpAddress
         akka.cluster.seed-nodes = [ "akka.tcp://Amber@$addr:2552" ]
+        akka.actor.allow-java-serialization = on
         """).withFallback(ConfigFactory.load("clustered"))
       Constants.masterNodeAddr = addr.toString
     }
