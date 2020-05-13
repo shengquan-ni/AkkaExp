@@ -4,15 +4,15 @@ import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
-import Engine.Architecture.Worker.WorkerState
+import Engine.Architecture.Worker.{SkewMetrics, WorkerState}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.PrincipalMessage.{AssignBreakpoint, _}
 import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.ControllerMessage.ReportGlobalBreakpointTriggered
 import Engine.Common.AmberMessage.WorkerMessage
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
-import Engine.Common.AmberTag.{LayerTag, OperatorTag}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportSkewMetrics, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
+import Engine.Common.AmberTag.{LayerTag, OperatorTag, WorkerTag}
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
 import Engine.Operators.OperatorMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
@@ -161,10 +161,17 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
               unstashAll()
+            } else {
+              if(metadata.tag.operator.contains("Join2")) {
+                context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
+                // unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics)
+              }
             }
           case _ => //skip others for now
         }
       }
+    case ReportSkewMetrics(tag, skewMetric) =>
+      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}")
     case Pause =>
       //single point pause: pause itself
       if(sender != self){

@@ -213,6 +213,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent,ReportWorkerPartialCompleted(tag,from),10,0)
   }
 
+  final def receiveSkewDetectionMessages:Receive = {
+    case QuerySkewDetectionMetrics =>
+      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length))
+  }
+
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -229,7 +234,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
 
-  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse super.running
+  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse super.running
 
   override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
 

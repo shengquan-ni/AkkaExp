@@ -4,6 +4,7 @@ import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Architecture.SendSemantics.DataTransferPolicy.DataTransferPolicy
 import Engine.Architecture.SendSemantics.Routees.BaseRoutee
 import Engine.Architecture.Worker.WorkerState
+import Engine.Architecture.Worker.SkewMetrics
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberTag.{LayerTag, LinkTag, WorkerTag}
 import Engine.Common.AmberTuple.Tuple
@@ -30,6 +31,8 @@ object WorkerMessage {
   final case class QueryBreakpoint(id:String)
 
   final case class ReportState(workerState: WorkerState.Value)
+
+  final case class ReportSkewMetrics(tag: WorkerTag, skewMetric: SkewMetrics)
 
   final case class RemoveBreakpoint(id:String)
 

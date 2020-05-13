@@ -26,4 +26,6 @@ object ControlMessage{
   final case class StashOutput()
 
   final case class ReleaseOutput()
+
+  final case class QuerySkewDetectionMetrics()
 }
