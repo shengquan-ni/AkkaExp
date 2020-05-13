@@ -126,7 +126,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def running:Receive = {
     case WorkerMessage.ReportState(state) =>
-      log.info("running: "+ sender +" to "+ state)
+      // log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
         state match {
           case WorkerState.LocalBreakpointTriggered =>
