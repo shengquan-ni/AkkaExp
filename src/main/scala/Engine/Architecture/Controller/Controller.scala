@@ -202,7 +202,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         }else{
           log.info("fully initialized!")
           for(i <- workflow.operators) {
-            if(i._1.operator.contains("GroupBy1") || i._1.operator.contains("Join1")) {
+            if(i._1.operator.contains("GroupBy1-globalGroupBy") || i._1.operator.contains("Join1")) {
               val node = principalBiMap.get(i._1)
               AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
               stashedNodes.add(node)
