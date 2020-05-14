@@ -307,8 +307,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       state match{
         case PrincipalState.Completed =>
           log.info(sender+" completed")
-          if(stashedNodes.forall(node => principalStates(node)==PrincipalState.Completed)) {
-            stashedNodes.foreach(node => AdvancedMessageSending.nonBlockingAskWithRetry(sender,ReleaseOutput,10,0))
+          if(stashedNodes.contains(sender) && stashedNodes.forall(node => principalStates(node)==PrincipalState.Completed)) {
+            stashedNodes.foreach(node => AdvancedMessageSending.nonBlockingAskWithRetry(node,ReleaseOutput,10,0))
           }
 //          if(stashedNodes.contains(sender)){
 //            AdvancedMessageSending.nonBlockingAskWithRetry(sender,ReleaseOutput,10,0)
