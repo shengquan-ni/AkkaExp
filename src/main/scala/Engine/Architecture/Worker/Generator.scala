@@ -23,7 +23,7 @@ object Generator {
   def props(producer:TupleProducer,tag:WorkerTag): Props = Props(new Generator(producer,tag))
 }
 
-class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends WorkerBase with ActorLogging with Stash{
+class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends WorkerBase(tag) with ActorLogging with Stash{
 
   val dataGenerateExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   var isGeneratingFinished = false

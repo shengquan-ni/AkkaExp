@@ -26,7 +26,7 @@ object Processor {
   def props(processor:TupleProcessor,tag:WorkerTag): Props = Props(new Processor(processor,tag))
 }
 
-class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
+class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase(tag)  {
 
   val dataProcessExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   val processingQueue = new mutable.Queue[(LayerTag,Array[Tuple])]

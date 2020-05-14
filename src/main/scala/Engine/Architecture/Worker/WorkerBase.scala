@@ -4,6 +4,7 @@ package Engine.Architecture.Worker
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, Pause, QueryState, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberTag.WorkerTag
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
 import akka.event.LoggingAdapter
@@ -15,7 +16,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks
 import scala.concurrent.duration._
 
-abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTransferSupport {
+abstract class WorkerBase(tag: WorkerTag) extends Actor with ActorLogging with Stash with DataTransferSupport {
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
@@ -76,9 +77,11 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   final def allowStashOrReleaseOutput:Receive = {
     case StashOutput =>
       sender ! Ack
+      println(s"Stash output received by ${tag.getGlobalIdentity}")
       pauseDataTransfer()
     case ReleaseOutput =>
       sender ! Ack
+      println(s"Release output received by ${tag.getGlobalIdentity}")
       resumeDataTransfer()
   }
 
