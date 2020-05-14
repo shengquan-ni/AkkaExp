@@ -39,7 +39,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
         }else{
             if(!isInnerTableFinished) {
-                throw new AssertionError();
+                throw new AssertionError("Probe table came before build table");
             }else{
                 K key = (K)tuple.get(outerTableIndex);
                 if(innerTableHashMap.containsKey(key)) {
