@@ -202,7 +202,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         }else{
           log.info("fully initialized!")
           for(i <- workflow.operators) {
-            if(i._1.operator.contains("GroupBy1-globalGroupBy") || i._1.operator.contains("Join1")) {
+            // GroupBy1 isn't being stashed because then even Local layer gets stashed and GroupBy1 never completes
+            if(i._1.operator.contains("Join1")) {
               val node = principalBiMap.get(i._1)
               AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
               stashedNodes.add(node)
@@ -307,6 +308,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       state match{
         case PrincipalState.Completed =>
           log.info(sender+" completed")
+
           if(stashedNodes.contains(sender) && stashedNodes.forall(node => principalStates(node)==PrincipalState.Completed)) {
             stashedNodes.foreach(node => AdvancedMessageSending.nonBlockingAskWithRetry(node,ReleaseOutput,10,0))
           }

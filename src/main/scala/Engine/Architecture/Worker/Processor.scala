@@ -184,6 +184,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveDataMessages:Receive = {
     case EndSending(seq) =>
+      if(tag.operator.contains("Join2")) {
+        println(s"${tag.getGlobalIdentity} received END")
+      }
       onReceiveEndSending(seq)
     case DataMessage(seq,payload) =>
       onReceiveDataMessage(seq,payload)
