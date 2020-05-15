@@ -164,7 +164,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             } else {
               if(metadata.tag.operator.contains("Join2")) {
                 println()
-                println(s"Completed came from ${sender.toString()}")
+                //println(s"Completed came from ${sender.toString()}")
                 context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
                 // unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics)
               }
