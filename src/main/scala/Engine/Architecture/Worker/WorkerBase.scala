@@ -77,11 +77,11 @@ abstract class WorkerBase(tag: WorkerTag) extends Actor with ActorLogging with S
   final def allowStashOrReleaseOutput:Receive = {
     case StashOutput =>
       sender ! Ack
-      println(s"Stash output received by ${tag.getGlobalIdentity}")
+      // println(s"Stash output received by ${tag.getGlobalIdentity}")
       pauseDataTransfer()
     case ReleaseOutput =>
       sender ! Ack
-      println(s"Release output received by ${tag.getGlobalIdentity}")
+      // println(s"Release output received by ${tag.getGlobalIdentity}")
       resumeDataTransfer()
   }
 

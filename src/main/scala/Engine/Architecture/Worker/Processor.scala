@@ -34,6 +34,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   val aliveUpstreams = new mutable.HashSet[LayerTag]
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
+  var totalBatchCountReceived = 0
 
   var tupleToIdentifyJoin:String = ""
 
@@ -121,8 +122,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       case Some(batches) =>
         val currentEdge = input.actorToEdge(sender)
         synchronized {
-          for (i <- batches)
+          for (i <- batches) {
+            totalBatchCountReceived += 1
             processingQueue += ((currentEdge,i))
+          }
           if (dPThreadState == ThreadState.Idle) {
             dPThreadState = ThreadState.Running
             Future {
@@ -185,7 +188,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   final def receiveDataMessages:Receive = {
     case EndSending(seq) =>
       if(tag.operator.contains("Join2")) {
-        println(s"${tag.getGlobalIdentity} received END")
+        // println(s"${tag.getGlobalIdentity} received END")
       }
       onReceiveEndSending(seq)
     case DataMessage(seq,payload) =>
@@ -218,7 +221,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveSkewDetectionMessages:Receive = {
     case QuerySkewDetectionMetrics =>
-      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length))
+      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchCountReceived))
   }
 
 

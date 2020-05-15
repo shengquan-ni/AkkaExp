@@ -163,6 +163,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               unstashAll()
             } else {
               if(metadata.tag.operator.contains("Join2")) {
+                println()
+                println(s"Completed came from ${sender.toString()}")
                 context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
                 // unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics)
               }
@@ -171,7 +173,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case ReportSkewMetrics(tag, skewMetric) =>
-      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}")
+      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}, ${skewMetric.totalProcessed}")
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
