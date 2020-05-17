@@ -1,8 +1,9 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, RequireAck, Resume}
+import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, ReportTime, RequireAck, Resume}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
+import Engine.Common.AmberTag.WorkerTag
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
 import akka.util.Timeout
 
@@ -48,7 +49,9 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   override def receive: Receive = {
     case msg:DataMessage =>
       timeStart = System.nanoTime()
-      message = msg.payload(0).toString
+      if(message.isEmpty()) {
+        message = msg.payload(0).toString()
+      }
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
@@ -92,9 +95,6 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       }
       timeTaken += System.nanoTime()-timeStart
     case AckOfEndSending =>
-      if(receiver.toString().contains("Join2")) {
-        println(s"Time taken by FLOW actor ${timeTaken} to send data ${message}")
-      }
       if(handleOfEndSending != null){
         handleOfEndSending._2.cancel()
         handleOfEndSending = null
@@ -115,6 +115,8 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       timeTaken += System.nanoTime()-timeStart
     case Resume =>
     case Pause => context.become(paused)
+    case ReportTime(tag:WorkerTag) =>
+      println(s"FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000} and message ${message}")
   }
 
   final def paused:Receive ={

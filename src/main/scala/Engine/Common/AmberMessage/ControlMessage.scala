@@ -1,5 +1,7 @@
 package Engine.Common.AmberMessage
 
+import Engine.Common.AmberTag.WorkerTag
+
 
 object ControlMessage{
 
@@ -28,4 +30,6 @@ object ControlMessage{
   final case class ReleaseOutput()
 
   final case class QuerySkewDetectionMetrics()
+
+  final case class ReportTime(tag: WorkerTag)
 }
