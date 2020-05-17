@@ -39,6 +39,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var tupleToIdentifyJoin:String = ""
 
   var flowControlActorsForJoin = new mutable.HashSet[ActorRef]()
+  var count = 0
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -232,7 +233,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   final def receiveSkewDetectionMessages:Receive = {
     case QuerySkewDetectionMetrics =>
       println()
-      flowControlActorsForJoin.foreach( actor => actor ! ReportTime(tag))
+      count += 1
+      flowControlActorsForJoin.foreach( actor => actor ! ReportTime(tag, count))
       sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchCountReceived))
   }
 

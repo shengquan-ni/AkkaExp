@@ -31,5 +31,5 @@ object ControlMessage{
 
   final case class QuerySkewDetectionMetrics()
 
-  final case class ReportTime(tag: WorkerTag)
+  final case class ReportTime(tag: WorkerTag, count: Integer)
 }

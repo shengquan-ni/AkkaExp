@@ -115,8 +115,8 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       timeTaken += System.nanoTime()-timeStart
     case Resume =>
     case Pause => context.become(paused)
-    case ReportTime(tag:WorkerTag) =>
-      println(s"FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000} and message ${message}")
+    case ReportTime(tag:WorkerTag, count:Integer) =>
+      println(s"${count} FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000} and message ${message}")
   }
 
   final def paused:Receive ={
