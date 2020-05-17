@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class ActorRoutee(receiver: ActorRef) extends BaseRoutee(receiver) {
 
-  var senderActor:ActorRef = _
+  var senderActor:ActorRef = _  //the actor that will be used to send data to the next layer
   val stash = new ArrayBuffer[Any]
   var isPaused = false
 

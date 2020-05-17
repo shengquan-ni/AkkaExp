@@ -61,6 +61,7 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
     super.initialize(tag, next)
     assert(next != null)
     routees = next
+    // each of the receiver will have its own routee
     routees.foreach(_.initialize(tag))
     batches = new Array[Array[Tuple]](next.length)
     for(i <- next.indices){

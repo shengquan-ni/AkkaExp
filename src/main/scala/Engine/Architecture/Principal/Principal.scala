@@ -53,6 +53,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val timer = new Stopwatch()
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
+  var skewQueryStartTime = 0L
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -163,9 +164,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               unstashAll()
             } else {
               if(metadata.tag.operator.contains("Join2")) {
+                if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
+                  context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
+                  skewQueryStartTime = System.nanoTime()
+                }
                 println()
                 //println(s"Completed came from ${sender.toString()}")
-                context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
                 // unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics)
               }
             }

@@ -41,8 +41,14 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   val messagesOnTheWay = new mutable.LongMap[(Cancellable,DataMessage)]
   val messagesToBeSent = new mutable.Queue[DataMessage]
 
+  var timeTaken = 0L
+  var timeStart = 0L
+  var message:String = ""
+
   override def receive: Receive = {
     case msg:DataMessage =>
+      timeStart = System.nanoTime()
+      message = msg.payload(0).toString
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
@@ -55,11 +61,15 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
 //          context.parent ! ActivateBackPressure
 //        }
       }
+      timeTaken += System.nanoTime()-timeStart
     case msg:EndSending =>
+      timeStart = System.nanoTime()
       //always send end-sending message regardless the message queue size
       handleOfEndSending = (msg.sequenceNumber,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut))
       receiver ! RequireAck(msg)
+      timeTaken += System.nanoTime()-timeStart
     case AckWithSequenceNumber(seq) =>
+      timeStart = System.nanoTime()
       if(messagesOnTheWay.contains(seq)) {
         messagesOnTheWay(seq)._1.cancel()
         messagesOnTheWay.remove(seq)
@@ -80,7 +90,11 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           receiver ! RequireAck(msg)
         }
       }
+      timeTaken += System.nanoTime()-timeStart
     case AckOfEndSending =>
+      if(receiver.toString().contains("Join2")) {
+        println(s"Time taken by FLOW actor ${timeTaken} to send data ${message}")
+      }
       if(handleOfEndSending != null){
         handleOfEndSending._2.cancel()
         handleOfEndSending = null
@@ -91,12 +105,14 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
         receiver ! RequireAck(EndSending(handleOfEndSending._1))
       }
     case MessageTimedOut(seq) =>
+      timeStart = System.nanoTime()
       if(messagesOnTheWay.contains(seq)){
         //resend the data message
         val msg = messagesOnTheWay(seq)._2
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
         receiver ! RequireAck(msg)
       }
+      timeTaken += System.nanoTime()-timeStart
     case Resume =>
     case Pause => context.become(paused)
   }
