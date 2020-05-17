@@ -195,9 +195,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveEndSending(seq)
     case DataMessage(seq,payload) =>
       if(tag.operator.contains("Join2")) {
-        if(sender.toString().contains("Join1")) {
           flowControlActorsForJoin.add(sender)
-        }
       }
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
