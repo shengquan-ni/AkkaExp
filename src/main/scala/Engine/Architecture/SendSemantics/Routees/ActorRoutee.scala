@@ -26,6 +26,7 @@ abstract class ActorRoutee(receiver: ActorRef) extends BaseRoutee(receiver) {
         case e:EndSending => senderActor ! e
       }
     }
+    println(s"DIRECT ROUTEE for ${receiver.toString()} DONE with ${stash.size}")
     stash.clear()
   }
 
