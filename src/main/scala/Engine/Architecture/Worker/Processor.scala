@@ -203,7 +203,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
       if(tag.operator.contains("Join2")) {
-        flowControlActorsForJoin.add(sender)
+        if(sender.toString().contains("Join1")) {
+          flowControlActorsForJoin.add(sender)
+        }
       }
       sender ! AckWithSequenceNumber(msg.sequenceNumber)
       onReceiveDataMessage(msg.sequenceNumber,msg.payload)
