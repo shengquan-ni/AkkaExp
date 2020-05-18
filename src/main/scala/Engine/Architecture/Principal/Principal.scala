@@ -1,5 +1,7 @@
 package Engine.Architecture.Principal
 
+import java.text.SimpleDateFormat
+
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
@@ -27,6 +29,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import java.util.Date
 
 
 object Principal {
@@ -54,6 +57,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
   var skewQueryStartTime = 0L
+  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z")
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -177,7 +181,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case ReportSkewMetrics(tag, skewMetric) =>
-      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}, ${skewMetric.totalProcessed}")
+      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}, ${skewMetric.totalProcessed} at time ${formatter.format(new Date(System.currentTimeMillis()))}")
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
