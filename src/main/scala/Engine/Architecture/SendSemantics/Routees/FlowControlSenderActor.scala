@@ -119,7 +119,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case Resume =>
     case Pause => context.become(paused)
     case ReportTime(tag:WorkerTag, count:Integer) =>
-      println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, toSend ${messagesToBeSent.size} at TIME: ${formatter.format(new Date(System.currentTimeMillis()))}")
+      println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at TIME: ${formatter.format(new Date(System.currentTimeMillis()))}")
   }
 
   final def paused:Receive ={
