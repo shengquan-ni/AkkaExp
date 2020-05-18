@@ -15,6 +15,8 @@ import scala.concurrent.ExecutionContext
 class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   val stash = new ArrayBuffer[Any]
   var isPaused = false
+
+  var message: String = ""
   override def schedule(msg: DataMessage)(implicit sender: ActorRef): Unit = {
     if(isPaused){
       stash.append(msg)
@@ -31,10 +33,15 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
     isPaused = false
     for(i <- stash){
       i match{
-        case d:DataMessage => receiver ! d
+        case d:DataMessage =>
+          if(message.isEmpty) {
+            message = d.payload(0).toString()
+          }
+          receiver ! d
         case e:EndSending => receiver ! e
       }
     }
+    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}")
     stash.clear()
   }
 
