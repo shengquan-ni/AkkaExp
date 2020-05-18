@@ -17,7 +17,7 @@ class HashBasedShuffle(from:ActorLayer, to:ActorLayer, batchSize:Int, hashFunc:T
     assert(from.isBuilt && to.isBuilt)
     from.layer.foreach(x =>
       AdvancedMessageSending.blockingAskWithRetry(x,
-        UpdateOutputLinking(new HashBasedShufflePolicy(batchSize,hashFunc),tag, to.layer.map(y => if(x.path.address.hostPort == y.path.address.hostPort) new DirectRoutee(y) else new FlowControlRoutee(y))),
+        UpdateOutputLinking(new HashBasedShufflePolicy(batchSize,hashFunc),tag, to.layer.map(y => if(x.path.address.hostPort == y.path.address.hostPort) new FlowControlRoutee(y) else new FlowControlRoutee(y))),
         10))
   }
 }
