@@ -44,14 +44,11 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
 
   var timeTaken = 0L
   var timeStart = 0L
-  var message:String = ""
+  var countOfMessageTimedOut:Integer = 0
 
   override def receive: Receive = {
     case msg:DataMessage =>
       timeStart = System.nanoTime()
-      if(message.isEmpty()) {
-        message = msg.payload(0).toString()
-      }
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
@@ -107,6 +104,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case MessageTimedOut(seq) =>
       timeStart = System.nanoTime()
       if(messagesOnTheWay.contains(seq)){
+        countOfMessageTimedOut += 1
         //resend the data message
         val msg = messagesOnTheWay(seq)._2
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
@@ -116,7 +114,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case Resume =>
     case Pause => context.become(paused)
     case ReportTime(tag:WorkerTag, count:Integer) =>
-      println(s"${count} FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000} and message ${message}")
+      println(s"${count} FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000}, messageTimedOut ${countOfMessageTimedOut}")
   }
 
   final def paused:Receive ={
