@@ -1,5 +1,8 @@
 package Engine.Architecture.SendSemantics.Routees
 
+import java.text.SimpleDateFormat
+import java.util.Date
+
 import Engine.Common.AdvancedMessageSending
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
 import Engine.Common.AmberTag.LinkTag
@@ -15,6 +18,7 @@ import scala.concurrent.ExecutionContext
 class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   val stash = new ArrayBuffer[Any]
   var isPaused = false
+  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss.SSS z")
 
   var message: String = ""
   override def schedule(msg: DataMessage)(implicit sender: ActorRef): Unit = {
@@ -41,7 +45,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
         case e:EndSending => receiver ! e
       }
     }
-    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}")
+    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}  at TIME: ${formatter.format(new Date(System.currentTimeMillis()))}")
     stash.clear()
   }
 

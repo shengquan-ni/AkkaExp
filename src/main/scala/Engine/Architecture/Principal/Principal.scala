@@ -57,7 +57,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
   var skewQueryStartTime = 0L
-  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss z")
+  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss.SSS z")
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
