@@ -45,10 +45,12 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var timeTaken = 0L
   var timeStart = 0L
   var countOfMessageTimedOut:Integer = 0
+  var countOfMessagesReceived = 0
 
   override def receive: Receive = {
     case msg:DataMessage =>
       timeStart = System.nanoTime()
+      countOfMessagesReceived += 1
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
@@ -114,7 +116,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case Resume =>
     case Pause => context.become(paused)
     case ReportTime(tag:WorkerTag, count:Integer) =>
-      println(s"${count} FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000}, messageTimedOut ${countOfMessageTimedOut}")
+      println(s"${count} FLOW control actor sending data to ${tag.getGlobalIdentity} has time ${timeTaken/1000000}, messageTimedOut ${countOfMessageTimedOut}, messagesReceivedTillNow ${countOfMessagesReceived}")
   }
 
   final def paused:Receive ={
