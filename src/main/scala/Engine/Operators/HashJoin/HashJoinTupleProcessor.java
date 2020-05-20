@@ -42,7 +42,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
             // Below is custom code to build fake data
             if(outerTableIndex == 1) {
-                for(int i =0; i<10000; i++) {
+                for(int i =0; i<10; i++) {
                     innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
                 }
             }
