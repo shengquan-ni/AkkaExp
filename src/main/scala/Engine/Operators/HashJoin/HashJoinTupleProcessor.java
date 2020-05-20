@@ -21,7 +21,8 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     private Iterator<Object[]> currentEntry = null;
     private Object[] currentTuple = null;
 
-    private boolean notInitialized = true;
+    private boolean notInitializedInner = true;
+    private boolean notInitializedOuter = true;
 
     HashJoinTupleProcessor(LayerTag innerTableIdentifier, int innerTableIndex, int outerTableIndex){
         this.innerTableIdentifier = innerTableIdentifier;
@@ -42,24 +43,28 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
             // Below is custom code to build fake data
             if(outerTableIndex == 1) {
-                for(int i =0; i<10; i++) {
+                for(int i =0; i<100; i++) {
                     innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
                 }
             }
 
-            if(notInitialized && outerTableIndex == 1) {
+            if(notInitializedInner && outerTableIndex == 1) {
                 for(int i=13; i<1000000; i++) {
                     K key1 = (K)Integer.toString(i);
                     innerTableHashMap.put(key1,new ArrayList<>());
                     innerTableHashMap.get(key1).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
                 }
 
-                notInitialized = false;
+                notInitializedInner = false;
             }
         }else{
             if(!isInnerTableFinished) {
                 throw new AssertionError("Probe table came before build table");
             }else{
+                if(notInitializedOuter) {
+                    System.out.println("Inner length " + innerTableHashMap.size());
+                    notInitializedOuter = false;
+                }
                 K key = (K)tuple.get(outerTableIndex);
                 if(innerTableHashMap.containsKey(key)) {
                     currentEntry = innerTableHashMap.get(key).iterator();
