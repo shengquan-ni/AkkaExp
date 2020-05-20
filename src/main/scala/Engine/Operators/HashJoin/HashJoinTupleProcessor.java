@@ -41,9 +41,12 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
 
             // Below is custom code to build fake data
-            for(int i =0; i<10000; i++) {
-                innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+            if(outerTableIndex == 1) {
+                for(int i =0; i<10000; i++) {
+                    innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+                }
             }
+
             if(notInitialized && outerTableIndex == 1) {
                 for(int i=13; i<1000000; i++) {
                     K key1 = (K)Integer.toString(i);
