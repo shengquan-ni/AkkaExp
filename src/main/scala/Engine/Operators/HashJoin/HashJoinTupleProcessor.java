@@ -21,6 +21,8 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     private Iterator<Object[]> currentEntry = null;
     private Object[] currentTuple = null;
 
+    private boolean notInitialized = true;
+
     HashJoinTupleProcessor(LayerTag innerTableIdentifier, int innerTableIndex, int outerTableIndex){
         this.innerTableIdentifier = innerTableIdentifier;
         this.innerTableIndex = innerTableIndex;
@@ -37,6 +39,20 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
                 innerTableHashMap.put(key,new ArrayList<>());
             }
             innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+
+            // Below is custom code to build fake data
+            for(int i =0; i<10000; i++) {
+                innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+            }
+            if(notInitialized && outerTableIndex == 1) {
+                for(int i=13; i<1000000; i++) {
+                    K key1 = (K)Integer.toString(i);
+                    innerTableHashMap.put(key1,new ArrayList<>());
+                    innerTableHashMap.get(key1).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+                }
+
+                notInitialized = false;
+            }
         }else{
             if(!isInnerTableFinished) {
                 throw new AssertionError("Probe table came before build table");
@@ -66,9 +82,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     }
 
     @Override
-    public void initialize() {
-        innerTableHashMap = new HashMap<>();
-    }
+    public void initialize() { innerTableHashMap = new HashMap<>(); }
 
     @Override
     public boolean hasNext() {
