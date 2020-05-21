@@ -16,7 +16,7 @@ object Config {
 //  val remoteHDFSIP = "128.195.52.129:9870"
   val remoteHDFSPath = "hdfs://ec2-18-216-84-85.us-east-2.compute.amazonaws.com:8020"
   val remoteHDFSIP = "ec2-18-216-84-85.us-east-2.compute.amazonaws.com:50070"
-  var dataset = 50
+  var dataset = 30
 
   /**
    * Automate number of workers per operator and data to be processed
