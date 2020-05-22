@@ -108,6 +108,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   private[this] def Generate(): Unit ={
     Breaks.breakable{
       generateStart = System.nanoTime()
+      println(s"Generate started for ${tag.getGlobalIdentity()}")
       while(dataProducer.hasNext){
         exitIfPaused()
         try {
@@ -136,6 +137,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       synchronized{
         isGeneratingFinished = true
         self ! ExecutionCompleted
+        println(s"Execution completed sent by ${tag.getGlobalIdentity()}")
       }
       generateTime += System.nanoTime()-generateStart
     }
