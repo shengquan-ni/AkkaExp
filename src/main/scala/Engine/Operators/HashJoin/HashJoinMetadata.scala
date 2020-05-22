@@ -26,7 +26,7 @@ class HashJoinMetadata[K](tag:OperatorTag, val numWorkers:Int, val innerTableInd
   override lazy val topology: Topology = {
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new HashJoinTupleProcessor[K](innerTableTag,innerTableIndex,outerTableIndex),
-        numWorkers/2,
+        numWorkers,
         if(outerTableIndex==0) JoinCustom(0,2) else JoinCustom(3,5),
         RoundRobinDeployment())
     ),Array(),Map())
