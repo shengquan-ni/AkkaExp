@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 
 class GroupByMetadata[T](tag:OperatorTag, val numWorkers:Int, val groupByField: Int, val aggregateField: Int, val aggregationType: AggregationType) extends OperatorMetadata(tag){
   override lazy val topology: Topology = {
-    val partialLayer = new ProcessorWorkerLayer(LayerTag(tag,"localGroupBy"),_ => new GroupByLocalTupleProcessor[T](groupByField,aggregateField,aggregationType), numWorkers, UseAll(),RoundRobinDeployment())
+    val partialLayer = new ProcessorWorkerLayer(LayerTag(tag,"localGroupBy"),_ => new GroupByLocalTupleProcessor[T](groupByField,aggregateField,aggregationType), numWorkers, FollowPrevious(),RoundRobinDeployment())
     val finalLayer = new ProcessorWorkerLayer(LayerTag(tag,"globalGroupBy"),_ => new GroupByGlobalTupleProcessor[T](aggregationType),numWorkers, FollowPrevious(),RoundRobinDeployment())
     new Topology(Array(
       partialLayer,
