@@ -178,7 +178,7 @@ abstract class WorkerBase(tag: WorkerTag) extends Actor with ActorLogging with S
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] { //query triggered breakpoint
     case Start =>
       sender ! Ack
-      println(s"${tag.getGlobalIdentity} received start from principal")
+      // println(s"${tag.getGlobalIdentity} received start from principal")
       onStart()
     case Pause =>
       onPaused()
