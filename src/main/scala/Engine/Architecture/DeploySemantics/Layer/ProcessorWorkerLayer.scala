@@ -22,8 +22,10 @@ class ProcessorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProcessor, _n
     deployStrategy.initialize(deploymentFilter.filter(prev, all, context.self.path.address))
     layer = new Array[ActorRef](numWorkers)
     for(i <- 0 until numWorkers){
+      println(s"${i} FOR started for ${tag.getGlobalIdentity}")
       val workerTag = WorkerTag(tag,i)
       layer(i)=context.actorOf(Processor.props(metadata(i),workerTag).withDeploy(Deploy(scope = RemoteScope(deployStrategy.next()))))
+      println(s"${i} FOR started for ${tag.getGlobalIdentity}")
     }
   }
 

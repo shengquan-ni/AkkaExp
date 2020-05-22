@@ -93,7 +93,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   final def ready:Receive = {
     case Start =>
       sender ! Ack
-      println(s"Principal ${metadata.tag.operator} sending START to its workers")
+      // println(s"Principal ${metadata.tag.operator} sending START to its workers")
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
     case WorkerMessage.ReportState(state) =>
       state match{
