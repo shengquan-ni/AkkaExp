@@ -3,7 +3,7 @@ package Engine.Operators.HashJoin
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.Controller.Workflow
 import Engine.Architecture.DeploySemantics.DeployStrategy.{RandomDeployment, RoundRobinDeployment}
-import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, UseAll}
+import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, JoinCustom, UseAll}
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLayer}
 import Engine.Architecture.LinkSemantics.LinkStrategy
 import Engine.Architecture.Worker.WorkerState
@@ -27,7 +27,7 @@ class HashJoinMetadata[K](tag:OperatorTag, val numWorkers:Int, val innerTableInd
     new Topology(Array(
       new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new HashJoinTupleProcessor[K](innerTableTag,innerTableIndex,outerTableIndex),
         numWorkers,
-        UseAll(),
+        if(outerTableIndex==0) JoinCustom(0,2) else JoinCustom(3,5),
         RoundRobinDeployment())
     ),Array(),Map())
   }
