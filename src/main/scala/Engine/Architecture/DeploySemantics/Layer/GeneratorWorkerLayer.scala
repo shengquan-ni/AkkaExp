@@ -22,7 +22,7 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
     layer = new Array[ActorRef](numWorkers)
     var idx = 0
     for(i <- 0 until numWorkers){
-      println(s"${i} FOR started for ${tag.getGlobalIdentity}")
+      // println(s"${i} FOR started for ${tag.getGlobalIdentity}")
       try{
         val workerTag = WorkerTag(tag,i)
         layer(idx)=context.actorOf(Generator.props(metadata(i),workerTag).withDeploy(Deploy(scope = RemoteScope(deployStrategy.next()))))
@@ -31,7 +31,7 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
       catch{
         case e:Exception => println(e)
       }
-      println(s"${i} FOR ended for ${tag.getGlobalIdentity}")
+      // println(s"${i} FOR ended for ${tag.getGlobalIdentity}")
     }
     if(idx != numWorkers-1){
       layer = layer.take(idx)
