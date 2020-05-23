@@ -42,21 +42,21 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
 
             // Below is custom code to build fake data
-//            if(outerTableIndex == 1) {
-//                for(int i =0; i<10; i++) {
-//                    innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
-//                }
-//            }
-//
-//            if(notInitializedInner && outerTableIndex == 1) {
-//                for(int i=13; i<1000000; i++) {
-//                    K key1 = (K)Integer.toString(i);
-//                    innerTableHashMap.put(key1,new ArrayList<>());
-//                    innerTableHashMap.get(key1).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
-//                }
-//
-//                notInitializedInner = false;
-//            }
+            if(outerTableIndex == 1) {
+                for(int i =0; i<10; i++) {
+                    innerTableHashMap.get(key).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+                }
+            }
+
+            if(notInitializedInner && outerTableIndex == 1) {
+                for(int i=13; i<1000000; i++) {
+                    K key1 = (K)Integer.toString(i);
+                    innerTableHashMap.put(key1,new ArrayList<>());
+                    innerTableHashMap.get(key1).add(ArrayUtils.remove(tuple.toArray(),innerTableIndex));
+                }
+
+                notInitializedInner = false;
+            }
         }else{
             if(!isInnerTableFinished) {
                 throw new AssertionError("Probe table came before build table");
