@@ -182,7 +182,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case ReportSkewMetrics(tag, skewMetric) =>
-      println(s"${tag.getGlobalIdentity} reports ${skewMetric.unprocessedQueueLength}, ${skewMetric.totalProcessed} at time ${formatter.format(new Date(System.currentTimeMillis()))}")
+      println(s"${tag.getGlobalIdentity} reports current queue ${skewMetric.unprocessedQueueLength}, cumulative queue ${skewMetric.totalPutInInternalQueue}, stash ${skewMetric.stashedBatches} at time ${formatter.format(new Date(System.currentTimeMillis()))}")
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
