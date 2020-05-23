@@ -57,7 +57,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
   var skewQueryStartTime = 0L
-  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss.SSS z")
+  val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -182,7 +182,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       }
     case ReportSkewMetrics(tag, skewMetric) =>
-      println(s"${tag.getGlobalIdentity} reports current queue ${skewMetric.unprocessedQueueLength}, cumulative queue ${skewMetric.totalPutInInternalQueue}, stash ${skewMetric.stashedBatches} at time ${formatter.format(new Date(System.currentTimeMillis()))}")
+      println(s"${tag.getGlobalIdentity} reports current queue ${skewMetric.unprocessedQueueLength}, cumulative queue ${skewMetric.totalPutInInternalQueue}, stash ${skewMetric.stashedBatches} at ${formatter.format(new Date(System.currentTimeMillis()))}")
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
