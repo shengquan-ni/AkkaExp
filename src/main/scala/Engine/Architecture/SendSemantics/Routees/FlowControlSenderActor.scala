@@ -48,7 +48,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var timeStart = 0L
   var countOfMessageTimedOut:Integer = 0
   var countOfMessagesReceived = 0
-  val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS z")
+  val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
 
   override def receive: Receive = {
     case msg:DataMessage =>
@@ -119,7 +119,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case Resume =>
     case Pause => context.become(paused)
     case ReportTime(tag:WorkerTag, count:Integer) =>
-      println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at TIME: ${formatter.format(new Date(System.currentTimeMillis()))}")
+      println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at ${formatter.format(new Date(System.currentTimeMillis()))}")
   }
 
   final def paused:Receive ={

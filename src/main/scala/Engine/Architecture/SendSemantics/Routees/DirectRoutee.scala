@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext
 class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   val stash = new ArrayBuffer[Any]
   var isPaused = false
-  val formatter = new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss.SSS z")
+  val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
 
   var message: String = ""
   override def schedule(msg: DataMessage)(implicit sender: ActorRef): Unit = {
@@ -45,7 +45,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
         case e:EndSending => receiver ! e
       }
     }
-    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}  at TIME: ${formatter.format(new Date(System.currentTimeMillis()))}")
+    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}  at ${formatter.format(new Date(System.currentTimeMillis()))}")
     stash.clear()
   }
 
