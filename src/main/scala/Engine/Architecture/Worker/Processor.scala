@@ -34,12 +34,13 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   val aliveUpstreams = new mutable.HashSet[LayerTag]
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
-  var totalBatchCountReceived = 0
+  var totalBatchPutInInternalQueue = 0
 
   var tupleToIdentifyJoin:String = ""
 
   var flowControlActorsForJoin = new mutable.HashSet[ActorRef]()
   var count = 0
+  var senderForJoin: ActorRef = null
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -62,7 +63,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
-    println(s" ${tag.getGlobalIdentity} ACTOR for Joining ${tupleToIdentifyJoin} TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms, batches ${totalBatchCountReceived}")
+    println(s" ${tag.getGlobalIdentity} ACTOR for Joining ${tupleToIdentifyJoin} TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms, batches ${totalBatchPutInInternalQueue}")
   }
 
   private[this] def waitProcessing:Receive={
@@ -121,12 +122,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   def onReceiveDataMessage(seq: Long, payload: Array[Tuple]): Unit = {
+    if(senderForJoin == null) {
+      senderForJoin = sender
+    }
     input.preCheck(seq,payload,sender) match{
       case Some(batches) =>
         val currentEdge = input.actorToEdge(sender)
         synchronized {
           for (i <- batches) {
-            totalBatchCountReceived += 1
+            totalBatchPutInInternalQueue += 1
             processingQueue += ((currentEdge,i))
           }
           if (dPThreadState == ThreadState.Idle) {
@@ -235,7 +239,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       println()
       count += 1
       flowControlActorsForJoin.foreach( actor => actor ! ReportTime(tag, count))
-      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchCountReceived))
+      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
   }
 
 
