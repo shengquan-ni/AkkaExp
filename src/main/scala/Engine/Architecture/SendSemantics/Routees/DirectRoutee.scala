@@ -45,7 +45,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
         case e:EndSending => receiver ! e
       }
     }
-    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size}  at ${formatter.format(new Date(System.currentTimeMillis()))}")
+    println(s"DIRECT ROUTEE for ${message} DONE with ${stash.size} at ${formatter.format(new Date(System.currentTimeMillis()))}")
     stash.clear()
   }
 
