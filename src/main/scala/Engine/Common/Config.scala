@@ -7,7 +7,7 @@ object Config {
    */
   // val thirdPartyIP: String = "128.195.52.129"
   // val thirdPartyPort:Int = 9870
-  val thirdPartyIP: String = "172.31.33.27"
+  val thirdPartyIP: String = "172.31.45.132"
   val thirdPartyPort:Int = 22
   /**
    * Put HDFS connection details below.

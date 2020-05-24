@@ -203,11 +203,11 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           log.info("fully initialized!")
           for(i <- workflow.operators) {
             // GroupBy1 isn't being stashed because then even Local layer gets stashed and GroupBy1 never completes
-            if(i._1.operator.contains("Join1")) {
-              val node = principalBiMap.get(i._1)
-              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-              stashedNodes.add(node)
-            }
+//            if(i._1.operator.contains("Join1")) {
+//              val node = principalBiMap.get(i._1)
+//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
+//              stashedNodes.add(node)
+//            }
           }
 //          for(i <- workflow.operators){
 //            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
@@ -309,9 +309,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         case PrincipalState.Completed =>
           log.info(sender+" completed")
 
-          if(stashedNodes.contains(sender) && stashedNodes.forall(node => principalStates(node)==PrincipalState.Completed)) {
-            stashedNodes.foreach(node => AdvancedMessageSending.nonBlockingAskWithRetry(node,ReleaseOutput,10,0))
-          }
+//          if(stashedNodes.contains(sender) && stashedNodes.forall(node => principalStates(node)==PrincipalState.Completed)) {
+//            stashedNodes.foreach(node => AdvancedMessageSending.nonBlockingAskWithRetry(node,ReleaseOutput,10,0))
+//          }
+
 //          if(stashedNodes.contains(sender)){
 //            AdvancedMessageSending.nonBlockingAskWithRetry(sender,ReleaseOutput,10,0)
 //            stashedNodes.remove(sender)
