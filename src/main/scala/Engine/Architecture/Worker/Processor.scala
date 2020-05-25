@@ -1,5 +1,7 @@
 package Engine.Architecture.Worker
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.concurrent.Executors
 
 import Engine.Architecture.ReceiveSemantics.FIFOAccessPort
@@ -41,6 +43,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var flowControlActorsForJoin = new mutable.HashSet[ActorRef]()
   var count = 0
   var senderForJoin: ActorRef = null
+  var internalQueueTimeStart = 0L
+  var dpthreadProcessingTimeStart = 0L
+  var totalBatchProcessed = 0
+  val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -132,6 +138,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           for (i <- batches) {
             totalBatchPutInInternalQueue += 1
             processingQueue += ((currentEdge,i))
+
+            if(totalBatchPutInInternalQueue%100 == 1) {
+              if(totalBatchPutInInternalQueue > 99) {
+                println(s"LAST 100 batches put in queue in ${(System.nanoTime()-internalQueueTimeStart)/1000000}ms: ${formatter.format(new Date(System.currentTimeMillis()))}")
+
+              }
+              internalQueueTimeStart = System.nanoTime()
+            }
+
           }
           if (dPThreadState == ThreadState.Idle) {
             dPThreadState = ThreadState.Running
@@ -271,6 +286,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   private[this] def afterProcessingBatch(): Unit ={
+    totalBatchProcessed += 1
+    if(totalBatchProcessed%100 == 1) {
+      if(totalBatchProcessed > 99) {
+        println(s"LAST 100 batches processed in ${(System.nanoTime()-dpthreadProcessingTimeStart)/1000000}ms: ${formatter.format(new Date(System.currentTimeMillis()))}")
+
+      }
+      dpthreadProcessingTimeStart = System.nanoTime()
+    }
+
     processingIndex = 0
     synchronized{
       processingQueue.dequeue()
@@ -417,6 +441,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           }
         }
       }
+
       afterProcessingBatch()
       processTime += System.nanoTime()-processStart
     }
