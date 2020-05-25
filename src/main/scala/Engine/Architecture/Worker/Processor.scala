@@ -139,12 +139,14 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             totalBatchPutInInternalQueue += 1
             processingQueue += ((currentEdge,i))
 
-            if(totalBatchPutInInternalQueue%100 == 1) {
-              if(totalBatchPutInInternalQueue > 99) {
-                println(s"LAST 100 batches put in queue in ${(System.nanoTime()-internalQueueTimeStart)/1000000}ms: ${formatter.format(new Date(System.currentTimeMillis()))}")
+            if(tag.operator.contains("Join2")) {
+              if(totalBatchPutInInternalQueue%100 == 1) {
+                if(totalBatchPutInInternalQueue > 99) {
+                  println(s"LAST 100 batches put in queue in ${(System.nanoTime()-internalQueueTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
 
+                }
+                internalQueueTimeStart = System.nanoTime()
               }
-              internalQueueTimeStart = System.nanoTime()
             }
 
           }
@@ -286,13 +288,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   private[this] def afterProcessingBatch(): Unit ={
-    totalBatchProcessed += 1
-    if(totalBatchProcessed%100 == 1) {
-      if(totalBatchProcessed > 99) {
-        println(s"LAST 100 batches processed in ${(System.nanoTime()-dpthreadProcessingTimeStart)/1000000}ms: ${formatter.format(new Date(System.currentTimeMillis()))}")
+    if(tag.operator.contains("Join2")) {
+      totalBatchProcessed += 1
+      if(totalBatchProcessed%100 == 1) {
+        if(totalBatchProcessed > 99) {
+          println(s"LAST 100 batches processed in ${(System.nanoTime()-dpthreadProcessingTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
 
+        }
+        dpthreadProcessingTimeStart = System.nanoTime()
       }
-      dpthreadProcessingTimeStart = System.nanoTime()
     }
 
     processingIndex = 0
