@@ -424,11 +424,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       var join2ActorsSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = new mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]()
       allWorkers.foreach(worker => {
         val skewMetricsFromPrevWorker: SkewMetricsFromPreviousWorker = AdvancedMessageSending.blockingAskWithRetry(worker, GetSkewMetricsFromFlowControl, 3).asInstanceOf[SkewMetricsFromPreviousWorker]
+        skewMetricsFromPrevWorker.flowActorSkewMap.keys.foreach(key => {println(s"Join1 ${key.toString()}")})
         for((key,value) <- skewMetricsFromPrevWorker.flowActorSkewMap) {
           join2ActorsSkewMap.getOrElse(key, new ArrayBuffer[(ActorRef,Int,Int)]()) += value
         }
       })
-      join2ActorsSkewMap.keys.foreach(worker => {println(s"Join1 ${worker.toString()}")})
+      // join2ActorsSkewMap.keys.foreach(worker => {println(s"Join1 ${worker.toString()}")})
       sender ! join2ActorsSkewMap
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
