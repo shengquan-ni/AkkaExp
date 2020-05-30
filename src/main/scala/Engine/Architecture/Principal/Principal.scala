@@ -428,6 +428,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           join2ActorsSkewMap.getOrElse(key, new ArrayBuffer[(ActorRef,Int,Int)]()) += value
         }
       })
+      join2ActorsSkewMap.keys.foreach(worker => {println(s"Join1 ${worker.toString()}")})
       sender ! join2ActorsSkewMap
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
