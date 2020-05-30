@@ -183,6 +183,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                     join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
                   }
                   val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
+                  flowControlSkewMap.keys.foreach(worker => {
+                    println(${worker})
+                  })
 
                   println()
                   unCompletedWorkers.foreach(worker => {
