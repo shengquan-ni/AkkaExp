@@ -257,7 +257,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       println()
       count += 1
       flowControlActorsForJoin.foreach( actor => actor ! ReportTime(tag, count))
-      sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
+      // sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
+      sender ! SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size)
   }
 
   final def receiveFlowControlSkewDetectionMessages:Receive = {
