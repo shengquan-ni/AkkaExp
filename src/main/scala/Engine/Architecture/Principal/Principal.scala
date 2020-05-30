@@ -183,15 +183,16 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                     join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
                   }
                   val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
-                  flowControlSkewMap.keys.foreach(worker => {
-                    println(s"Join2 ${worker.toString()}")
-                  })
 
                   println()
                   unCompletedWorkers.foreach(worker => {
-                    var sum = 0
-                    flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {sum += metric._2})
-                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum}")
+                    var sum1 = 0
+                    var sum2 = 0
+                    flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {
+                      sum1 += metric._2
+                      sum2 += metric._3
+                    })
+                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum1} and ${sum2}")
                   })
 
                   countOfSkewQuery += 1
@@ -430,7 +431,6 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           join2ActorsSkewMap.put(key,oldValue)
         }
       })
-      // join2ActorsSkewMap.keys.foreach(worker => {println(s"Join1 ${worker.toString()}")})
       sender ! join2ActorsSkewMap
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
