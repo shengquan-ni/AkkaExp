@@ -173,10 +173,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
               if(metadata.tag.operator.contains("Join2")) {
                 if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
-                  var workersSkewMap: mutable.HashMap[ActorRef,SkewMetrics] = new mutable.HashMap[ActorRef,SkewMetrics]()
+                  var workersSkewMap: mutable.HashMap[ActorRef,(String,SkewMetrics)] = new mutable.HashMap[ActorRef,(String,SkewMetrics)]()
                   unCompletedWorkers.foreach(worker =>{
-                    val metrics: SkewMetrics = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[SkewMetrics]
-                    workersSkewMap += (worker -> metrics)
+                    val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
+                    workersSkewMap += (worker -> (tag,metrics))
                   })
                   // context.system.scheduler.scheduleOnce(1.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
                   if(join1Principal == null) {
@@ -188,7 +188,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                   unCompletedWorkers.foreach(worker => {
                     var sum = 0
                     flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {sum += metric._2})
-                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${worker.toString()}- ${workersSkewMap.getOrElse(worker, new SkewMetrics(0,0,0)).totalPutInInternalQueue} and ${sum}")
+                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum}")
                   })
 
                   countOfSkewQuery += 1
