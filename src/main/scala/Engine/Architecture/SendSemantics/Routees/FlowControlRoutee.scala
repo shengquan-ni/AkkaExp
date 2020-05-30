@@ -7,6 +7,7 @@ import akka.actor.{ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class FlowControlRoutee(receiver:ActorRef) extends ActorRoutee(receiver) {
@@ -25,4 +26,13 @@ class FlowControlRoutee(receiver:ActorRef) extends ActorRoutee(receiver) {
   }
 
   override def toString: String = s"FlowControlRoutee($receiver)"
+
+  /**
+   * Returns (receiver ActorRef, Flow Control ActorRef, totalQueueLength, SentTillNow)
+   * @return
+   */
+  override def getSenderActor(): ActorRef = {
+    return senderActor
+  }
+
 }

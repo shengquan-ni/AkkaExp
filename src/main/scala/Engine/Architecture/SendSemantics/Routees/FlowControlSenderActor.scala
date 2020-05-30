@@ -1,7 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, Pause, ReportTime, RequireAck, Resume}
+import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, Resume}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import Engine.Common.AmberTag.WorkerTag
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
@@ -120,6 +120,9 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case Pause => context.become(paused)
     case ReportTime(tag:WorkerTag, count:Integer) =>
       println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at ${formatter.format(new Date(System.currentTimeMillis()))}")
+
+    case GetSkewMetricsFromFlowControl =>
+      sender ! (receiver, countOfMessagesReceived, countOfMessagesReceived - messagesToBeSent.size)
   }
 
   final def paused:Receive ={

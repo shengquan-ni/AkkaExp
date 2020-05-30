@@ -22,6 +22,7 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.control.Breaks
 import scala.annotation.elidable
 import scala.annotation.elidable._
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 object Processor {
@@ -142,7 +143,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             if(tag.operator.contains("Join2")) {
               if(totalBatchPutInInternalQueue%1000 == 2) {
                 if(totalBatchPutInInternalQueue > 99) {
-                  println(s"Batches ${totalBatchPutInInternalQueue-1000}-${totalBatchPutInInternalQueue} put in queue in ${(System.nanoTime()-internalQueueTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
+                  // println(s"Batches ${totalBatchPutInInternalQueue-1000}-${totalBatchPutInInternalQueue} put in queue in ${(System.nanoTime()-internalQueueTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
 
                 }
                 internalQueueTimeStart = System.nanoTime()
@@ -259,6 +260,18 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
   }
 
+  final def receiveFlowControlSkewDetectionMessages:Receive = {
+    case GetSkewMetricsFromFlowControl =>
+      val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
+      var flowActorSkewMap: mutable.HashMap[ActorRef,(ActorRef, Int,Int)] = new mutable.HashMap[ActorRef,(ActorRef, Int,Int)]()
+      flowControlActors.foreach(actor => {
+        val (receiver,totalMessaegs,sentTillNow) = AdvancedMessageSending.blockingAskWithRetry(actor, GetSkewMetricsFromFlowControl, 3).asInstanceOf[(ActorRef,Int,Int)]
+        flowActorSkewMap += (receiver -> (actor,totalMessaegs,sentTillNow))
+      })
+
+      sender ! (SkewMetricsFromPreviousWorker(flowActorSkewMap))
+  }
+
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -281,7 +294,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
 
-  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse super.completed
+  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveFlowControlSkewDetectionMessages orElse super.completed
 
 
   private[this] def beforeProcessingBatch(): Unit ={
@@ -292,7 +305,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       totalBatchProcessed += 1
       if(totalBatchProcessed%1000 == 2) {
         if(totalBatchProcessed > 99) {
-           println(s"Batches ${totalBatchProcessed-1000}-${totalBatchProcessed} PROCESSED in ${(System.nanoTime()-dpthreadProcessingTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
+           // println(s"Batches ${totalBatchProcessed-1000}-${totalBatchProcessed} PROCESSED in ${(System.nanoTime()-dpthreadProcessingTimeStart)/1000000}ms: ${tag.getGlobalIdentity}, ${formatter.format(new Date(System.currentTimeMillis()))}")
 
         }
         dpthreadProcessingTimeStart = System.nanoTime()

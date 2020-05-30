@@ -1,12 +1,14 @@
 package Engine.Architecture.SendSemantics.DataTransferPolicy
 
 import Engine.Architecture.SendSemantics.Routees.BaseRoutee
+import Engine.Architecture.Worker.SkewMetricsFromPreviousWorker
 import Engine.Common.AmberTag.LinkTag
 import Engine.Common.AmberTuple.Tuple
 import akka.actor.{Actor, ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 /**
@@ -29,6 +31,10 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
   def pause():Unit
 
   def resume()(implicit sender:ActorRef):Unit
+
+  def getFlowActors(): ArrayBuffer[ActorRef] = {
+    return null
+  }
 
   /**
    * Policy between a worker actor and its downstream layer of actors.

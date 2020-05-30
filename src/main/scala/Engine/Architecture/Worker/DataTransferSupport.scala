@@ -9,6 +9,7 @@ import akka.actor.{ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks
 
@@ -117,6 +118,10 @@ trait DataTransferSupport extends BreakpointSupport {
       }
       output = output :+ policy
     }
+  }
+
+  def getFlowActors(): ArrayBuffer[ActorRef] = {
+    return output(0).getFlowActors()
   }
 
 }

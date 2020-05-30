@@ -1,6 +1,7 @@
 package Engine.Architecture.SendSemantics.DataTransferPolicy
 
 import Engine.Architecture.SendSemantics.Routees.BaseRoutee
+import Engine.Architecture.Worker.SkewMetricsFromPreviousWorker
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import Engine.Common.AmberTag.LinkTag
 import Engine.Common.AmberTuple.Tuple
@@ -8,6 +9,8 @@ import akka.actor.{Actor, ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends DataTransferPolicy(batchSize) {
@@ -73,5 +76,13 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
 
   override def dispose(): Unit = {
     routees.foreach(_.dispose())
+  }
+
+  override def getFlowActors(): ArrayBuffer[ActorRef] = {
+    var flowActors: ArrayBuffer[ActorRef] = new ArrayBuffer[ActorRef]()
+    routees.foreach(routee => {
+      flowActors += routee.getSenderActor()
+    })
+    return flowActors
   }
 }

@@ -31,5 +31,9 @@ object ControlMessage{
 
   final case class QuerySkewDetectionMetrics()
 
+  final case class GetSkewMetricsFromFlowControl()
+
+  final case class TellJoin1Actor()
+
   final case class ReportTime(tag: WorkerTag, count: Integer)
 }

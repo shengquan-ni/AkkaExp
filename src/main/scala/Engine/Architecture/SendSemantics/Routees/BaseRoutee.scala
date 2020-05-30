@@ -6,6 +6,7 @@ import akka.actor.{Actor, ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 /**
@@ -27,4 +28,8 @@ abstract class BaseRoutee(val receiver:ActorRef) extends Serializable {
   def schedule(msg:EndSending)(implicit sender: ActorRef)
 
   def dispose()
+
+  def getSenderActor(): ActorRef = {
+    return null
+  }
 }

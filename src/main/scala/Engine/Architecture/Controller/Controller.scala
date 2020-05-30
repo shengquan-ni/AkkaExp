@@ -363,6 +363,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           }
         }
       }
+    case TellJoin1Actor =>
+      var join1Principal:ActorRef = null
+      principalBiMap.keySet().forEach(opTag => if(opTag.operator.contains("Join1")) {join1Principal = principalBiMap.get(opTag)})
+      sender ! join1Principal
     case Resume =>
     case msg => stash()
   }

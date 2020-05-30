@@ -6,7 +6,7 @@ import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
-import Engine.Architecture.Worker.{SkewMetrics, WorkerState}
+import Engine.Architecture.Worker.{SkewMetrics, SkewMetricsFromPreviousWorker, WorkerState}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.PrincipalMessage.{AssignBreakpoint, _}
 import Engine.Common.AmberMessage.StateMessage._
@@ -58,6 +58,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val stage2Timer = new Stopwatch()
   var skewQueryStartTime = 0L
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
+  var join1Principal: ActorRef = null
+  var countOfSkewQuery: Int = 0
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -168,14 +170,31 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.become(completed)
               unstashAll()
             } else {
+
               if(metadata.tag.operator.contains("Join2")) {
                 if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
-                  context.system.scheduler.scheduleOnce(100.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
+                  var workersSkewMap: mutable.HashMap[ActorRef,SkewMetrics] = new mutable.HashMap[ActorRef,SkewMetrics]()
+                  unCompletedWorkers.foreach(worker =>{
+                    val metrics: SkewMetrics = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[SkewMetrics]
+                    workersSkewMap += (worker -> metrics)
+                  })
+                  // context.system.scheduler.scheduleOnce(1.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
+                  if(join1Principal == null) {
+                    join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
+                  }
+                  val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
+
+                  println()
+                  unCompletedWorkers.foreach(worker => {
+                    var sum = 0
+                    flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {sum += metric._2})
+                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${worker.toString()}- ${workersSkewMap.getOrElse(worker, new SkewMetrics(0,0,0)).totalPutInInternalQueue} and ${sum}")
+                  })
+
+                  countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()
                 }
                 println()
-                //println(s"Completed came from ${sender.toString()}")
-                // unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics)
               }
             }
           case _ => //skip others for now
@@ -397,6 +416,16 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case ReleaseOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
+    case QuerySkewDetectionMetrics =>
+      // the below takes place in Join1
+      var join2ActorsSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = new mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]()
+      allWorkers.foreach(worker => {
+        val skewMetricsFromPrevWorker: SkewMetricsFromPreviousWorker = AdvancedMessageSending.blockingAskWithRetry(worker, GetSkewMetricsFromFlowControl, 3).asInstanceOf[SkewMetricsFromPreviousWorker]
+        for((key,value) <- skewMetricsFromPrevWorker.flowActorSkewMap) {
+          join2ActorsSkewMap.getOrElse(key, new ArrayBuffer[(ActorRef,Int,Int)]()) += value
+        }
+      })
+      sender ! join2ActorsSkewMap
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){
