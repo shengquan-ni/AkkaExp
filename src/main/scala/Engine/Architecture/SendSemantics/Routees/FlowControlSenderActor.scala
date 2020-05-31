@@ -122,7 +122,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at ${formatter.format(new Date(System.currentTimeMillis()))}")
 
     case GetSkewMetricsFromFlowControl =>
-      sender ! (receiver, countOfMessagesReceived, countOfMessagesReceived - messagesToBeSent.size)
+      sender ! (receiver, countOfMessagesReceived, messagesToBeSent.size)
   }
 
   final def paused:Receive ={
