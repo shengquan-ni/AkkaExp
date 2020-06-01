@@ -1,5 +1,7 @@
 package Engine.Operators.Sort
 
+import java.util
+
 import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
@@ -41,7 +43,7 @@ class SortTupleProcessor[T:Ordering](val targetField:Int) extends TupleProcessor
 
   }
 
-  override def getBuildHashTable: Any = null
+  override def getBuildHashTable: util.ArrayList[Any] = null
 
   override def renewHashTable(hashTable: Any): Unit = {
   }

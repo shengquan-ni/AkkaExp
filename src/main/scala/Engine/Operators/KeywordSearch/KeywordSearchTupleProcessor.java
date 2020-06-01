@@ -4,6 +4,8 @@ import Engine.Common.AmberTag.LayerTag;
 import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.TupleProcessor;
 
+import java.util.ArrayList;
+
 public class KeywordSearchTupleProcessor implements TupleProcessor {
 
     private Tuple tuple = null;
@@ -61,8 +63,8 @@ public class KeywordSearchTupleProcessor implements TupleProcessor {
     }
 
     @Override
-    public Object getBuildHashTable() {
-        return null;
+    public ArrayList<Object> getBuildHashTable() {
+        return new ArrayList<>();
     }
 
     @Override

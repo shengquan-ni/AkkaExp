@@ -4,6 +4,7 @@ import Engine.Common.AmberTag.LayerTag;
 import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.TupleProcessor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -95,8 +96,8 @@ public class GroupByGlobalTupleProcessor<T> implements TupleProcessor {
 
     }
     @Override
-    public Object getBuildHashTable() {
-        return null;
+    public ArrayList<Object> getBuildHashTable() {
+        return new ArrayList<>();
     }
 
     @Override

@@ -1,5 +1,7 @@
 package Engine.Operators.SimpleCollection
 
+import java.util
+
 import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
@@ -40,7 +42,7 @@ class SimpleTupleProcessor extends TupleProcessor {
 
   }
 
-  override def getBuildHashTable: Any = null
+  override def getBuildHashTable: util.ArrayList[Any] = null
 
   override def renewHashTable(hashTable: Any): Unit = {
   }

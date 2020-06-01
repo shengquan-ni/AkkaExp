@@ -17,7 +17,7 @@ trait TupleProcessor extends TupleProducer {
 
   def noMore():Unit
 
-  def getBuildHashTable(): Any
+  def getBuildHashTable(): util.ArrayList[Any]
 
   def renewHashTable(hashTable: Any):Unit
 }

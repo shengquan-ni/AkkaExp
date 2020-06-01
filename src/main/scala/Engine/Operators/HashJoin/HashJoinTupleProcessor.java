@@ -4,11 +4,13 @@ import Engine.Common.AmberTag.LayerTag;
 import Engine.Common.AmberTuple.AmberTuple;
 import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.TupleProcessor;
+import com.google.inject.internal.cglib.core.$ClassNameReader;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class HashJoinTupleProcessor<K> implements TupleProcessor {
 
@@ -110,13 +112,34 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
     }
 
     @Override
-    public Object getBuildHashTable() {
-        return innerTableHashMap;
+    public ArrayList<Object> getBuildHashTable() {
+        ArrayList<Object> sendingMap = new ArrayList<>();
+        int count = 1;
+        HashMap<K, ArrayList<Object[]>> curr = new HashMap<>();
+        for(Map.Entry<K, ArrayList<Object[]>> entry: innerTableHashMap.entrySet()) {
+            curr.put(entry.getKey(),entry.getValue());
+            if(count % 4000 == 0) {
+                sendingMap.add(curr);
+                curr = new HashMap<>();
+            }
+            count++;
+        }
+        if(!curr.isEmpty()) {
+            sendingMap.add(curr);
+        }
+
+        return sendingMap;
     }
 
     @Override
     public void renewHashTable(Object hashTable) {
-        innerTableHashMap = (HashMap<K, ArrayList<Object[]>>)hashTable;
+        HashMap<K, ArrayList<Object[]>> newHashMap = (HashMap<K, ArrayList<Object[]>>)hashTable;
+        for(Map.Entry<K, ArrayList<Object[]>> entry: newHashMap.entrySet()) {
+            if(!innerTableHashMap.containsKey(entry.getKey())) {
+                innerTableHashMap.put(entry.getKey(),new ArrayList<>());
+            }
+            innerTableHashMap.get(entry.getKey()).addAll(entry.getValue());
+        }
         System.out.println("Inner length for new table" + innerTableHashMap.size());
     }
 }

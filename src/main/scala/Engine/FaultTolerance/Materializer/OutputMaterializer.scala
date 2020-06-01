@@ -6,9 +6,9 @@ import Engine.Common.TupleProcessor
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
-
-import java.io.{FileWriter,BufferedWriter}
+import java.io.{BufferedWriter, FileWriter}
 import java.net.URI
+import java.util
 
 class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) extends TupleProcessor {
 
@@ -47,7 +47,7 @@ class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) ex
 
   }
 
-  override def getBuildHashTable: Any = null
+  override def getBuildHashTable: util.ArrayList[Any] = null
 
   override def renewHashTable(hashTable: Any): Unit = {
   }

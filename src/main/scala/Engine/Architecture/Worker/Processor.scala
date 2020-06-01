@@ -1,6 +1,7 @@
 package Engine.Architecture.Worker
 
 import java.text.SimpleDateFormat
+import java.util
 import java.util.Date
 import java.util.concurrent.Executors
 
@@ -276,8 +277,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   final def receiveBuildTableReplicationMsg:Receive = {
     case ReplicateBuildTable(to) =>
       if(tag.operator.contains("Join2")) {
-        val hashTable:Any = dataProcessor.getBuildHashTable()
-        to ! ReceiveHashTable(hashTable)
+        val hashTable:util.ArrayList[Any] = dataProcessor.getBuildHashTable()
+        hashTable.forEach(map => to!ReceiveHashTable(map))
       }
   }
 

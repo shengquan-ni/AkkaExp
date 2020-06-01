@@ -1,5 +1,7 @@
 package Engine.Operators.Sink
 
+import java.util
+
 import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.TupleProcessor
@@ -35,7 +37,7 @@ class SimpleSinkProcessor extends TupleProcessor{
 
   }
 
-  override def getBuildHashTable: Any = null
+  override def getBuildHashTable: util.ArrayList[Any] = null
 
   override def renewHashTable(hashTable: Any): Unit = {
   }

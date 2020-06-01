@@ -4,6 +4,8 @@ import Engine.Common.AmberTag.LayerTag;
 import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.TupleProcessor;
 
+import java.util.ArrayList;
+
 
 public class ProjectionTupleProcessor implements TupleProcessor {
 
@@ -69,8 +71,8 @@ public class ProjectionTupleProcessor implements TupleProcessor {
     }
 
     @Override
-    public Object getBuildHashTable() {
-        return null;
+    public ArrayList<Object> getBuildHashTable() {
+        return new ArrayList<>();
     }
 
     @Override

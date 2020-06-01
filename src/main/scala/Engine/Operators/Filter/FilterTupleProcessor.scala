@@ -1,5 +1,7 @@
 package Engine.Operators.Filter
 
+import java.util
+
 import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
@@ -42,7 +44,7 @@ class FilterTupleProcessor[T:Ordering](val targetField:Int, val filterType:Filte
 
   }
 
-  override def getBuildHashTable: Any = null
+  override def getBuildHashTable: util.ArrayList[Any] = null
 
   override def renewHashTable(hashTable: Any): Unit = {
   }

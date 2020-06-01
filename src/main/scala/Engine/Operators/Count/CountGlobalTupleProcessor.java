@@ -55,8 +55,8 @@ public class CountGlobalTupleProcessor implements TupleProcessor {
     }
 
     @Override
-    public Object getBuildHashTable() {
-        return null;
+    public ArrayList<Object> getBuildHashTable() {
+        return new ArrayList<>();
     }
 
     @Override
