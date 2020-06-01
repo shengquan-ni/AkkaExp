@@ -4,7 +4,9 @@ import Engine.Common.AmberTag.LayerTag;
 import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.TupleProcessor;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 
 public class CountGlobalTupleProcessor implements TupleProcessor {
 
@@ -49,6 +51,16 @@ public class CountGlobalTupleProcessor implements TupleProcessor {
 
     @Override
     public void dispose() {
+
+    }
+
+    @Override
+    public Object getBuildHashTable() {
+        return null;
+    }
+
+    @Override
+    public void renewHashTable(Object hashTable) {
 
     }
 }

@@ -46,4 +46,9 @@ class OutputMaterializer(val outputPath:String, val remoteHDFS:String = null) ex
   override def onUpstreamExhausted(from: LayerTag): Unit = {
 
   }
+
+  override def getBuildHashTable: Any = null
+
+  override def renewHashTable(hashTable: Any): Unit = {
+  }
 }

@@ -107,4 +107,14 @@ public class GroupByLocalTupleProcessor<T> implements TupleProcessor {
         results = null;
         counts = null;
     }
+
+    @Override
+    public Object getBuildHashTable() {
+        return null;
+    }
+
+    @Override
+    public void renewHashTable(Object hashTable) {
+
+    }
 }

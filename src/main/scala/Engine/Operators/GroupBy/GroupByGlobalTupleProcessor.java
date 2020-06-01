@@ -94,4 +94,13 @@ public class GroupByGlobalTupleProcessor<T> implements TupleProcessor {
     public void dispose() throws Exception {
 
     }
+    @Override
+    public Object getBuildHashTable() {
+        return null;
+    }
+
+    @Override
+    public void renewHashTable(Object hashTable) {
+
+    }
 }

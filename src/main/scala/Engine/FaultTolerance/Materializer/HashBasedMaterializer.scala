@@ -54,4 +54,9 @@ class HashBasedMaterializer(val outputPath:String,val index:Int, val hashFunc:Tu
   override def onUpstreamExhausted(from: LayerTag): Unit = {
 
   }
+
+  override def getBuildHashTable: Any = null
+
+  override def renewHashTable(hashTable: Any): Unit = {
+  }
 }

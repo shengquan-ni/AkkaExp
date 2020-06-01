@@ -1,6 +1,7 @@
 package Engine.Common.AmberMessage
 
 import Engine.Common.AmberTag.WorkerTag
+import akka.actor.ActorRef
 
 
 object ControlMessage{
@@ -36,4 +37,9 @@ object ControlMessage{
   final case class TellJoin1Actor()
 
   final case class ReportTime(tag: WorkerTag, count: Integer)
+
+  final case class ReplicateBuildTable(to:ActorRef)
+
+  final case class ReceiveHashTable(hashTable: Any)
+
 }

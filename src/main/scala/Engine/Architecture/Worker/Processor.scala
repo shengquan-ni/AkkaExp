@@ -273,6 +273,20 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       sender ! (SkewMetricsFromPreviousWorker(flowActorSkewMap))
   }
 
+  final def receiveBuildTableReplicationMsg:Receive = {
+    case ReplicateBuildTable(to) =>
+      if(tag.operator.contains("Join2")) {
+        val hashTable:Any = dataProcessor.getBuildHashTable()
+        to ! ReceiveHashTable(hashTable)
+      }
+  }
+
+  final def receiveHashTable: Receive = {
+    case ReceiveHashTable(hashTable) =>
+      if(tag.operator.contains("Join2")) {
+        dataProcessor.renewHashTable(hashTable)
+      }
+  }
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -289,13 +303,13 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
 
-  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse super.running
+  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse super.running
 
   override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
 
   override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
 
-  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse super.completed
+  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveHashTable orElse super.completed
 
 
   private[this] def beforeProcessingBatch(): Unit ={

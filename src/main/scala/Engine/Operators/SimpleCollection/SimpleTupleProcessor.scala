@@ -39,4 +39,9 @@ class SimpleTupleProcessor extends TupleProcessor {
   override def onUpstreamExhausted(from: LayerTag): Unit = {
 
   }
+
+  override def getBuildHashTable: Any = null
+
+  override def renewHashTable(hashTable: Any): Unit = {
+  }
 }

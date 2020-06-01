@@ -59,7 +59,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var skewQueryStartTime = 0L
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
   var join1Principal: ActorRef = null
-  var countOfSkewQuery: Int = 0
+  var countOfSkewQuery: Int = 1
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -185,15 +185,24 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                   val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
 
                   println()
+                  var mostSkewedWorker: ActorRef = null
+                  var mostDataToProcess: Int = -1
                   unCompletedWorkers.foreach(worker => {
-                    var sum1 = 0
+                    // var sum1 = 0
                     var sum2 = 0
                     flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {
-                      sum1 += metric._2
+                      // sum1 += metric._2
                       sum2 += metric._3
                     })
-                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum1} and ${sum2}")
+                    if(sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue > mostDataToProcess) {
+                      mostDataToProcess = sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue
+                      mostSkewedWorker = worker
+                    }
+                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum2}")
                   })
+
+                  println(s"${countOfSkewQuery} Most skewed worker is ${workersSkewMap.getOrElse(mostSkewedWorker,("",SkewMetrics(0,0,0)))._1}")
+                  mostSkewedWorker ! ReplicateBuildTable(sender)
 
                   countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()

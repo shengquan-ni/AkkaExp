@@ -108,4 +108,15 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
         currentEntry = null;
         currentTuple = null;
     }
+
+    @Override
+    public Object getBuildHashTable() {
+        return innerTableHashMap;
+    }
+
+    @Override
+    public void renewHashTable(Object hashTable) {
+        innerTableHashMap = (HashMap<K, ArrayList<Object[]>>)hashTable;
+        System.out.println("Inner length for new table" + innerTableHashMap.size());
+    }
 }

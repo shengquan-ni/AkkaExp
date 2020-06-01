@@ -59,4 +59,14 @@ public class KeywordSearchTupleProcessor implements TupleProcessor {
     public void dispose() {
 
     }
+
+    @Override
+    public Object getBuildHashTable() {
+        return null;
+    }
+
+    @Override
+    public void renewHashTable(Object hashTable) {
+
+    }
 }

@@ -41,5 +41,10 @@ class FilterTupleProcessor[T:Ordering](val targetField:Int, val filterType:Filte
   override def onUpstreamExhausted(from: LayerTag): Unit = {
 
   }
+
+  override def getBuildHashTable: Any = null
+
+  override def renewHashTable(hashTable: Any): Unit = {
+  }
 }
 

@@ -7,6 +7,7 @@ import Engine.Architecture.SendSemantics.DataTransferPolicy.{HashBasedShufflePol
 import Engine.Architecture.SendSemantics.Routees.DirectRoutee
 import Engine.Architecture.Worker.{Generator, Processor}
 import Engine.Common.AmberField.FieldType
+import Engine.Common.AmberMessage.ControlMessage.ReplicateBuildTable
 import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, GetInputLayer, GetOutputLayer, ReportPrincipalPartialCompleted, ReportState}
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, DataMessage, EndSending, UpdateInputLinking, UpdateOutputLinking}
 import Engine.Common.AmberTag.{LayerTag, LinkTag, OperatorTag, WorkerTag, WorkflowTag}
@@ -104,11 +105,13 @@ class HashJoinPrincipalSpec
     }
     //parent.expectMsg(ReportState(PrincipalState.Completed))
     assert(res == Set(
-      Tuple("Japan",6,"Japan",4),
-      Tuple("cat",1,"cat",3),
-      Tuple("cat boomer",2,"cat boomer",2),
-      Tuple("cat lover",3,"cat lover",1),
-      Tuple("asia",4,"asia",0)))
+      Tuple("Japan",4,6),
+      Tuple("cat",3,1),
+      Tuple("cat boomer",2,2),
+      Tuple("cat lover",1,3),
+      Tuple("asia",0,4)))
+
+
   }
 
 }

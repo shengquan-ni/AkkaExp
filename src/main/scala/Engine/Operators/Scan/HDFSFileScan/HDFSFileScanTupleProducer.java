@@ -73,4 +73,5 @@ public class HDFSFileScanTupleProducer implements TupleProducer{
     public void dispose() throws Exception {
         reader.close();
     }
+
 }
