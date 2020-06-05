@@ -173,7 +173,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               if(metadata.tag.operator.contains("Join2")) {
                 if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
                   val mostSkewedWorker: ActorRef = SkewDetection()
-                  SkewMitigation(mostSkewedWorker)
+                  SkewMitigation(mostSkewedWorker, sender)
                   countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()
                 }
@@ -248,7 +248,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     mostSkewedWorker
   }
 
-  def SkewMitigation(mostSkewedWorker: ActorRef)(implicit sender:ActorRef): Unit = {
+  def SkewMitigation(mostSkewedWorker: ActorRef, sender:ActorRef): Unit = {
     AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(sender), 3)
     join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,sender)
   }
