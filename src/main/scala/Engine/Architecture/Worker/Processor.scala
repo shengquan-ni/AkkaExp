@@ -280,6 +280,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         val hashTable:util.ArrayList[Any] = dataProcessor.getBuildHashTable()
         hashTable.forEach(map => to!ReceiveHashTable(map))
       }
+      sender ! Ack
   }
 
   final def receiveHashTable: Receive = {
@@ -287,6 +288,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       if(tag.operator.contains("Join2")) {
         dataProcessor.renewHashTable(hashTable)
       }
+  }
+
+  final def receiveRouteUpdateMessages: Receive = {
+    case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
+      val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
+      flowControlActors.foreach(actor => {
+        actor ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
+      })
+
   }
 
   override def postStop(): Unit = {
@@ -310,7 +320,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
 
-  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveHashTable orElse super.completed
+  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse super.completed
 
 
   private[this] def beforeProcessingBatch(): Unit ={

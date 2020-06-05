@@ -170,44 +170,13 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.become(completed)
               unstashAll()
             } else {
-
               if(metadata.tag.operator.contains("Join2")) {
                 if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
-                  var workersSkewMap: mutable.HashMap[ActorRef,(String,SkewMetrics)] = new mutable.HashMap[ActorRef,(String,SkewMetrics)]()
-                  unCompletedWorkers.foreach(worker =>{
-                    val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
-                    workersSkewMap += (worker -> (tag,metrics))
-                  })
-                  // context.system.scheduler.scheduleOnce(1.milliseconds, () => unCompletedWorkers.foreach(worker => worker ! QuerySkewDetectionMetrics))
-                  if(join1Principal == null) {
-                    join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
-                  }
-                  val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
-
-                  println()
-                  var mostSkewedWorker: ActorRef = null
-                  var mostDataToProcess: Int = -1
-                  unCompletedWorkers.foreach(worker => {
-                    // var sum1 = 0
-                    var sum2 = 0
-                    flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {
-                      // sum1 += metric._2
-                      sum2 += metric._3
-                    })
-                    if(sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue > mostDataToProcess) {
-                      mostDataToProcess = sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue
-                      mostSkewedWorker = worker
-                    }
-                    println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum2}")
-                  })
-
-                  println(s"${countOfSkewQuery} Most skewed worker is ${workersSkewMap.getOrElse(mostSkewedWorker,("",SkewMetrics(0,0,0)))._1}")
-                  mostSkewedWorker ! ReplicateBuildTable(sender)
-
+                  val mostSkewedWorker: ActorRef = SkewDetection()
+                  SkewMitigation(mostSkewedWorker)
                   countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()
                 }
-                println()
               }
             }
           case _ => //skip others for now
@@ -246,6 +215,42 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
+  }
+
+  def SkewDetection()(implicit sender:ActorRef): ActorRef = {
+    var workersSkewMap: mutable.HashMap[ActorRef,(String,SkewMetrics)] = new mutable.HashMap[ActorRef,(String,SkewMetrics)]()
+    unCompletedWorkers.foreach(worker =>{
+      val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
+      workersSkewMap += (worker -> (tag,metrics))
+    })
+
+    if(join1Principal == null) {
+      join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
+    }
+    val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
+    println()
+    var mostSkewedWorker: ActorRef = null
+    var mostDataToProcess: Int = -1
+    unCompletedWorkers.foreach(worker => {
+      // var sum1 = 0
+      var sum2 = 0
+      flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {
+        // sum1 += metric._2
+        sum2 += metric._3
+      })
+      if(sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue > mostDataToProcess) {
+        mostDataToProcess = sum2+workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue
+        mostSkewedWorker = worker
+      }
+      println(s"${countOfSkewQuery} SKEW METRICS FOR ${workersSkewMap.getOrElse(worker,("",SkewMetrics(0,0,0)))._1}- ${workersSkewMap.getOrElse(worker, ("",SkewMetrics(0,0,0)))._2.totalPutInInternalQueue} and ${sum2}")
+    })
+    println(s"${countOfSkewQuery} Most skewed worker is ${workersSkewMap.getOrElse(mostSkewedWorker,("",SkewMetrics(0,0,0)))._1}")
+    mostSkewedWorker
+  }
+
+  def SkewMitigation(mostSkewedWorker: ActorRef)(implicit sender:ActorRef): Unit = {
+    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(sender), 3)
+    join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,sender)
   }
 
 
@@ -441,6 +446,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         }
       })
       sender ! join2ActorsSkewMap
+    case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
+      allWorkers.foreach(worker => {
+        worker ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
+      })
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){

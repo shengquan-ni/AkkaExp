@@ -42,4 +42,6 @@ object ControlMessage{
 
   final case class ReceiveHashTable(hashTable: Any)
 
+  final case class UpdateRoutingForSkewMitigation(mostSkewedWorker: ActorRef, freeWorker: ActorRef)
+
 }

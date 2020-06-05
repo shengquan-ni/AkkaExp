@@ -140,6 +140,6 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             }
             innerTableHashMap.get(entry.getKey()).addAll(entry.getValue());
         }
-        System.out.println("Inner length for new table" + innerTableHashMap.size());
+        // System.out.println("Inner length for new table" + innerTableHashMap.size());
     }
 }

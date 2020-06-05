@@ -1,7 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, Resume}
+import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, Resume, UpdateRoutingForSkewMitigation}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import Engine.Common.AmberTag.WorkerTag
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import java.text.SimpleDateFormat
 import java.util.Date
+
+import scala.collection.mutable.ArrayBuffer
 
 object FlowControlSenderActor{
   def props(receiver:ActorRef): Props = Props(new FlowControlSenderActor(receiver))
@@ -50,6 +52,16 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var countOfMessagesReceived = 0
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
 
+  var allReceivers: ArrayBuffer[ActorRef] =  ArrayBuffer(receiver)
+  var currentReceiverIdx: Int = 0
+
+  def getReceiver():ActorRef = {
+    currentReceiverIdx = currentReceiverIdx%allReceivers.size
+    val receiverNext = allReceivers(currentReceiverIdx)
+    currentReceiverIdx += 1
+    receiverNext
+  }
+
   override def receive: Receive = {
     case msg:DataMessage =>
       timeStart = System.nanoTime()
@@ -57,7 +69,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       if(messagesOnTheWay.size < windowSize){
         maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
-        receiver ! RequireAck(msg)
+        getReceiver() ! RequireAck(msg)
       }else{
         messagesToBeSent.enqueue(msg)
 //        if(messagesToBeSent.size >= activateBackPressureThreshold){
@@ -71,7 +83,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       timeStart = System.nanoTime()
       //always send end-sending message regardless the message queue size
       handleOfEndSending = (msg.sequenceNumber,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut))
-      receiver ! RequireAck(msg)
+      getReceiver() ! RequireAck(msg)
       timeTaken += System.nanoTime()-timeStart
     case AckWithSequenceNumber(seq) =>
       timeStart = System.nanoTime()
@@ -92,7 +104,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           val msg = messagesToBeSent.dequeue()
           maxSentSequenceNumber = Math.max(maxSentSequenceNumber,msg.sequenceNumber)
           messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
-          receiver ! RequireAck(msg)
+          getReceiver() ! RequireAck(msg)
         }
       }
       timeTaken += System.nanoTime()-timeStart
@@ -104,7 +116,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
     case EndSendingTimedOut =>
       if(handleOfEndSending != null){
         handleOfEndSending = (handleOfEndSending._1,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut))
-        receiver ! RequireAck(EndSending(handleOfEndSending._1))
+        getReceiver() ! RequireAck(EndSending(handleOfEndSending._1))
       }
     case MessageTimedOut(seq) =>
       timeStart = System.nanoTime()
@@ -113,7 +125,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
         //resend the data message
         val msg = messagesOnTheWay(seq)._2
         messagesOnTheWay(msg.sequenceNumber) = (context.system.scheduler.scheduleOnce(sendingTimeout,self,MessageTimedOut(msg.sequenceNumber)),msg)
-        receiver ! RequireAck(msg)
+        getReceiver() ! RequireAck(msg)
       }
       timeTaken += System.nanoTime()-timeStart
     case Resume =>
@@ -122,7 +134,10 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       println(s"${count} FLOW sending to ${tag.getGlobalIdentity} time ${timeTaken/1000000}, messagesReceivedTillNow ${countOfMessagesReceived}, sent ${countOfMessagesReceived - messagesToBeSent.size} at ${formatter.format(new Date(System.currentTimeMillis()))}")
 
     case GetSkewMetricsFromFlowControl =>
-      sender ! (receiver, countOfMessagesReceived, messagesToBeSent.size)
+      sender ! (getReceiver(), countOfMessagesReceived, messagesToBeSent.size)
+
+    case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
+
   }
 
   final def paused:Receive ={
