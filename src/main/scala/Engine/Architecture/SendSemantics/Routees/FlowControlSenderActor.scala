@@ -40,7 +40,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var ssThreshold = 16
   var windowSize = 2
   var maxSentSequenceNumber: mutable.HashMap[ActorRef,Long] = mutable.HashMap(receiver->0)
-  var handleOfEndSending:mutable.HashMap[ActorRef,(Long,Cancellable)] = _
+  var handleOfEndSending:mutable.HashMap[ActorRef,(Long,Cancellable)] = new mutable.HashMap[ActorRef,(Long,Cancellable)]()
 //  var backPressureActivated = false
 
   val messagesOnTheWay = new mutable.HashMap[(ActorRef,Long),(Cancellable,DataMessage)]
