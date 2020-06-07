@@ -87,6 +87,8 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       timeStart = System.nanoTime()
       //always send end-sending message regardless the message queue size
       for(i<- 0 to allReceivers.size-1) {
+        println(s"${i} Actor name = ${allReceivers(i).toString()}")
+        println(s"${i} Sequence number = ${sequenceNumberFromFlowActor(i)}")
         handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
         msg.sequenceNumber = sequenceNumberFromFlowActor(i)
         allReceivers(i) ! RequireAck(msg)
