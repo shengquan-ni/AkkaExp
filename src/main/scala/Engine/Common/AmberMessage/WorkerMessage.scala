@@ -18,7 +18,7 @@ object WorkerMessage {
 
   final case class UpdateOutputLinking(policy:DataTransferPolicy, link:LinkTag, receivers:Array[BaseRoutee])
 
-  final case class EndSending(sequenceNumber:Long)
+  final case class EndSending(var sequenceNumber:Long)
 
   final case class ExecutionCompleted()
 
@@ -46,7 +46,7 @@ object WorkerMessage {
 
   final case class ReportWorkerPartialCompleted(worker:WorkerTag,layer:LayerTag)
 
-  final case class DataMessage(sequenceNumber:Long, payload:Array[Tuple]){
+  final case class DataMessage(var sequenceNumber:Long, payload:Array[Tuple]){
     override def equals(obj: Any): Boolean = {
       if (!obj.isInstanceOf[DataMessage]) return false
       val other = obj.asInstanceOf[DataMessage]
