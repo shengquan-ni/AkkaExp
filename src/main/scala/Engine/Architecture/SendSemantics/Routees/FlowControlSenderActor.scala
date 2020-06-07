@@ -56,6 +56,10 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
   var sequenceNumberFromFlowActor: ArrayBuffer[Long] = ArrayBuffer(0)
   var currentReceiverIdx: Int = 0
 
+  var lastButOneSeq: Long = -1
+  var highestSeqNumSentTillNow: Long = -1
+  var endMessage: EndSending = null
+
   def incrementReceiverIdx():Unit = {
     currentReceiverIdx += 1
     currentReceiverIdx = currentReceiverIdx%allReceivers.size
@@ -68,6 +72,10 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       if(messagesOnTheWay.size < windowSize){
         val receiver = allReceivers(currentReceiverIdx)
         val seqNum = sequenceNumberFromFlowActor(currentReceiverIdx)
+        highestSeqNumSentTillNow = Math.max(highestSeqNumSentTillNow,msg.sequenceNumber) //this is to ensure that End is sent to downstream only after all data is sent
+        if(endMessage!=null && endMessage.sequenceNumber-1==highestSeqNumSentTillNow) {
+          self ! endMessage
+        }
         msg.sequenceNumber = seqNum
         sequenceNumberFromFlowActor(currentReceiverIdx) += 1
         incrementReceiverIdx()
@@ -85,12 +93,17 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       timeTaken += System.nanoTime()-timeStart
     case msg:EndSending =>
       timeStart = System.nanoTime()
-      //always send end-sending message regardless the message queue size
-      for(i<- 0 to allReceivers.size-1) {
-        handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
-        msg.sequenceNumber = sequenceNumberFromFlowActor(i)
-        allReceivers(i) ! RequireAck(msg)
+      //don't send END if all messages not sent
+      if(highestSeqNumSentTillNow != msg.sequenceNumber-1) {
+        endMessage = msg
+      } else {
+        for(i<- 0 to allReceivers.size-1) {
+          handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
+          msg.sequenceNumber = sequenceNumberFromFlowActor(i)
+          allReceivers(i) ! RequireAck(msg)
+        }
       }
+
       timeTaken += System.nanoTime()-timeStart
     case AckWithSequenceNumber(seq) =>
       timeStart = System.nanoTime()
@@ -111,6 +124,10 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
           val msg = messagesToBeSent.dequeue()
           val receiver = allReceivers(currentReceiverIdx)
           val seqNum = sequenceNumberFromFlowActor(currentReceiverIdx)
+          highestSeqNumSentTillNow = Math.max(highestSeqNumSentTillNow,msg.sequenceNumber)
+          if(endMessage!=null && endMessage.sequenceNumber-1==highestSeqNumSentTillNow) {
+            self ! endMessage
+          }
           msg.sequenceNumber = seqNum
           sequenceNumberFromFlowActor(currentReceiverIdx) += 1
           incrementReceiverIdx()

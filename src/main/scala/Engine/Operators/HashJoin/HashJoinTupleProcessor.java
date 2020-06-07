@@ -61,7 +61,7 @@ public class HashJoinTupleProcessor<K> implements TupleProcessor {
             }
         }else{
             if(!isInnerTableFinished) {
-                throw new AssertionError("Probe table came before build table");
+                //throw new AssertionError("Probe table came before build table");
             }else{
                 if(notInitializedOuter) {
                     System.out.println("Inner length " + innerTableHashMap.size());
