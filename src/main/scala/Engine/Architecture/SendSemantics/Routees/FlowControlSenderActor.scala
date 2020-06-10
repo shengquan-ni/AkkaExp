@@ -2,9 +2,9 @@ package Engine.Architecture.SendSemantics.Routees
 
 
 import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, Resume, UpdateRoutingForSkewMitigation}
-import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
-import Engine.Common.AmberTag.WorkerTag
-import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, Stash}
+import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
+import Engine.Common.AmberTag.{LayerTag, WorkerTag}
+import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, PoisonPill, Props, Stash}
 import akka.util.Timeout
 
 import scala.collection.mutable
@@ -13,10 +13,13 @@ import scala.concurrent.duration._
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import Engine.Common.AdvancedMessageSending
+import akka.event.LoggingAdapter
+
 import scala.collection.mutable.ArrayBuffer
 
 object FlowControlSenderActor{
-  def props(receiver:ActorRef): Props = Props(new FlowControlSenderActor(receiver))
+  def props(receiver:ActorRef,layerTag:LayerTag): Props = Props(new FlowControlSenderActor(receiver,layerTag))
 
   final val maxWindowSize = 64
   final val minWindowSize = 2
@@ -30,17 +33,18 @@ object FlowControlSenderActor{
 }
 
 
-class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
+class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) extends Actor with ActorLogging with Stash{
   import FlowControlSenderActor._
 
   implicit val timeout:Timeout = 1.second
   implicit val ec:ExecutionContext = context.dispatcher
+  implicit val logAdapter: LoggingAdapter = log
 
   var exactlyCount = 0
   var ssThreshold = 16
   var windowSize = 2
   var maxSentSequenceNumber: mutable.HashMap[ActorRef,Long] = mutable.HashMap(receiver->0)
-  var handleOfEndSending:mutable.HashMap[ActorRef,(Long,Cancellable)] = new mutable.HashMap[ActorRef,(Long,Cancellable)]()
+  var handleOfEndSending:mutable.HashMap[ActorRef,(Long,Cancellable)] = null
 //  var backPressureActivated = false
 
   val messagesOnTheWay = new mutable.HashMap[(ActorRef,Long),(Cancellable,DataMessage)]
@@ -97,6 +101,7 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       if(highestSeqNumSentTillNow != msg.sequenceNumber-1) {
         endMessage = msg
       } else {
+        handleOfEndSending = new mutable.HashMap[ActorRef,(Long,Cancellable)]()
         for(i<- 0 to allReceivers.size-1) {
           handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
           msg.sequenceNumber = sequenceNumberFromFlowActor(i)
@@ -170,8 +175,9 @@ class FlowControlSenderActor(val receiver:ActorRef) extends Actor with Stash{
       sender ! (allReceivers(0), countOfMessagesReceived, messagesToBeSent.size)
 
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
-      if(allReceivers.contains(mostSkewedWorker)) {
-        // addReceiver(freeWorker)
+      if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {
+        AdvancedMessageSending.blockingAskWithRetry(freeWorker,UpdateInputLinking(self,layerTag),10)
+        addReceiver(freeWorker)
       }
   }
 

@@ -19,6 +19,7 @@ object WorkerState extends Enumeration {
   Pausing,
   Paused,
   LocalBreakpointTriggered,
+  Restarted,
   Completed = Value
 
   val ValidTransitions: Map[WorkerState.Value, Set[WorkerState.Value]]
@@ -29,7 +30,8 @@ object WorkerState extends Enumeration {
     LocalBreakpointTriggered -> Set(Paused),
     Pausing -> Set(Paused),
     Paused -> Set(LocalBreakpointTriggered,Running,Ready),
-    Completed -> Set()
+    Completed -> Set(Restarted),
+    Restarted -> Set(Running)
   )
 
   val SkippedTransitions: Map[WorkerState.Value, Set[WorkerState.Value]]

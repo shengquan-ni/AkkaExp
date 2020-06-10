@@ -21,7 +21,7 @@ class FlowControlRoutee(receiver:ActorRef) extends ActorRoutee(receiver) {
    * @param log
    */
   override def initialize(tag:LinkTag)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
-    senderActor = ac.actorOf(FlowControlSenderActor.props(receiver))
+    senderActor = ac.actorOf(FlowControlSenderActor.props(receiver,tag.from))
     AdvancedMessageSending.blockingAskWithRetry(receiver,UpdateInputLinking(senderActor,tag.from),10)
   }
 

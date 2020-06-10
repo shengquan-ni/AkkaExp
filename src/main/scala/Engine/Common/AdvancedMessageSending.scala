@@ -59,7 +59,7 @@ object AdvancedMessageSending {
         }
         i += 1
       }
-      log.error("failed to send message "+message+" to "+receiver)
+      //log.error("failed to send message "+message+" to "+receiver)
     }
     res
   }

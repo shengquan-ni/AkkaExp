@@ -157,6 +157,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               context.become(pausing)
               unstashAll()
             }
+          case WorkerState.Restarted =>
+            workerStateMap(sender) = WorkerState.Restarted
           case WorkerState.Paused =>
             //WARN: possibly dropped LocalBreakpointTriggered message OR backpressure?
             log.warning(sender + " paused itself with unknown reason")
@@ -250,6 +252,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   def SkewMitigation(mostSkewedWorker: ActorRef, sender:ActorRef): Unit = {
     AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(sender), 3)
+    AdvancedMessageSending.blockingAskWithRetry(sender, RestartProcessing, 3)
     join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,sender)
   }
 

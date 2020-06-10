@@ -40,6 +40,8 @@ object ControlMessage{
 
   final case class ReplicateBuildTable(to:ActorRef)
 
+  final case class RestartProcessing()
+
   final case class ReceiveHashTable(hashTable: Any)
 
   final case class UpdateRoutingForSkewMitigation(mostSkewedWorker: ActorRef, freeWorker: ActorRef)
