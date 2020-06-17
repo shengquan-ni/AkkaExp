@@ -66,4 +66,18 @@ class RoundRobinPolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
   override def dispose(): Unit = {
     routees.foreach(_.dispose())
   }
+
+  override def resetPolicy(): Unit = {
+    var i=0
+    while(i<sequenceNum.size) {
+      sequenceNum(i) = 0
+      i += 1
+    }
+    currentSize = 0
+    roundRobinIndex = 0
+  }
+
+  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    routees.foreach(routee => routee.propagateRestartForward())
+  }
 }

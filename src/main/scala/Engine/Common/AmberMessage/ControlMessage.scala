@@ -1,6 +1,6 @@
 package Engine.Common.AmberMessage
 
-import Engine.Common.AmberTag.WorkerTag
+import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import akka.actor.ActorRef
 
 
@@ -40,7 +40,9 @@ object ControlMessage{
 
   final case class ReplicateBuildTable(to:ActorRef)
 
-  final case class RestartProcessing()
+  final case class RestartProcessing(inputActor: ActorRef, fromLayer:LayerTag)
+
+  final case class RestartProcessingFreeWorker()
 
   final case class ReceiveHashTable(hashTable: Any)
 

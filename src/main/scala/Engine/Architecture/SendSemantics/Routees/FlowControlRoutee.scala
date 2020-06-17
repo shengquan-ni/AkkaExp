@@ -1,6 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 import Engine.Common.AdvancedMessageSending
+import Engine.Common.AmberMessage.ControlMessage.RestartProcessing
 import Engine.Common.AmberMessage.WorkerMessage.UpdateInputLinking
 import Engine.Common.AmberTag.LinkTag
 import akka.actor.{ActorContext, ActorRef}
@@ -35,4 +36,7 @@ class FlowControlRoutee(receiver:ActorRef) extends ActorRoutee(receiver) {
     return senderActor
   }
 
+  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    AdvancedMessageSending.blockingAskWithRetry(senderActor, RestartProcessing, 3)
+  }
 }

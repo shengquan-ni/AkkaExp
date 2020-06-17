@@ -60,6 +60,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
   var join1Principal: ActorRef = null
   var countOfSkewQuery: Int = 1
+  var mitigationCount: Int = 0
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
@@ -158,7 +159,13 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               unstashAll()
             }
           case WorkerState.Restarted =>
+            sender ! Ack
             workerStateMap(sender) = WorkerState.Restarted
+            if(layerCompletedCounter.keys.size != 1) {
+              println(s"Error!! layerCompletedCounter size is ${layerCompletedCounter.keys.size} only 1 layer should remain. Inner table layer should have already finished.")
+            }
+            val layerTag: LayerTag = layerCompletedCounter.keys.head
+            layerCompletedCounter(layerTag) += 1
           case WorkerState.Paused =>
             //WARN: possibly dropped LocalBreakpointTriggered message OR backpressure?
             log.warning(sender + " paused itself with unknown reason")
@@ -173,11 +180,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               unstashAll()
             } else {
               if(metadata.tag.operator.contains("Join2")) {
-                if((System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
+                if(mitigationCount<1 && (System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
                   val mostSkewedWorker: ActorRef = SkewDetection()
                   SkewMitigation(mostSkewedWorker, sender)
                   countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()
+                  mitigationCount += 1
                 }
               }
             }
@@ -203,6 +211,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         layerCompletedCounter(layer) -= 1
         if(layerCompletedCounter(layer) == 0){
           layerCompletedCounter -= layer
+          // This is used to control the stage by stage execution especially for Join where the stage belonging to inner table should finish first
           AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(metadata.tag,layer),10,0)
         }
       }
@@ -250,10 +259,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     mostSkewedWorker
   }
 
-  def SkewMitigation(mostSkewedWorker: ActorRef, sender:ActorRef): Unit = {
-    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(sender), 3)
-    AdvancedMessageSending.blockingAskWithRetry(sender, RestartProcessing, 3)
-    join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,sender)
+  def SkewMitigation(mostSkewedWorker: ActorRef, freeWorker:ActorRef): Unit = {
+    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
+    AdvancedMessageSending.blockingAskWithRetry(freeWorker, RestartProcessingFreeWorker, 3)
+    join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
   }
 
 

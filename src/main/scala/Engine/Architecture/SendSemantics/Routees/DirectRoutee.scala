@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import Engine.Common.AdvancedMessageSending
+import Engine.Common.AmberMessage.ControlMessage.RestartProcessing
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
 import Engine.Common.AmberTag.LinkTag
 import akka.actor.{Actor, ActorContext, ActorRef}
@@ -66,4 +67,8 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   }
 
   override def toString: String = s"DirectRoutee($receiver)"
+
+  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing, 3)
+  }
 }

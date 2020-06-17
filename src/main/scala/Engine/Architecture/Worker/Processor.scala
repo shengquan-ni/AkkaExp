@@ -299,10 +299,35 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   }
 
-  final def receiveRestart: Receive = {
-    case RestartProcessing =>
-      context.parent ! ReportState(WorkerState.Restarted)
+  final def receiveRestartFromPrincipal: Receive = {
+    case RestartProcessingFreeWorker =>
+      output.foreach(policy => {
+        policy.resetPolicy()
+        policy.propagateRestartForward()
+      })
+      AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
       context.become(restart)
+  }
+
+  final def receiveRestartFromPrevWorker: Receive = {
+    case RestartProcessing(senderActor,edgeID) =>
+      // the below two lines are basically copied from UpdateInputLinking
+      // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
+      // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()
+      aliveUpstreams.add(edgeID)
+      input.addSender(senderActor,edgeID)
+      if(dPThreadState == ThreadState.Completed) {
+        output.foreach(policy => {
+          policy.resetPolicy()
+          policy.propagateRestartForward()
+        })
+        AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
+        context.become(restart)
+      } else {
+        output.foreach(policy => {
+          policy.propagateRestartForward()
+        })
+      }
   }
 
   override def postStop(): Unit = {
@@ -322,13 +347,13 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
 
-  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse super.running
+  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse receiveRestartFromPrevWorker orElse super.running
 
   override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
 
   override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
 
-  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse receiveRestart orElse super.completed
+  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse receiveRestartFromPrincipal orElse receiveRestartFromPrevWorker orElse super.completed
 
 
   private[this] def beforeProcessingBatch(): Unit ={
@@ -356,7 +381,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         Future {
           processBatch()
         }(dataProcessExecutor)
-      }else if(aliveUpstreams.isEmpty){
+      }else if(aliveUpstreams.isEmpty){ // i.e. if no layers are remaining
         Future{
           afterFinishProcessing()
         }(dataProcessExecutor)
@@ -444,7 +469,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       if(batch == null){
         dataProcessor.onUpstreamExhausted(from)
         self ! ReportUpstreamExhausted(from)
-        aliveUpstreams.remove(from)
+        aliveUpstreams.remove(from) //remove a particular layer
       }else{
         dataProcessor.onUpstreamChanged(from)
         //no tuple remains, we continue

@@ -1,7 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, Resume, UpdateRoutingForSkewMitigation}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, RestartProcessing, Resume, UpdateRoutingForSkewMitigation}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, PoisonPill, Props, Stash}
@@ -63,10 +63,26 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
   var lastButOneSeq: Long = -1
   var highestSeqNumSentTillNow: Long = -1
   var endMessage: EndSending = null
+  var restartMsgArrived: Boolean = false
 
   def incrementReceiverIdx():Unit = {
     currentReceiverIdx += 1
     currentReceiverIdx = currentReceiverIdx%allReceivers.size
+  }
+
+  def resetOnNewMsgSeries():Unit = {
+    currentReceiverIdx = 0
+    var i = 0
+    while(i<sequenceNumberFromFlowActor.size) {
+      sequenceNumberFromFlowActor(i) = 0
+      i += 1
+    }
+    for(entry <- maxSentSequenceNumber) {
+      maxSentSequenceNumber(entry._1) = 0
+    }
+    lastButOneSeq = -1
+    highestSeqNumSentTillNow = -1
+    restartMsgArrived = false
   }
 
   override def receive: Receive = {
@@ -74,6 +90,11 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
       timeStart = System.nanoTime()
       countOfMessagesReceived += 1
       if(messagesOnTheWay.size < windowSize){
+        //if this message is from after the restart, reset all data structures
+        if(msg.sequenceNumber==0 && restartMsgArrived) {
+          resetOnNewMsgSeries()
+        }
+
         val receiver = allReceivers(currentReceiverIdx)
         val seqNum = sequenceNumberFromFlowActor(currentReceiverIdx)
         highestSeqNumSentTillNow = Math.max(highestSeqNumSentTillNow,msg.sequenceNumber) //this is to ensure that End is sent to downstream only after all data is sent
@@ -127,6 +148,9 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
         }
         if(messagesOnTheWay.size < windowSize && messagesToBeSent.nonEmpty){
           val msg = messagesToBeSent.dequeue()
+          if(msg.sequenceNumber==0 && restartMsgArrived) {
+            resetOnNewMsgSeries()
+          }
           val receiver = allReceivers(currentReceiverIdx)
           val seqNum = sequenceNumberFromFlowActor(currentReceiverIdx)
           highestSeqNumSentTillNow = Math.max(highestSeqNumSentTillNow,msg.sequenceNumber)
@@ -173,6 +197,11 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
 
     case GetSkewMetricsFromFlowControl =>
       sender ! (allReceivers(0), countOfMessagesReceived, messagesToBeSent.size)
+
+    case RestartProcessing =>
+      restartMsgArrived = true
+      AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(self,layerTag), 3)
+      sender ! Ack
 
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {

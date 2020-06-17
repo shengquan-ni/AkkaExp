@@ -85,4 +85,17 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
     })
     return flowActors
   }
+
+  override def resetPolicy(): Unit = {
+    var i=0
+    while(i<sequenceNum.size) {
+      sequenceNum(i) = 0
+      currentSizes(i) = 0
+      i += 1
+    }
+  }
+
+  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    routees.foreach(routee => routee.propagateRestartForward())
+  }
 }
