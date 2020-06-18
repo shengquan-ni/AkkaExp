@@ -305,6 +305,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRestartFromPrincipal: Receive = {
     case RestartProcessingFreeWorker =>
+      println(s"RECEIVED RESTART ${tag.getGlobalIdentity}")
       output.foreach(policy => {
         policy.resetPolicy()
         policy.propagateRestartForward()
