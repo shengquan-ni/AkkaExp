@@ -187,7 +187,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def activateWhenReceiveDataMessages:Receive = {
     case EndSending(_) | DataMessage(_,_) | RequireAck(_:EndSending) | RequireAck(_:DataMessage) =>
-      println(s"ACTIVATED ${tag.getGlobalIdentity}")
+      if(tag.operator.contains("Join2")) {
+        println(s"ACTIVATED ${tag.getGlobalIdentity}")
+      }
+
       stash()
       onStart()
       context.become(running)
@@ -312,6 +315,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRestartFromPrevWorker: Receive = {
     case RestartProcessing(senderActor,edgeID) =>
+      println(s"RECEIVED RESTART ${tag.getGlobalIdentity}")
+      sender ! Ack
       // the below two lines are basically copied from UpdateInputLinking
       // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
       // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()
@@ -342,7 +347,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
 
 
-  override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse super.ready
+  override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse receiveRestartFromPrevWorker orElse super.ready
 
   def restart: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking
 
