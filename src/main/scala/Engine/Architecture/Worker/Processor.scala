@@ -310,7 +310,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         policy.resetPolicy()
         policy.propagateRestartForward()
       })
-      AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
+      sender ! ReportState(WorkerState.Restarted)
+      // AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
       context.become(restart)
   }
 
