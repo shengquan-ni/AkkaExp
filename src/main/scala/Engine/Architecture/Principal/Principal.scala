@@ -180,7 +180,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               unstashAll()
             } else {
               if(metadata.tag.operator.contains("Join2")) {
-                if(mitigationCount<2 && (System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
+                if(mitigationCount<1 && (System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
                   val mostSkewedWorker: ActorRef = SkewDetection()
                   SkewMitigation(mostSkewedWorker, sender)
                   countOfSkewQuery += 1
