@@ -187,6 +187,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def activateWhenReceiveDataMessages:Receive = {
     case EndSending(_) | DataMessage(_,_) | RequireAck(_:EndSending) | RequireAck(_:DataMessage) =>
+      println(s"ACTIVATED ${tag.getGlobalIdentity}")
       stash()
       onStart()
       context.become(running)
