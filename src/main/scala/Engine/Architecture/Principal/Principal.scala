@@ -404,7 +404,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           currentLayer = inLinks.filter(x => !x._1.isBuilt && x._2.forall(_.isBuilt)).keys
         }
       }
-      layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> x._2.layer.length).toSeq:_*)
+      layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> workerLayers.head.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
       allWorkers.foreach(x => x ! AckedWorkerInitialization)
       saveRemoveAskHandle()
