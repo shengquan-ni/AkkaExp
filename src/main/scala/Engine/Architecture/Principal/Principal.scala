@@ -14,26 +14,13 @@ import Engine.Common.AmberMessage.WorkerMessage
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
 import Engine.Common.AmberTag.{LayerTag, OperatorTag}
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
-import Engine.Operators.Count.CountMetadata
-import Engine.Operators.Filter.{FilterMetadata, FilterType}
-import Engine.Operators.GroupBy.{AggregationType, GroupByMetadata}
-import Engine.Operators.HashJoin.HashJoinMetadata
-import Engine.Operators.KeywordSearch.KeywordSearchMetadata
 import Engine.Operators.OperatorMetadata
-import Engine.Operators.Projection.ProjectionMetadata
-import Engine.Operators.Scan.HDFSFileScan.HDFSFileScanMetadata
-import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata
-import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
-import Engine.Operators.Sink.SimpleSinkOperatorMetadata
-import Engine.Operators.Sort.SortMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 import akka.pattern.after
 import akka.pattern.ask
 import com.google.common.base.Stopwatch
-import org.joda.time.DateTime
-import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
