@@ -8,7 +8,7 @@ abstract class LocalBreakpoint(val id:String,val version:Long) extends Serializa
 
   def isTriggered:Boolean
 
-  def needUserFix:Boolean = true
+  def needUserFix:Boolean = isTriggered
 
   var isReported = false
 

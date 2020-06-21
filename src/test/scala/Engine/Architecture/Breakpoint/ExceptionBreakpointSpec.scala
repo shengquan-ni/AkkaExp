@@ -128,9 +128,9 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.ref ! PoisonPill
   }
 
-  "A workflow" should "be able to detect faulted tuples and trigger exception breakpoint in the workflow2, then resume them" in {
+  "A workflow" should "be able to trigger conditional breakpoint in the workflow2, then resume them" in {
     val parent = TestProbe()
-    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+    val controller = parent.childActorOf(Controller.props(logicalPlan2))
     controller ! AckedControllerInitialization
     parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
     controller ! PassBreakpointTo("Gen", new ConditionalGlobalBreakpoint("ConditionalBreakpoint", x => x.getInt(0)%1000 == 0))
@@ -153,6 +153,29 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.ref ! PoisonPill
   }
 
-
+  "A workflow" should "be able to trigger conditional breakpoint in the workflow2, then skip them" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan2))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
+    controller ! PassBreakpointTo("Gen", new ConditionalGlobalBreakpoint("ConditionalBreakpoint", x => x.getInt(0)%1000 == 0))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    var isCompleted = false
+    parent.receiveWhile(30.seconds,10.seconds){
+      case ReportGlobalBreakpointTriggered(bp) =>
+        for(i <- bp){
+          log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
+          AdvancedMessageSending.blockingAskWithRetry(i._1._1, SkipTuple(i._1._2),5)
+        }
+        controller ! Resume
+      case ReportState(ControllerState.Paused) =>
+      case ReportState(ControllerState.Completed) =>
+        isCompleted = true
+      case _ =>
+    }
+    assert(isCompleted)
+    parent.ref ! PoisonPill
+  }
 
 }

@@ -62,7 +62,7 @@ trait DataTransferSupport extends BreakpointSupport {
           breakpoints(i).triggeredTupleId = tupleId
         }
         breakpointTriggered |= breakpoints(i).isTriggered
-        needUserFix != breakpoints(i).needUserFix
+        needUserFix |= breakpoints(i).needUserFix
         i += 1
       }
       i = 0
