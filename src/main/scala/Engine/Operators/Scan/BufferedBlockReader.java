@@ -65,7 +65,11 @@ public class BufferedBlockReader {
                 }else if(buffer[cursor] == '\n'){
                     if(keptFields == null || keptFields.contains(index)){
                         if(cursor-start > 0){
-                            outputStream.write(buffer,start,cursor-start);
+                            if(buffer[cursor-1] != '\r') {
+                                outputStream.write(buffer,start,cursor-start);
+                            }else{
+                                outputStream.write(buffer,start,cursor-start-1);
+                            }
                             fields.add(outputStream.toString());
                             isEmpty = false;
                         }else if(outputStream.size()>0){

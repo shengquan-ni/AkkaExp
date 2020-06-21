@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.{ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Common.AmberException.BreakpointException
-import Engine.Common.{AdvancedMessageSending, ElidableStatement, TupleProducer}
+import Engine.Common.{AdvancedMessageSending, ElidableStatement, ThreadState, TupleProducer}
 import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
@@ -31,7 +31,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   val dataGenerateExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   var isGeneratingFinished = false
 
-  @elidable(INFO) var generatedCount = 0L
+  var generatedCount = 0L
   @elidable(INFO) var generateTime = 0L
   @elidable(INFO) var generateStart = 0L
 
@@ -69,11 +69,11 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   }
 
   override def onResumeTuple(faultedTuple: FaultedTuple): Unit = {
-    transferTuple(faultedTuple.tuple)
+    userFixedTuple = faultedTuple.tuple
   }
 
   override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {
-    transferTuple(faultedTuple.tuple)
+    userFixedTuple = faultedTuple.tuple
   }
 
   override def onPausing(): Unit = {
@@ -104,6 +104,25 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
     unstashAll()
   }
 
+  private[this] def beforeGenerating(): Unit ={
+    if(userFixedTuple != null) {
+      try {
+        transferTuple(userFixedTuple, generatedCount)
+        userFixedTuple = null
+        generatedCount += 1
+      } catch {
+        case e: BreakpointException =>
+          self ! LocalBreakpointTriggered
+          generateTime += System.nanoTime() - generateStart
+          Breaks.break()
+        case e: Exception =>
+          self ! ReportFailure(e)
+          generateTime += System.nanoTime() - generateStart
+          Breaks.break()
+      }
+    }
+  }
+
 
   private[this] def exitIfPaused(): Unit ={
     onInterrupted{
@@ -115,6 +134,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   private[this] def Generate(): Unit ={
     Breaks.breakable{
       generateStart = System.nanoTime()
+      beforeGenerating()
       while(dataProducer.hasNext){
         exitIfPaused()
         var nextTuple:Tuple = null
@@ -125,11 +145,12 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
             self ! LocalBreakpointTriggered
             breakpoints(0).triggeredTuple = nextTuple
             breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+            breakpoints(0).triggeredTupleId = generatedCount
             generateTime += System.nanoTime()-generateStart
             Breaks.break()
         }
         try {
-          transferTuple(nextTuple)
+          transferTuple(nextTuple,generatedCount)
           generatedCount += 1
         }catch{
           case e:BreakpointException =>

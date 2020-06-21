@@ -33,7 +33,7 @@ class ExceptionGlobalBreakpoint(id:String) extends GlobalBreakpoint(id) {
 
   override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
     for(i <- exceptions){
-      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.isInput))
+      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.triggeredTupleId,i._2.isInput))
       if(map.contains(k)){
         map(k).append(i._2.error.toString)
       }else{

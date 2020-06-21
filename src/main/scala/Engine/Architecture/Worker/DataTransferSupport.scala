@@ -50,26 +50,29 @@ trait DataTransferSupport extends BreakpointSupport {
     output = Array()
   }
 
-  def transferTuple(tuple: Tuple)(implicit sender:ActorRef): Unit ={
+  def transferTuple(tuple: Tuple, tupleId: Long)(implicit sender:ActorRef): Unit ={
     if(tuple != null){
       var i = 1
       var breakpointTriggered = false
+      var needUserFix = false
       while(i < breakpoints.length){
         breakpoints(i).accept(tuple)
         if(breakpoints(i).isTriggered){
           breakpoints(i).triggeredTuple = tuple
+          breakpoints(i).triggeredTupleId = tupleId
         }
         breakpointTriggered |= breakpoints(i).isTriggered
+        needUserFix != breakpoints(i).needUserFix
         i += 1
       }
       i = 0
-      if(!breakpointTriggered) {
+      if(!needUserFix) {
         while (i < output.length) {
           output(i).accept(tuple)
           i += 1
         }
       }
-      else{
+      if(breakpointTriggered){
         throw new BreakpointException()
       }
     }

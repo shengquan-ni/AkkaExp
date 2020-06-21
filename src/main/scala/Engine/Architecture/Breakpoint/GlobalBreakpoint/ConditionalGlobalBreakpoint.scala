@@ -35,7 +35,7 @@ class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple => Boolean) ext
 
   override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
     for(i <- localbreakpoints){
-      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,false))
+      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.triggeredTupleId,false))
       if(map.contains(k)){
         map(k).append("condition unsatisfied")
       }else{

@@ -14,6 +14,7 @@ import akka.util.Timeout
 
 import scala.annotation.elidable
 import scala.annotation.elidable.INFO
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks
 import scala.concurrent.duration._
@@ -23,7 +24,10 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
 
+  val receivedFaultedTupleIds:mutable.HashSet[Long] = new mutable.HashSet[Long]()
+
   var pausedFlag = false
+  var userFixedTuple: Tuple = _
   @elidable(INFO) var startTime = 0L
 
   def onInitialization(): Unit = {
@@ -230,11 +234,23 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         context.become(running)
         unstashAll()
     case SkipTuple(f) =>
-      onSkipTuple(f)
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onSkipTuple(f)
+      }
     case ModifyTuple(f) =>
-      onModifyTuple(f)
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onModifyTuple(f)
+      }
     case ResumeTuple(f) =>
-      onResumeTuple(f)
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onResumeTuple(f)
+      }
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryBreakpoint(id) =>
