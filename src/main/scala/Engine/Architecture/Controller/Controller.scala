@@ -384,6 +384,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       unstashAll()
     case Pause =>
     case EnforceStateCheck =>
+    case ModifyLogic(newLogic) =>
+      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
+      val json: JsValue = Json.parse(newLogic)
+      val id = json("operatorID").as[String]
+      val operatorTag = OperatorTag(tag.workflow,id)
+      val principal: ActorRef = principalBiMap.get(operatorTag)
+      principal ! ModifyLogic(newLogic)
     case msg => stash()
   }
 

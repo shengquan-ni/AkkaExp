@@ -9,11 +9,24 @@ import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage.{QueryState, _}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import Engine.Common.AmberTuple.{AmberTuple, Tuple}
-import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Common.{AdvancedMessageSending, Constants, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Operators.Count.CountMetadata
+import Engine.Operators.Filter.{FilterMetadata, FilterSpecializedTupleProcessor, FilterType}
+import Engine.Operators.GroupBy.{AggregationType, GroupByMetadata}
+import Engine.Operators.HashJoin.HashJoinMetadata
+import Engine.Operators.KeywordSearch.{KeywordSearchMetadata, KeywordSearchTupleProcessor}
+import Engine.Operators.Projection.ProjectionMetadata
+import Engine.Operators.Scan.HDFSFileScan.HDFSFileScanMetadata
+import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata
+import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
+import Engine.Operators.Sink.SimpleSinkOperatorMetadata
+import Engine.Operators.Sort.SortMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.util.Timeout
+import org.joda.time.DateTime
+import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -26,7 +39,7 @@ object Processor {
   def props(processor:TupleProcessor,tag:WorkerTag): Props = Props(new Processor(processor,tag))
 }
 
-class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
+class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
 
   val dataProcessExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   val processingQueue = new mutable.Queue[(LayerTag,Array[Tuple])]
@@ -210,6 +223,24 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent,ReportWorkerPartialCompleted(tag,from),10,0)
   }
 
+  final def allowOperatorLogicUpdate:Receive = {
+    case ModifyLogic(newLogic) =>
+      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
+      val json: JsValue = Json.parse(newLogic)
+      val operatorType = json("operatorID").as[String]
+      json("operatorType").as[String] match{
+        case "KeywordMatcher" =>
+          var dataProcessor: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dataProcessor.setPredicate(json("attributeName").as[Int],json("keyword").as[String])
+        case "Filter" =>
+          var dataProcessor: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
+          dataProcessor.filterType = FilterType.getType[DateTime](json("filterType").as[String])
+          dataProcessor.targetField = json("targetField").as[Int]
+          dataProcessor.threshold = DateTime.parse(json("threshold").as[String])
+        case t => throw new NotImplementedError("Unknown operator type: "+ t)
+      }
+  }
+
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -228,9 +259,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse super.running
 
-  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
+  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse super.paused
 
-  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
+  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse  super.breakpointTriggered
 
   override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse super.completed
 

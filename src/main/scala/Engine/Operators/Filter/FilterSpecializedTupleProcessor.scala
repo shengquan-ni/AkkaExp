@@ -5,7 +5,7 @@ import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
 import com.github.nscala_time.time.Imports._
 
-class FilterSpecializedTupleProcessor(val targetField:Int, val filterType:Int, val threshold:DateTime) extends TupleProcessor {
+class FilterSpecializedTupleProcessor(var targetField:Int, var filterType:Int, var threshold:DateTime) extends TupleProcessor {
   var _tuple:Tuple = _
   var nextFlag = false
 

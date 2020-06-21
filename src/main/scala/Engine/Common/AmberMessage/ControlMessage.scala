@@ -7,6 +7,8 @@ object ControlMessage{
 
   final case class Pause()
 
+  final case class ModifyLogic(newLogic:String)
+
   final case class Resume()
 
   final case class QueryState()
