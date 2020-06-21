@@ -1,11 +1,15 @@
 package Engine.Architecture.Breakpoint
 
 import Clustering.SingleNodeListener
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.CountGlobalBreakpoint
+import Engine.Architecture.Controller.{Controller, ControllerState}
+import Engine.Common.AmberMessage.ControlMessage.{Resume, Start}
+import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo, ReportState}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import Engine.Common.AmberTag.{LayerTag, LinkTag, OperatorTag, WorkerTag, WorkflowTag}
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.event.LoggingAdapter
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike}
 
@@ -21,6 +25,19 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
   implicit val timeout: Timeout = Timeout(5.seconds)
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   implicit val log:LoggingAdapter = system.log
+
+  private val logicalPlan1 =
+    """{
+      |"operators":[
+      |{"tableName":"D:\\large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
+      |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch","operatorType":"KeywordMatcher"},
+      |{"operatorID":"Count","operatorType":"Aggregation"},
+      |{"operatorID":"Sink","operatorType":"Sink"}],
+      |"links":[
+      |{"origin":"Scan","destination":"KeywordSearch"},
+      |{"origin":"KeywordSearch","destination":"Count"},
+      |{"origin":"Count","destination":"Sink"}]
+      |}""".stripMargin
 
 
   val workflowTag = WorkflowTag("sample")
@@ -48,6 +65,26 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
 
   override def afterAll: Unit = {
     TestKit.shutdownActorSystem(system)
+  }
+
+  "A controller" should "be able to set and trigger count breakpoint in the workflow1" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
+    controller ! PassBreakpointTo("KeywordSearch",new CountGlobalBreakpoint("break1",100000))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    var isCompleted = false
+    parent.receiveWhile(30.seconds,10.seconds){
+      case ReportState(ControllerState.Paused) =>
+        controller ! Resume
+      case ReportState(ControllerState.Completed) =>
+        isCompleted = true
+      case _ =>
+    }
+    assert(isCompleted)
+    parent.ref ! PoisonPill
   }
 
 

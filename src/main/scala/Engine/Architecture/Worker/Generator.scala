@@ -9,6 +9,7 @@ import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberTag.WorkerTag
+import Engine.Common.AmberTuple.Tuple
 import akka.actor.{ActorLogging, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
@@ -111,7 +112,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       generateStart = System.nanoTime()
       while(dataProducer.hasNext){
         exitIfPaused()
-        var nextTuple = _
+        var nextTuple:Tuple = null
         try{
           nextTuple = dataProducer.next()
         }catch{

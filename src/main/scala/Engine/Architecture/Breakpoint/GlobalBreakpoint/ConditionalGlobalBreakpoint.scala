@@ -18,7 +18,7 @@ class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple =>Boolean) exte
 
   override def acceptImpl(sender:ActorRef, localBreakpoint: LocalBreakpoint):Unit = {
     if(localBreakpoint.isTriggered){
-      badTuples.append(localBreakpoint.asInstanceOf[ConditionalBreakpoint].badTuple)
+      badTuples.append(localBreakpoint.asInstanceOf[ConditionalBreakpoint].triggeredTuple)
     }
   }
 

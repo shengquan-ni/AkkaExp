@@ -270,7 +270,7 @@ class ProcessorSpec
     execActor ! DataMessage(4,Array(Tuple(5)))
     probe.expectMsg(ReportState(WorkerState.LocalBreakpointTriggered))
     val tmp = Await.result(execActor ? QueryTriggeredBreakpoints, 5.seconds).asInstanceOf[ReportedTriggeredBreakpoints].bps(0)
-    system.log.info("received bad tuple: {}",tmp.asInstanceOf[ConditionalBreakpoint].badTuple)
+    system.log.info("received bad tuple: {}",tmp.asInstanceOf[ConditionalBreakpoint].triggeredTuple)
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",1))
     probe.expectMsg(ReportState(WorkerState.Paused))
     execActor ! Resume
@@ -278,7 +278,7 @@ class ProcessorSpec
     execActor ! DataMessage(5,Array(Tuple(6)))
     probe.expectMsg(ReportState(WorkerState.LocalBreakpointTriggered))
     val tmp1 = Await.result(execActor ? QueryTriggeredBreakpoints, 5.seconds).asInstanceOf[ReportedTriggeredBreakpoints].bps(0)
-    system.log.info("received bad tuple: {}",tmp1.asInstanceOf[ConditionalBreakpoint].badTuple)
+    system.log.info("received bad tuple: {}",tmp1.asInstanceOf[ConditionalBreakpoint].triggeredTuple)
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",2))
     probe.expectMsg(ReportState(WorkerState.Paused))
     execActor ! Resume

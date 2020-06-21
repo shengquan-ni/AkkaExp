@@ -276,7 +276,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       dataProcessor.noMore()
       while (dataProcessor.hasNext) {
         exitIfPaused()
-        var nextTuple = _
+        var nextTuple:Tuple = null
         try{
           nextTuple = dataProcessor.next()
         }catch{
@@ -330,7 +330,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       //check if there is tuple left to be outputted
       while(dataProcessor.hasNext){
         exitIfPaused()
-        var nextTuple = _
+        var nextTuple:Tuple = null
         try{
           nextTuple = dataProcessor.next()
         }catch{
@@ -389,7 +389,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           processingIndex += 1
           while(dataProcessor.hasNext){
             exitIfPaused()
-            var nextTuple = _
+            var nextTuple:Tuple = null
             try{
               nextTuple = dataProcessor.next()
             }catch{
