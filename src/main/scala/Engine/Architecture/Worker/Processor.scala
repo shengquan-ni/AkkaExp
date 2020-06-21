@@ -60,12 +60,20 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onSkipTuple(faultedTuple: FaultedTuple): Unit = {
     if(faultedTuple.isInput){
       processingIndex+=1
+    }else{
+      //if it's output tuple, it will be ignored
     }
   }
 
   override def onResumeTuple(faultedTuple: FaultedTuple): Unit = {
     if(!faultedTuple.isInput){
-      userFixedTuple = faultedTuple.tuple
+      var i = 0
+      while (i < output.length) {
+        output(i).accept(faultedTuple.tuple)
+        i += 1
+      }
+    }else{
+      //if its input tuple, the same breakpoint will be triggered again
     }
   }
 
