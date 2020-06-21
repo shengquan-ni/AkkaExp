@@ -216,6 +216,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def allowOperatorLogicUpdate:Receive = {
     case ModifyLogic(newLogic) =>
+      sender ! Ack
       // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
       val json: JsValue = Json.parse(newLogic)
       val operatorType = json("operatorID").as[String]

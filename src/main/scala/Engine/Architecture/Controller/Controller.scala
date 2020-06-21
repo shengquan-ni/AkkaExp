@@ -390,7 +390,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       val id = json("operatorID").as[String]
       val operatorTag = OperatorTag(tag.workflow,id)
       val principal: ActorRef = principalBiMap.get(operatorTag)
-      principal ! ModifyLogic(newLogic)
+      AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newLogic), 3)
+      context.parent ! Ack
     case msg => stash()
   }
 

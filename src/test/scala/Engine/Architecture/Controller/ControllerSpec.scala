@@ -2,7 +2,7 @@ package Engine.Architecture.Controller
 
 import Clustering.SingleNodeListener
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ConditionalGlobalBreakpoint, CountGlobalBreakpoint}
-import Engine.Common.AmberMessage.ControlMessage.{Pause, Resume, Start}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, ModifyLogic, Pause, Resume, Start}
 import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo, ReportState}
 import Engine.Common.AmberMessage.WorkerMessage.DataMessage
 import Engine.Common.AmberTuple.Tuple
@@ -34,7 +34,7 @@ class ControllerSpec
   private val logicalPlan1 =
     """{
       |"operators":[
-      |{"tableName":"D:\\large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
+      |{"tableName":"/Users/avinash/TexeraOrleans/dataset/large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
       |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch","operatorType":"KeywordMatcher"},
       |{"operatorID":"Count","operatorType":"Aggregation"},
       |{"operatorID":"Sink","operatorType":"Sink"}],
@@ -179,6 +179,24 @@ class ControllerSpec
     parent.ref ! PoisonPill
   }
 
+  "A controller" should "be able to modify the logic after pausing the workflow1" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(ReportState(ControllerState.Ready))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    controller ! Pause
+    parent.expectMsg(ReportState(ControllerState.Pausing))
+    parent.expectMsg(ReportState(ControllerState.Paused))
+    controller ! ModifyLogic("{\"attributeName\":0,\"keyword\":\"Europe\",\"operatorID\":\"KeywordSearch\",\"operatorType\":\"KeywordMatcher\"}")
+    parent.expectMsg(Ack)
+    controller ! Resume
+    parent.expectMsg(ReportState(ControllerState.Resuming))
+    parent.expectMsg(ReportState(ControllerState.Running))
+    parent.expectMsg(1.minute, ReportState(ControllerState.Completed))
+    parent.ref ! PoisonPill
+  }
 
   "A controller" should "be able to set and trigger conditional breakpoint in the workflow1" in {
     val parent = TestProbe()

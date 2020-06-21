@@ -208,8 +208,6 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           k ! QueryState
         }
       }
-    case ModifyLogic(newLogic) =>
-      allWorkers.foreach(worker => AdvancedMessageSending.blockingAskWithRetry(worker, ModifyLogic(newLogic), 3))
 
     case WorkerMessage.ReportState(state) =>
       //log.info("pausing: "+ sender +" to "+ state)
@@ -370,6 +368,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case GetOutputLayer => sender ! workerLayers.last.layer
     case Pause => context.parent ! ReportState(PrincipalState.Paused)
     case QueryState => sender ! ReportState(PrincipalState.Paused)
+    case ModifyLogic(newLogic) =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.blockingAskWithRetry(worker, ModifyLogic(newLogic), 3))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
