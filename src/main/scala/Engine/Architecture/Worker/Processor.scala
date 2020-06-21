@@ -2,7 +2,8 @@ package Engine.Architecture.Worker
 
 import java.util.concurrent.Executors
 
-import Engine.Architecture.Breakpoint.LocalBreakpoint.ExceptionBreakpoint
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.{ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Architecture.ReceiveSemantics.FIFOAccessPort
 import Engine.Common.AmberException.{AmberException, BreakpointException}
 import Engine.Common.AmberMessage.WorkerMessage._
@@ -51,6 +52,26 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       Future{
         afterFinishProcessing()
       }(dataProcessExecutor)
+    }
+  }
+
+  override def onSkipTuple(faultedTuple: FaultedTuple): Unit = {
+    if(faultedTuple.isInput){
+      processingIndex+=1
+    }
+  }
+
+  override def onResumeTuple(faultedTuple: FaultedTuple): Unit = {
+    if(!faultedTuple.isInput){
+      transferTuple(faultedTuple.tuple)
+    }
+  }
+
+  override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {
+    if(!faultedTuple.isInput){
+      transferTuple(faultedTuple.tuple)
+    }else{
+      processingQueue.front._2(processingIndex) = faultedTuple.tuple
     }
   }
 

@@ -71,7 +71,7 @@ object Controller{
     val id = json("operatorID").as[String]
     val tag = OperatorTag(workflowTag.workflow,id)
     json("operatorType").as[String] match{
-      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
+      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),(json \ "indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "KeywordMatcher" => new KeywordSearchMetadata(tag,Constants.defaultNumWorkers,json("attributeName").as[Int],json("keyword").as[String])
       case "Aggregation" => new CountMetadata(tag,Constants.defaultNumWorkers)
@@ -295,7 +295,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       }
     case ReportGlobalBreakpointTriggered(bp) =>
       self ! Pause
-      log.info(bp)
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case Pause =>
       pauseTimer.start()
       workflow.operators.foreach( x => principalBiMap.get(x._1) ! Pause)
@@ -363,7 +363,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           frontier ++= next.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
         }
       }
-    case ReportGlobalBreakpointTriggered(bp) => log.info(bp)
+    case ReportGlobalBreakpointTriggered(bp) =>
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case msg => stash()
   }
 

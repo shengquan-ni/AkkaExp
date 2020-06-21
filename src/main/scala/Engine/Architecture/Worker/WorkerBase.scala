@@ -1,9 +1,12 @@
 package Engine.Architecture.Worker
 
 
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberException.AmberException
-import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, Pause, QueryState, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, ModifyTuple, Pause, QueryState, ReleaseOutput, RequireAck, Resume, ResumeTuple, SkipTuple, Start, StashOutput}
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
 import akka.event.LoggingAdapter
@@ -24,6 +27,18 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   @elidable(INFO) var startTime = 0L
 
   def onInitialization(): Unit = {
+
+  }
+
+  def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onResumeTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onModifyTuple(faultedTuple:FaultedTuple):Unit = {
 
   }
 
@@ -214,6 +229,12 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         onResumed()
         context.become(running)
         unstashAll()
+    case SkipTuple(f) =>
+      onSkipTuple(f)
+    case ModifyTuple(f) =>
+      onModifyTuple(f)
+    case ResumeTuple(f) =>
+      onResumeTuple(f)
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryBreakpoint(id) =>

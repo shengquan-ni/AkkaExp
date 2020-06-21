@@ -4,7 +4,7 @@ import Clustering.SingleNodeListener
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.CountGlobalBreakpoint
 import Engine.Architecture.Controller.{Controller, ControllerState}
 import Engine.Common.AmberMessage.ControlMessage.{Resume, Start}
-import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo, ReportState}
+import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo, ReportGlobalBreakpointTriggered, ReportState}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending}
 import Engine.Common.AmberTag.{LayerTag, LinkTag, OperatorTag, WorkerTag, WorkflowTag}
 import akka.actor.{ActorSystem, PoisonPill, Props}
@@ -29,14 +29,14 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
   private val logicalPlan1 =
     """{
       |"operators":[
-      |{"tableName":"D:\\large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
-      |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch","operatorType":"KeywordMatcher"},
-      |{"operatorID":"Count","operatorType":"Aggregation"},
+      |{"tableName":"D:\\fragmented_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
+      |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch1","operatorType":"KeywordMatcher"},
+      |{"attributeName":12,"keyword":"12","operatorID":"KeywordSearch2","operatorType":"KeywordMatcher"},
       |{"operatorID":"Sink","operatorType":"Sink"}],
       |"links":[
-      |{"origin":"Scan","destination":"KeywordSearch"},
-      |{"origin":"KeywordSearch","destination":"Count"},
-      |{"origin":"Count","destination":"Sink"}]
+      |{"origin":"Scan","destination":"KeywordSearch1"},
+      |{"origin":"KeywordSearch1","destination":"KeywordSearch2"},
+      |{"origin":"KeywordSearch2","destination":"Sink"}]
       |}""".stripMargin
 
 
@@ -72,11 +72,11 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     val controller = parent.childActorOf(Controller.props(logicalPlan1))
     controller ! AckedControllerInitialization
     parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
-    controller ! PassBreakpointTo("KeywordSearch",new CountGlobalBreakpoint("break1",100000))
     controller ! Start
     parent.expectMsg(ReportState(ControllerState.Running))
     var isCompleted = false
     parent.receiveWhile(30.seconds,10.seconds){
+      case ReportGlobalBreakpointTriggered =>
       case ReportState(ControllerState.Paused) =>
         controller ! Resume
       case ReportState(ControllerState.Completed) =>

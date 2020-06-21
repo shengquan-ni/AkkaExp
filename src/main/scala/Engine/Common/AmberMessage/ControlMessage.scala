@@ -1,5 +1,9 @@
 package Engine.Common.AmberMessage
 
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
+import Engine.Common.AmberTuple.Tuple
+
 
 object ControlMessage{
 
@@ -26,4 +30,10 @@ object ControlMessage{
   final case class StashOutput()
 
   final case class ReleaseOutput()
+
+  final case class SkipTuple(faultedTuple:FaultedTuple)
+
+  final case class ModifyTuple(faultedTuple:FaultedTuple)
+
+  final case class ResumeTuple(faultedTuple:FaultedTuple)
 }

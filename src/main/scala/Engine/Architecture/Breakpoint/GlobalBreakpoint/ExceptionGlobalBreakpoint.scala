@@ -1,5 +1,6 @@
 package Engine.Architecture.Breakpoint.GlobalBreakpoint
 
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Common.AdvancedMessageSending
 import Engine.Common.AmberMessage.WorkerMessage.AssignBreakpoint
@@ -8,15 +9,16 @@ import akka.actor.ActorRef
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class ExceptionGlobalBreakpoint(id:String) extends GlobalBreakpoint(id) {
-  var exceptions: ArrayBuffer[ExceptionBreakpoint] = new ArrayBuffer[ExceptionBreakpoint]()
+  var exceptions: ArrayBuffer[(ActorRef,ExceptionBreakpoint)] = new ArrayBuffer[(ActorRef,ExceptionBreakpoint)]()
 
   override def acceptImpl(sender: ActorRef, localBreakpoint: LocalBreakpoint): Unit = {
     if (localBreakpoint.isTriggered) {
-      exceptions.append(localBreakpoint.asInstanceOf[ExceptionBreakpoint])
+      exceptions.append((sender,localBreakpoint.asInstanceOf[ExceptionBreakpoint]))
     }
   }
 
@@ -29,13 +31,15 @@ class ExceptionGlobalBreakpoint(id:String) extends GlobalBreakpoint(id) {
   layer
 }
 
-  override def report(): String = {
-    var result = s"Exception Breakpoint[$id]: \n"
+  override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
     for(i <- exceptions){
-      result ++= "["+(if(i.isInput)"IN" else "OUT")+"]"+i.triggeredTuple.toString+" triggered the breakpoint \n ERROR: "+i.error.toString+" \n"
+      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.isInput))
+      if(map.contains(k)){
+        map(k).append(i._2.error.toString)
+      }else{
+        map(k) = ArrayBuffer[String](i._2.error.toString)
+      }
     }
-    exceptions.clear()
-    result
   }
 
   override def isCompleted: Boolean = false

@@ -2,7 +2,8 @@ package Engine.Architecture.Worker
 
 import java.util.concurrent.Executors
 
-import Engine.Architecture.Breakpoint.LocalBreakpoint.ExceptionBreakpoint
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.{ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Common.AmberException.BreakpointException
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TupleProducer}
 import Engine.Common.AmberMessage.WorkerMessage._
@@ -67,9 +68,13 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
     case msg => stash()
   }
 
+  override def onResumeTuple(faultedTuple: FaultedTuple): Unit = {
+    transferTuple(faultedTuple.tuple)
+  }
 
-
-
+  override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {
+    transferTuple(faultedTuple.tuple)
+  }
 
   override def onPausing(): Unit = {
     super.onPausing()

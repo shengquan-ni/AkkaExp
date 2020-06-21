@@ -13,4 +13,6 @@ abstract class LocalBreakpoint(val id:String,val version:Long) extends Serializa
   var triggeredTuple:Tuple = _
 
   def isDirty:Boolean
+
+  var isInput = false
 }

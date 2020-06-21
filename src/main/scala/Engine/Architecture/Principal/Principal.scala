@@ -1,6 +1,7 @@
 package Engine.Architecture.Principal
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
@@ -251,12 +252,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       if(setWorkerState(sender,state)) {
           if(unCompletedWorkerStates.forall(_ == WorkerState.Paused)){
             //all breakpoint resolved, it's safe to report to controller and then Pause(on triggered, or user paused) else Resume
+            val map = new mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]
             for(i <- globalBreakpoints.values.filter(_.isTriggered)){
               isUserPaused = true //upgrade pause
-              val report = i.report()
-              log.info(report)
-              context.parent ! ReportGlobalBreakpointTriggered(report)
+              i.report(map)
             }
+            context.parent ! ReportGlobalBreakpointTriggered(map)
             saveRemoveAskHandle()
             context.parent ! ReportState(PrincipalState.Paused)
             context.become(paused)
@@ -269,6 +270,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }else{
               stage2Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
+              stage1Timer.start()
 
             }
           }

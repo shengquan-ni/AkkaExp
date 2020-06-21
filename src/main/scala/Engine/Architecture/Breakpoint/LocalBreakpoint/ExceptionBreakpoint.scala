@@ -3,7 +3,6 @@ import Engine.Common.AmberTuple.Tuple
 
 class ExceptionBreakpoint()(implicit id:String, version:Long) extends LocalBreakpoint(id,version) {
   var error:Exception = _
-  var isInput = false
   override def accept(tuple: Tuple): Unit = {
     //empty
   }
