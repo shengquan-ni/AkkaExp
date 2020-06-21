@@ -52,23 +52,24 @@ trait DataTransferSupport extends BreakpointSupport {
 
   def transferTuple(tuple: Tuple)(implicit sender:ActorRef): Unit ={
     if(tuple != null){
-      var i = 0
+      var i = 1
       var breakpointTriggered = false
-      var tupleFaulted = false
       while(i < breakpoints.length){
         breakpoints(i).accept(tuple)
+        if(breakpoints(i).isTriggered){
+          breakpoints(i).triggeredTuple = tuple
+        }
         breakpointTriggered |= breakpoints(i).isTriggered
-        tupleFaulted |= breakpoints(i).isFaultedTuple
         i += 1
       }
       i = 0
-      if(!tupleFaulted) {
+      if(!breakpointTriggered) {
         while (i < output.length) {
           output(i).accept(tuple)
           i += 1
         }
       }
-      if(breakpointTriggered) {
+      else{
         throw new BreakpointException()
       }
     }

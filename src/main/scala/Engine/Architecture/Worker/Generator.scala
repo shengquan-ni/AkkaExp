@@ -2,6 +2,7 @@ package Engine.Architecture.Worker
 
 import java.util.concurrent.Executors
 
+import Engine.Architecture.Breakpoint.LocalBreakpoint.ExceptionBreakpoint
 import Engine.Common.AmberException.BreakpointException
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TupleProducer}
 import Engine.Common.AmberMessage.WorkerMessage._
@@ -110,8 +111,19 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       generateStart = System.nanoTime()
       while(dataProducer.hasNext){
         exitIfPaused()
+        var nextTuple = _
+        try{
+          nextTuple = dataProducer.next()
+        }catch{
+          case e:Exception =>
+            self ! LocalBreakpointTriggered
+            breakpoints(0).triggeredTuple = nextTuple
+            breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+            generateTime += System.nanoTime()-generateStart
+            Breaks.break()
+        }
         try {
-          transferTuple(dataProducer.next())
+          transferTuple(nextTuple)
           generatedCount += 1
         }catch{
           case e:BreakpointException =>

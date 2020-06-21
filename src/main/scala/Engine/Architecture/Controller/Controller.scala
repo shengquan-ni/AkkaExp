@@ -2,7 +2,7 @@ package Engine.Architecture.Controller
 
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
-import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -179,14 +179,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           stashedFrontier.clear()
         }else{
           log.info("fully initialized!")
-//          for(i <- workflow.operators){
-//            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
-//              val node = principalBiMap.get(i._1)
-//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-//              stashedNodes.add(node)
-//            }
-//          }
         }
+        //assign exception breakpoint before all breakpoints
+        principalBiMap.entrySet().forEach(x => AdvancedMessageSending.blockingAskWithRetry(x.getValue,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.getKey.operator+"-ExceptionBreakpoint")),10))
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         unstashAll()
