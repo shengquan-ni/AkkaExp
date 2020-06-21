@@ -221,13 +221,15 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       val operatorType = json("operatorID").as[String]
       json("operatorType").as[String] match{
         case "KeywordMatcher" =>
-          var dataProcessor: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
-          dataProcessor.setPredicate(json("attributeName").as[Int],json("keyword").as[String])
+          var dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dp.setPredicate(json("attributeName").as[Int],json("keyword").as[String])
+          dataProcessor = dp
         case "Filter" =>
-          var dataProcessor: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
-          dataProcessor.filterType = FilterType.getType[DateTime](json("filterType").as[String])
-          dataProcessor.targetField = json("targetField").as[Int]
-          dataProcessor.threshold = DateTime.parse(json("threshold").as[String])
+          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
+          dp.filterType = 0 //unused parameter
+          dp.targetField = json("targetField").as[Int]
+          dp.threshold = DateTime.parse(json("threshold").as[String])
+          dataProcessor = dp
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
   }
