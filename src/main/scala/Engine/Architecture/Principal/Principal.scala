@@ -272,7 +272,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }else{
               stage2Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
-
+              stage1Timer.start()
             }
           }
       }
