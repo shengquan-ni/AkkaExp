@@ -1,10 +1,10 @@
 package Engine.Architecture.Worker
 
-import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, CountBreakpoint, LocalBreakpoint}
+import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, CountBreakpoint, ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Architecture.SendSemantics.DataTransferPolicy.OneToOnePolicy
 import Engine.Architecture.SendSemantics.Routees.DirectRoutee
 import Engine.Common.AmberMessage.ControlMessage.{LocalBreakpointTriggered, Pause, QueryState, Resume, Start}
-import Engine.Common.AmberMessage.WorkerMessage.{AssignBreakpoint, DataMessage, EndSending, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportState, ReportedTriggeredBreakpoints, UpdateOutputLinking, AckedWorkerInitialization}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportState, ReportedTriggeredBreakpoints, UpdateOutputLinking}
 import Engine.Common.AmberTag.{LayerTag, LinkTag, OperatorTag, WorkerTag, WorkflowTag}
 import Engine.Operators.SimpleCollection.SimpleTupleProducer
 import akka.actor.{ActorSystem, PoisonPill}
@@ -167,6 +167,7 @@ class GeneratorSpec
     probe.expectMsg(ReportState(WorkerState.Uninitialized))
     execActor ? AckedWorkerInitialization
     probe.expectMsg(ReportState(WorkerState.Ready))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",0))
     execActor ? Start
     probe.expectMsg(ReportState(WorkerState.Running))
@@ -202,6 +203,7 @@ class GeneratorSpec
     probe.expectMsg(ReportState(WorkerState.Uninitialized))
     execActor ? AckedWorkerInitialization
     probe.expectMsg(ReportState(WorkerState.Ready))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new CountBreakpoint(5)("count1",0))
     execActor ? Start
     probe.expectMsg(ReportState(WorkerState.Running))
@@ -223,6 +225,7 @@ class GeneratorSpec
     probe.expectMsg(ReportState(WorkerState.Uninitialized))
     execActor ? AckedWorkerInitialization
     probe.expectMsg(ReportState(WorkerState.Ready))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new CountBreakpoint(50)("count1",0))
     execActor ? Start
     probe.expectMsg(ReportState(WorkerState.Running))

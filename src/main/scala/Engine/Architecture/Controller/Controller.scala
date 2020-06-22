@@ -35,11 +35,11 @@ import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
 import akka.util.Timeout
+import com.github.nscala_time.time.Imports.DateTime
 import com.google.common.base.Stopwatch
 import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
-import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer

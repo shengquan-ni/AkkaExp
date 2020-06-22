@@ -4,6 +4,7 @@ import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{TableMetadata, TupleProcessor}
 
+
 class FilterTupleProcessor[T:Ordering](val targetField:Int, val filterType:FilterType.Val[T], val threshold:T) extends TupleProcessor {
   var _tuple:Tuple = _
   var nextFlag = false

@@ -141,8 +141,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }else{
               //no tau involved since we know a very small tau works best
               if(!stage2Timer.isRunning){
-                stage1Timer.stop()
                 stage2Timer.start()
+              }
+              if(stage1Timer.isRunning){
+                stage1Timer.stop()
               }
               context.system.scheduler.scheduleOnce(tau,() => unCompletedWorkers.foreach(worker => worker ! Pause))
               saveRemoveAskHandle()
@@ -157,7 +159,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             sender ! Resume
           case WorkerState.Completed =>
             if (whenAllWorkersCompleted) {
-              timer.stop()
+              if(timer.isRunning){
+                timer.stop()
+              }
               log.info(metadata.tag.toString+" completed! Time Elapsed: "+timer.toString())
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
@@ -264,14 +268,15 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             unstashAll()
             if(!isUserPaused){
               log.info("no global breakpoint triggered, continue")
-              stage2Timer.stop()
-              stage1Timer.start()
               self ! Resume
             }else{
-              stage2Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
+            }
+            if(stage2Timer.isRunning){
+              stage2Timer.stop()
+            }
+            if(!stage1Timer.isRunning){
               stage1Timer.start()
-
             }
           }
       }

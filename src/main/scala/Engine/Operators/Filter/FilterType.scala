@@ -4,8 +4,21 @@ import Engine.Common.AmberException.AmberException
 
 import scala.language.postfixOps
 import Ordering.Implicits._
+import com.github.nscala_time.time.Imports._
+
 
 object FilterType extends Enumeration with Serializable {
+
+
+  object AmberDateTime{
+    def parse(str:String): AmberDateTime = new AmberDateTime(DateTime.parse(str))
+  }
+
+  class AmberDateTime(val s: DateTime) extends Ordering[DateTime] {
+    override def compare(x: DateTime, y: DateTime): Int = x.compare(y)
+  }
+
+
 
   case class Val[T:Ordering](validate: (T,T) => Boolean) extends super.Val with Serializable
   def Equal[T:Ordering]: Val[T] = Val[T]((x, y) => x==y)
@@ -27,3 +40,9 @@ object FilterType extends Enumeration with Serializable {
     }
   }
 }
+
+
+
+
+
+

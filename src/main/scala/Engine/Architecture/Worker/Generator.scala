@@ -74,6 +74,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       output(i).accept(faultedTuple.tuple)
       i += 1
     }
+    generatedCount+=1
   }
 
   override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {

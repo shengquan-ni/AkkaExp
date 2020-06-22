@@ -34,13 +34,15 @@ public class BufferedBlockReader {
     public String[] readLine() throws IOException {
         outputStream.reset();
         fields.clear();
-        boolean isEmpty = true;
         int index = 0;
         while(true) {
             if (cursor >= bufferSize) {
                 fillBuffer();
                 if (bufferSize == -1) {
-                    return isEmpty ? null: fields.toArray(new String[0]);
+                    if(outputStream.size()>0) {
+                        fields.add(outputStream.toString());
+                    }
+                    return fields.isEmpty() ? null: fields.toArray(new String[0]);
                 }
             }
             int start = cursor;
@@ -50,10 +52,8 @@ public class BufferedBlockReader {
                         if(cursor-start > 0){
                             outputStream.write(buffer,start,cursor-start);
                             fields.add(outputStream.toString());
-                            isEmpty = false;
                         }else if(outputStream.size()>0){
                             fields.add(outputStream.toString());
-                            isEmpty = false;
                         }else{
                             fields.add(null);
                         }
@@ -71,17 +71,15 @@ public class BufferedBlockReader {
                                 outputStream.write(buffer,start,cursor-start-1);
                             }
                             fields.add(outputStream.toString());
-                            isEmpty = false;
                         }else if(outputStream.size()>0){
                             fields.add(outputStream.toString());
-                            isEmpty = false;
                         }else{
                             fields.add(null);
                         }
                     }
                     currentPos += cursor - start + 1;
                     cursor++;
-                    return isEmpty ? null: fields.toArray(new String[0]);
+                    return fields.isEmpty() ? null: fields.toArray(new String[0]);
                 }
                 cursor++;
             }

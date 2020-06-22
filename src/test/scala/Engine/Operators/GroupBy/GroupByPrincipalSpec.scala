@@ -91,7 +91,7 @@ class GroupByPrincipalSpec
       case msg =>
     }
     parent.expectMsg(ReportState(PrincipalState.Completed))
-    assert(res == Set(Tuple("Asia",10d),Tuple("Europe",6d),Tuple("Japan",6d),Tuple("Cat",9d)))
+    assert(res == Set(Tuple("Europe","6.0"),Tuple("Asia","10.0"),Tuple("Japan","6.0"),Tuple("Cat","9.0")))
   }
 
 }
