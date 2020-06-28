@@ -305,7 +305,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRestartFromPrincipal: Receive = {
     case RestartProcessingFreeWorker =>
-      println(s"RECEIVED RESTART ${tag.getGlobalIdentity}")
+      println(s"RECEIVED RESTART from principal ${tag.getGlobalIdentity}")
       sender ! Ack
       output.foreach(policy => {
         policy.resetPolicy()
@@ -318,7 +318,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRestartFromPrevWorker: Receive = {
     case RestartProcessing(senderActor,edgeID) =>
-      println(s"RECEIVED RESTART ${tag.getGlobalIdentity}")
+      println(s"RECEIVED RESTART from previous worker ${tag.getGlobalIdentity}")
       sender ! Ack
       // the below two lines are basically copied from UpdateInputLinking
       // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
