@@ -71,7 +71,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   override def toString: String = s"DirectRoutee($receiver)"
 
   override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
-    println(s"SENDING RESTART TO ${receiver.toString()} from DIRECTROUTEE")
+    //println(s"SENDING RESTART TO ${receiver.toString()} from DIRECTROUTEE")
     AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(sender, tag.from), 3)
   }
 }

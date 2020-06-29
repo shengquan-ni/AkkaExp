@@ -1,7 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{Ack, AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, RestartProcessing, Resume, UpdateRoutingForSkewMitigation}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, RestartProcessing, RestartProcessingToFlowControlActor, Resume, UpdateRoutingForSkewMitigation}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, PoisonPill, Props, Stash}
@@ -198,7 +198,7 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
     case GetSkewMetricsFromFlowControl =>
       sender ! (allReceivers(0), countOfMessagesReceived, messagesToBeSent.size)
 
-    case RestartProcessing =>
+    case RestartProcessingToFlowControlActor =>
       restartMsgArrived = true
       AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(self,layerTag), 3)
       sender ! Ack

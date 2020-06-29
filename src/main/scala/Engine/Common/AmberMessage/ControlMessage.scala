@@ -42,6 +42,8 @@ object ControlMessage{
 
   final case class RestartProcessing(inputActor: ActorRef, fromLayer:LayerTag)
 
+  final case class RestartProcessingToFlowControlActor()
+
   final case class RestartProcessingFreeWorker()
 
   final case class ReceiveHashTable(hashTable: Any)

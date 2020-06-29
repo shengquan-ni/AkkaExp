@@ -39,7 +39,7 @@ object Principal {
 
 class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
-  implicit val timeout:Timeout = 5.seconds
+  implicit val timeout:Timeout = 10.seconds
   implicit val logAdapter: LoggingAdapter = log
 
   val tau:FiniteDuration = Constants.defaultTau
