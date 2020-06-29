@@ -37,6 +37,7 @@ class FlowControlRoutee(receiver:ActorRef) extends ActorRoutee(receiver) {
   }
 
   override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    println(s"SENDING RESTART TO ${receiver.toString()} from FLOWCONTROLROUTEE")
     AdvancedMessageSending.blockingAskWithRetry(senderActor, RestartProcessing, 3)
   }
 }
