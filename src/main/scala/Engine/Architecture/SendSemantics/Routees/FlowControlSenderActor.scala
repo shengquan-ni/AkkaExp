@@ -199,9 +199,9 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
       sender ! (allReceivers(0), countOfMessagesReceived, messagesToBeSent.size)
 
     case RestartProcessing =>
-      sender ! Ack
       restartMsgArrived = true
       AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(self,layerTag), 3)
+      sender ! Ack
 
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {
