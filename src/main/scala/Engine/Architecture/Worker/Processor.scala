@@ -356,15 +356,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse receiveRestartFromPrevWorker orElse super.ready
 
-  def restart: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking
+  def restart: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking  orElse receiveRestartFromPrevWorker
 
-  override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
+  override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking  orElse receiveRestartFromPrevWorker orElse super.pausedBeforeStart
 
   override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse receiveRestartFromPrevWorker orElse super.running
 
-  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
+  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking  orElse receiveRestartFromPrevWorker orElse super.paused
 
-  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
+  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking  orElse receiveRestartFromPrevWorker orElse super.breakpointTriggered
 
   override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse receiveRestartFromPrincipal orElse receiveRestartFromPrevWorker orElse super.completed
 
