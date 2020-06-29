@@ -366,7 +366,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
 
-  override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse receiveRestartFromPrincipal orElse receiveRestartFromPrevWorker orElse super.completed
+  override def completed: Receive = disallowDataMessages orElse receiveSkewDetectionMessages orElse receiveFlowControlSkewDetectionMessages orElse receiveRouteUpdateMessages orElse receiveHashTable orElse receiveRestartFromPrincipal orElse receiveRestartFromPrevWorker orElse super.completed
 
 
   private[this] def beforeProcessingBatch(): Unit ={
