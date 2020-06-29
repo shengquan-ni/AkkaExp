@@ -322,7 +322,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRestartFromPrevWorker: Receive = {
     case RestartProcessing(senderActor,edgeID) =>
-      println(s"RECEIVED RESTART from previous worker ${tag.getGlobalIdentity}")
+      println(s"${tag.getGlobalIdentity} RECEIVED RESTART from previous worker")
       // the below two lines are basically copied from UpdateInputLinking
       // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
       // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()

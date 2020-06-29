@@ -274,7 +274,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     val layerTag: LayerTag = layerCompletedCounter.keys.head
     layerCompletedCounter(layerTag) += 1
 
-
+    println(s"SENDING UPDATEROUTING TO JOIN1 PRINCIPAL")
     join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
   }
 
