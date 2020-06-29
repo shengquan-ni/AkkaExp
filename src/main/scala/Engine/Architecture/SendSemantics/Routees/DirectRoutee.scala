@@ -20,6 +20,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   val stash = new ArrayBuffer[Any]
   var isPaused = false
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
+  var tag: LinkTag = null
 
   var message: String = ""
   override def schedule(msg: DataMessage)(implicit sender: ActorRef): Unit = {
@@ -59,6 +60,7 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   }
 
   override def initialize(tag:LinkTag)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    this.tag = tag
     receiver ? UpdateInputLinking(sender,tag.from)
   }
 
@@ -70,6 +72,6 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
 
   override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     println(s"SENDING RESTART TO ${receiver.toString()} from DIRECTROUTEE")
-    AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing, 3)
+    AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(sender, tag.from), 3)
   }
 }
