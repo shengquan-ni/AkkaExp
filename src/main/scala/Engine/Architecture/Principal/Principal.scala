@@ -207,6 +207,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case ReportWorkerPartialCompleted(worker,layer) =>
       sender ! Ack
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent, ReportPrincipalPartialCompleted(worker,layer),10,0)
+      if(worker.getGlobalIdentity.contains("sample-Join2-main/0")) {
+        println(s"Principal receives Join2 - 0 request")
+      }
       if(layerCompletedCounter.contains(layer)){
         layerCompletedCounter(layer) -= 1
         if(layerCompletedCounter(layer) == 0){

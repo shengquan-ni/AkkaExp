@@ -109,7 +109,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   def onSaveEndSending(seq: Long): Unit = {
     if(input.registerEnd(sender,seq)){
-      if(tag.operator.contains("Join2")) {
+      if(tag.operator.contains("Join2-main/0")) {
         println("END accepted")
       }
       synchronized {
@@ -231,13 +231,13 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-      if(tag.getGlobalIdentity.contains("sample-Join2-main/10") || tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
-        print(s"${tag.getGlobalIdentity} received END, ")
-        for((k,v) <- input.endToBeReceived) {
-          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
-        }
-        println()
-      }
+//      if(tag.getGlobalIdentity.contains("sample-Join2-main/10") || tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
+//        print(s"${tag.getGlobalIdentity} received END, ")
+//        for((k,v) <- input.endToBeReceived) {
+//          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
+//        }
+//        println()
+//      }
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
       if(tag.operator.contains("Join2")) {
@@ -264,6 +264,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def reactOnUpstreamExhausted:Receive = {
     case ReportUpstreamExhausted(from) =>
+      if(tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
+        println(s"Join2-0 reporting finish to principal")
+      }
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent,ReportWorkerPartialCompleted(tag,from),10,0)
   }
 
