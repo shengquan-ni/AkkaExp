@@ -109,6 +109,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   def onSaveEndSending(seq: Long): Unit = {
     if(input.registerEnd(sender,seq)){
+      if(tag.operator.contains("Join2")) {
+        println("END accepted")
+      }
       synchronized {
         val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
