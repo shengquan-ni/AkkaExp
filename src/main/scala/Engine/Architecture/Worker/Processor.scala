@@ -229,7 +229,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
       if(tag.getGlobalIdentity.contains("Join2")) {
-        println(s"${tag.getGlobalIdentity} received END")
+        print(s"${tag.getGlobalIdentity} received END, ")
+        for((k,v) <- input.endToBeReceived) {
+          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
+        }
+        println()
       }
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
