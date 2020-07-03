@@ -494,6 +494,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       }
       if(batch == null){
         dataProcessor.onUpstreamExhausted(from)
+        if(tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
+          println(s"Join2-0 sending ReportUpstreamExhausted to itself")
+        }
         self ! ReportUpstreamExhausted(from)
         aliveUpstreams.remove(from) //remove a particular layer
       }else{
