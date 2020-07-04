@@ -72,7 +72,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
-    println(s" ${tag.getGlobalIdentity} ACTOR for Joining ${tupleToIdentifyJoin} TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms, batches ${totalBatchPutInInternalQueue}")
+    println(s" ${tag.getGlobalIdentity} ACTOR for Joining ${tupleToIdentifyJoin} TIME ####. total: ${(System.nanoTime()-startTime)/1000000} ms, processing: ${processTime/1000000} ms, batches ${totalBatchPutInInternalQueue} - ${formatter.format(new Date(System.currentTimeMillis()))}")
   }
 
   private[this] def waitProcessing:Receive={
@@ -232,7 +232,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-      if(tag.getGlobalIdentity.contains("sample-GroupBy3-globalGroupBy")) {
+      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
 //        for((k,v) <- input.endToBeReceived) {
 //          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
@@ -503,7 +503,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       if(batch == null){
         dataProcessor.onUpstreamExhausted(from)
         if(tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
-          println(s"Join2-0 sending ReportUpstreamExhausted to itself")
+          println(s"Join2-0 sending ReportUpstreamExhausted to itself - ${formatter.format(new Date(System.currentTimeMillis()))}")
         }
         self ! ReportUpstreamExhausted(from)
         aliveUpstreams.remove(from) //remove a particular layer
