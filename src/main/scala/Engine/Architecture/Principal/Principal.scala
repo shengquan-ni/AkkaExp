@@ -267,7 +267,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   def SkewMitigation(principalRef: ActorRef, mitigationCount: Int, mostSkewedWorker: ActorRef, freeWorker:ActorRef): Unit = {
     AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
+    println(s"Replication done - ${formatter.format(new Date(System.currentTimeMillis()))}")
     AdvancedMessageSending.blockingAskWithRetry(freeWorker, RestartProcessingFreeWorker(principalRef, mitigationCount), 3)
+    println(s"Restart message propagated - ${formatter.format(new Date(System.currentTimeMillis()))}")
 
     // below block says that freeWorker is restarted.
     workerStateMap(freeWorker) = WorkerState.Restarted
