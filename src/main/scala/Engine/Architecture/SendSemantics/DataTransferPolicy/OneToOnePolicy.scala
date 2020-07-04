@@ -59,7 +59,7 @@ class OneToOnePolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
     currentSize = 0
   }
 
-  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
-    routee.propagateRestartForward()
+  override def propagateRestartForward(principalRef: ActorRef, mitigationCount:Int)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    routee.propagateRestartForward(principalRef, mitigationCount)
   }
 }

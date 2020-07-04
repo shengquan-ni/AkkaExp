@@ -55,6 +55,6 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
 
   def resetPolicy():Unit
 
-  def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Unit
+  def propagateRestartForward(principalRef: ActorRef, mitigationCount:Int)(implicit ac:ActorContext, senderActor: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Unit
 
 }

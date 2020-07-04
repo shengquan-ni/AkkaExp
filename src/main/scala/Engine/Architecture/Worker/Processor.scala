@@ -49,6 +49,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var dpthreadProcessingTimeStart = 0L
   var totalBatchProcessed = 0
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
+  var restartProcessingMap = new mutable.HashSet[(ActorRef,Int,ActorRef)]() // (principalStartingMitigation, mitigationCount, prevWorker)
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -317,11 +318,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   final def receiveRestartFromPrincipal: Receive = {
-    case RestartProcessingFreeWorker =>
+    case RestartProcessingFreeWorker(principalRef, mitigationCount) =>
       println(s"RECEIVED RESTART from principal ${tag.getGlobalIdentity}")
       output.foreach(policy => {
         policy.resetPolicy()
-        policy.propagateRestartForward()
+        policy.propagateRestartForward(principalRef, mitigationCount)
       })
 
       // sender ! ReportState(WorkerState.Restarted)
@@ -334,26 +335,33 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   final def receiveRestartFromPrevWorker: Receive = {
-    case RestartProcessing(senderActor,edgeID) =>
+    case RestartProcessing(principalRef, mitigationCount, senderActor,edgeID) =>
       // println(s"${tag.getGlobalIdentity} RECEIVED RESTART from previous worker")
-      // the below two lines are basically copied from UpdateInputLinking
-      // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
-      // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()
-      aliveUpstreams.add(edgeID)
-      input.addSender(senderActor,edgeID)
-      if(dPThreadState == ThreadState.Completed) {
-        output.foreach(policy => {
-          policy.resetPolicy()
-          policy.propagateRestartForward()
-        })
-        AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
-        context.become(restart)
+
+      if(restartProcessingMap.contains((principalRef,mitigationCount,senderActor))) {
+        // restart message should be idempotent
+        sender ! Ack
       } else {
-        output.foreach(policy => {
-          policy.propagateRestartForward()
-        })
+        restartProcessingMap.add((principalRef,mitigationCount,senderActor))
+        // the below two lines are basically copied from UpdateInputLinking
+        // the logic is that propagateRestartForward() calls the below two lines for all downstream workers from the free worker
+        // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()
+        aliveUpstreams.add(edgeID)
+        input.addSender(senderActor,edgeID)
+        if(dPThreadState == ThreadState.Completed) {
+          output.foreach(policy => {
+            policy.resetPolicy()
+            policy.propagateRestartForward(principalRef,mitigationCount)
+          })
+          AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
+          context.become(restart)
+        } else {
+          output.foreach(policy => {
+            policy.propagateRestartForward(principalRef,mitigationCount)
+          })
+        }
+        sender ! Ack
       }
-      sender ! Ack
   }
 
   override def postStop(): Unit = {

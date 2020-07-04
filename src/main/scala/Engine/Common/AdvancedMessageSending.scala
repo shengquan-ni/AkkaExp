@@ -58,7 +58,7 @@ object AdvancedMessageSending {
           Breaks.break()
         }
         i += 1
-        println(s"***MESSAGE TIMEOUT***: Receiver didn't respond. Sending ${message.toString} for ${i+1}th time")
+        println(s"***MESSAGE TIMEOUT***: Receiver didn't respond. Sending ${message.toString} for ${i}th time")
       }
       //log.error("failed to send message "+message+" to "+receiver)
     }

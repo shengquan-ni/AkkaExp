@@ -40,11 +40,11 @@ object ControlMessage{
 
   final case class ReplicateBuildTable(to:ActorRef)
 
-  final case class RestartProcessing(inputActor: ActorRef, fromLayer:LayerTag)
+  final case class RestartProcessing(principalRef: ActorRef, mitigationCount:Int, inputActor: ActorRef, fromLayer:LayerTag)
 
-  final case class RestartProcessingToFlowControlActor()
+  final case class RestartProcessingToFlowControlActor(principalRef: ActorRef, mitigationCount:Int)
 
-  final case class RestartProcessingFreeWorker()
+  final case class RestartProcessingFreeWorker(principalRef: ActorRef, mitigationCount: Int)
 
   final case class ReceiveHashTable(hashTable: Any)
 

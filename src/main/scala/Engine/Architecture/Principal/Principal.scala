@@ -182,7 +182,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               if(metadata.tag.operator.contains("Join2")) {
                 if(mitigationCount<1 && (System.nanoTime()-skewQueryStartTime)/1000000 > 100) {
                   val mostSkewedWorker: ActorRef = SkewDetection()
-                  SkewMitigation(mostSkewedWorker, sender)
+                  SkewMitigation(self, mitigationCount, mostSkewedWorker, sender)
                   countOfSkewQuery += 1
                   skewQueryStartTime = System.nanoTime()
                   mitigationCount += 1
@@ -265,9 +265,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     mostSkewedWorker
   }
 
-  def SkewMitigation(mostSkewedWorker: ActorRef, freeWorker:ActorRef): Unit = {
+  def SkewMitigation(principalRef: ActorRef, mitigationCount: Int, mostSkewedWorker: ActorRef, freeWorker:ActorRef): Unit = {
     AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
-    AdvancedMessageSending.blockingAskWithRetry(freeWorker, RestartProcessingFreeWorker, 3)
+    AdvancedMessageSending.blockingAskWithRetry(freeWorker, RestartProcessingFreeWorker(principalRef, mitigationCount), 3)
 
     // below block says that freeWorker is restarted.
     workerStateMap(freeWorker) = WorkerState.Restarted

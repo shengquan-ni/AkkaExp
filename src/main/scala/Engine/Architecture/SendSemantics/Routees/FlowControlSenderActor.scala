@@ -198,9 +198,9 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
     case GetSkewMetricsFromFlowControl =>
       sender ! (allReceivers(0), countOfMessagesReceived, messagesToBeSent.size)
 
-    case RestartProcessingToFlowControlActor =>
+    case RestartProcessingToFlowControlActor(principalRef, mitigationCount) =>
       restartMsgArrived = true
-      AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(self,layerTag), 3)
+      AdvancedMessageSending.blockingAskWithRetry(receiver, RestartProcessing(principalRef, mitigationCount, self,layerTag), 3)
       sender ! Ack
 
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>

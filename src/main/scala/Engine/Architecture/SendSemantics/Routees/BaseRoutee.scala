@@ -33,7 +33,7 @@ abstract class BaseRoutee(val receiver:ActorRef) extends Serializable {
     return null
   }
 
-  def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+  def propagateRestartForward(principalRef: ActorRef, mitigationCount:Int)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
 
   }
 }

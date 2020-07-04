@@ -77,7 +77,7 @@ class RoundRobinPolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
     roundRobinIndex = 0
   }
 
-  override def propagateRestartForward()(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
-    routees.foreach(routee => routee.propagateRestartForward())
+  override def propagateRestartForward(principalRef: ActorRef, mitigationCount:Int)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
+    routees.foreach(routee => routee.propagateRestartForward(principalRef, mitigationCount))
   }
 }
