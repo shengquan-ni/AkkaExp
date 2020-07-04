@@ -233,11 +233,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
       if(tag.getGlobalIdentity.contains("sample-GroupBy3-globalGroupBy")) {
-        print(s"${tag.getGlobalIdentity} received END, ")
-        for((k,v) <- input.endToBeReceived) {
-          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
-        }
-        println()
+        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+//        for((k,v) <- input.endToBeReceived) {
+//          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
+//        }
+//        println()
       }
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
