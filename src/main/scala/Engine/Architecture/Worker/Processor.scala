@@ -120,7 +120,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       synchronized {
         val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
-        if (dPThreadState == ThreadState.Idle) {
+        if (dPThreadState == ThreadState.Idle || dPThreadState == ThreadState.Completed) {
           dPThreadState = ThreadState.Running
           Future {
             processBatch()
