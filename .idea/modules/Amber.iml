@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id="akkaexp [file:/home/avinash/Downloads/AkkaExp/]" external.linked.project.path="$MODULE_DIR$/../.." external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_10">
+<module external.linked.project.id="akkaexp [file:/Users/avinash/AkkaExp/]" external.linked.project.path="$MODULE_DIR$/../.." external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
     <output url="file://$MODULE_DIR$/../../target/scala-2.12/classes" />
     <output-test url="file://$MODULE_DIR$/../../target/scala-2.12/test-classes" />
     <exclude-output />
@@ -44,9 +44,12 @@
     <orderEntry type="library" name="sbt: com.sun.jersey:jersey-servlet:1.19:jar" level="project" />
     <orderEntry type="library" name="sbt: com.sun.xml.bind:jaxb-impl:2.2.3-1:jar" level="project" />
     <orderEntry type="library" name="sbt: com.thoughtworks.paranamer:paranamer:2.3:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:bijection-core_2.12:0.9.7:jar" level="project" />
     <orderEntry type="library" name="sbt: com.twitter:chill-akka_2.12:0.9.3:jar" level="project" />
     <orderEntry type="library" name="sbt: com.twitter:chill-java:0.9.3:jar" level="project" />
     <orderEntry type="library" name="sbt: com.twitter:chill_2.12:0.9.3:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-core_2.12:20.6.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.twitter:util-function_2.12:20.6.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.typesafe.akka:akka-actor_2.12:2.5.24:jar" level="project" />
     <orderEntry type="library" name="sbt: com.typesafe.akka:akka-cluster-metrics_2.12:2.5.24:jar" level="project" />
     <orderEntry type="library" name="sbt: com.typesafe.akka:akka-cluster-tools_2.12:2.5.24:jar" level="project" />
@@ -147,6 +150,7 @@
     <orderEntry type="library" name="sbt: org.objenesis:objenesis:2.5.1:jar" level="project" />
     <orderEntry type="library" name="sbt: org.ow2.asm:asm:5.0.4:jar" level="project" />
     <orderEntry type="library" name="sbt: org.reactivestreams:reactive-streams:1.0.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-collection-compat_2.12:2.1.2:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-java8-compat_2.12:0.8.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-parser-combinators_2.12:1.1.2:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-lang.modules:scala-xml_2.12:1.2.0:jar" level="project" />

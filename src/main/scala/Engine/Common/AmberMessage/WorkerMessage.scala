@@ -10,11 +10,15 @@ import Engine.Common.AmberTag.{LayerTag, LinkTag, WorkerTag}
 import Engine.Common.AmberTuple.Tuple
 import akka.actor.ActorRef
 
+import scala.collection.mutable.ArrayBuffer
+
 object WorkerMessage {
 
   final case class AckedWorkerInitialization()
 
   final case class UpdateInputLinking(inputActor: ActorRef, fromLayer:LayerTag)
+
+  final case class UpdateInputsLinking(inputActors: ArrayBuffer[ActorRef], fromLayer:LayerTag)
 
   final case class UpdateOutputLinking(policy:DataTransferPolicy, link:LinkTag, receivers:Array[BaseRoutee])
 

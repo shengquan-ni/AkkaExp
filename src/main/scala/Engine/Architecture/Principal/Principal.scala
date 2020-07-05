@@ -13,7 +13,7 @@ import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.ControllerMessage.ReportGlobalBreakpointTriggered
 import Engine.Common.AmberMessage.WorkerMessage
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportSkewMetrics, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportSkewMetrics, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateInputsLinking}
 import Engine.Common.AmberTag.{LayerTag, OperatorTag, WorkerTag}
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
 import Engine.Operators.OperatorMetadata
@@ -279,8 +279,14 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     val layerTag: LayerTag = layerCompletedCounter.keys.head
     layerCompletedCounter(layerTag) += 1
 
-    println(s"SENDING UPDATEROUTING TO JOIN1 PRINCIPAL")
-    join1Principal ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
+    println(s"GETTING INFO FROM JOIN1 PRINCIPAL")
+    val (inputsToBeUpdated: ArrayBuffer[ActorRef], lyTag:LayerTag) = AdvancedMessageSending.blockingAskWithRetry(join1Principal, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+
+    println(s"SENDING INFO TO FREE WORKER")
+    AdvancedMessageSending.blockingAskWithRetry(freeWorker, UpdateInputsLinking(inputsToBeUpdated, lyTag), 3)
+
+    println(s"OPENING THE FLOODGATES")
+    join1Principal ! AddFreeWorkerAsReceiver(mostSkewedWorker, freeWorker)
   }
 
 
@@ -481,10 +487,17 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       sender ! join2ActorsSkewMap
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       println(s"Join1 principal got UpdateRouting message")
+      var ret = new ArrayBuffer[ActorRef]()
+      var layTag: LayerTag = null
       allWorkers.foreach(worker => {
-        AdvancedMessageSending.blockingAskWithRetry(worker, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+        val (inputsToBeUpdated: ArrayBuffer[ActorRef], layerTag: LayerTag) = AdvancedMessageSending.blockingAskWithRetry(worker, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+        ret.appendAll(inputsToBeUpdated)
+        layTag = layerTag
       })
-      println(s"Join1 principal now adding receivers")
+      sender ! (ret,layTag)
+
+    case AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker) =>
+      println(s"JOIN1 principal now adding free workers as receivers")
       allWorkers.foreach(worker => {
         worker ! AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker)
       })

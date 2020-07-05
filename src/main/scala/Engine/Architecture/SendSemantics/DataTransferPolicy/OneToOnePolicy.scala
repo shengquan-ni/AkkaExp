@@ -8,6 +8,7 @@ import akka.actor.{Actor, ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class OneToOnePolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
@@ -52,6 +53,12 @@ class OneToOnePolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
 
   override def dispose(): Unit = {
     routee.dispose()
+  }
+
+  override def getRoutees(): Array[BaseRoutee] = {
+    var ret = new Array[BaseRoutee](1)
+    ret(0) = routee
+    ret
   }
 
   override def resetPolicy(): Unit = {

@@ -11,10 +11,15 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks
 import scala.concurrent.duration._
+//import com.twitter.util.{Await, Future, Duration}
+// import com.twitter.bijection.Conversion.asMethod
+
+import scala.collection.mutable.ArrayBuffer
+import collection.JavaConverters._
 
 object AdvancedMessageSending {
 
-  def nonBlockingAskWithRetry(receiver: ActorRef, message: Any, maxAttempts: Int, attempt: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Future[Any] = {
+  def nonBlockingAskWithRetry(receiver: ActorRef, message: Any, maxAttempts: Int, attempt: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): scala.concurrent.Future[Any] = {
     val future = (receiver ? message) recover {
       case e: AskTimeoutException =>
         if (attempt > maxAttempts) log.error("failed to send message "+message+" to "+receiver)
@@ -47,6 +52,15 @@ object AdvancedMessageSending {
 //    future
 //  }
 
+//  def blockingAskWithRetry(receivers: ArrayBuffer[ActorRef], message: Any, maxAttempts: Int)(implicit timeout: Timeout): Any = {
+//    var futures: ArrayBuffer[com.twitter.util.Future[Any]] = new ArrayBuffer[com.twitter.util.Future[Any]]()
+//    receivers.foreach(receiver => {
+//      futures.append((receiver ? message).as[com.twitter.util.Future[Any]])
+//    })
+//    com.twitter.util.Await.all(futures: _*)
+//
+//  }
+
   //this is blocking the actor, be careful!
   def blockingAskWithRetry(receiver: ActorRef, message: Any, maxAttempts: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Any ={
     var res:Any = null
@@ -54,7 +68,7 @@ object AdvancedMessageSending {
       var i = 0
       while(i < maxAttempts){
         Try{
-          res = Await.result(receiver ? message,timeout.duration)
+          res = scala.concurrent.Await.result(receiver ? message,timeout.duration)
           Breaks.break()
         }
         i += 1
@@ -72,7 +86,7 @@ object AdvancedMessageSending {
       var i = 0
       while(i < maxAttempts){
         Try{
-          res = Await.result(receiver ? message,timeout.duration)
+          res = scala.concurrent.Await.result(receiver ? message,timeout.duration)
           Breaks.break()
         }
         i += 1

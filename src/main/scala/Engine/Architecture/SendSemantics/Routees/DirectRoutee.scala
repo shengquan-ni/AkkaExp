@@ -60,6 +60,10 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
     }
   }
 
+  override def getSenderActor(): ActorRef = {
+    senderActor
+  }
+
   override def initialize(tag:LinkTag)(implicit ac:ActorContext, sender: ActorRef, timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
     this.tag = tag
     this.senderActor = sender

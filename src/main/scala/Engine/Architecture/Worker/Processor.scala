@@ -272,6 +272,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       }
       aliveUpstreams.add(edgeID)
       input.addSender(inputActor,edgeID)
+
+    case UpdateInputsLinking(inputActors,edgeID) =>
+      inputActors.foreach(actor => {
+        if(restartedByPrincipal) {
+          println(s"INPUT LINKING UPDATED")
+        }
+        aliveUpstreams.add(edgeID)
+        input.addSender(actor,edgeID)
+      })
+      sender ! Ack
   }
 
   final def disallowUpdateInputLinking:Receive = {
@@ -327,11 +337,20 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveRouteUpdateMessages: Receive = {
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
-      val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
-      flowControlActors.foreach(actor => {
-        AdvancedMessageSending.blockingAskWithRetry(actor, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+//      val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
+//      flowControlActors.foreach(actor => {
+//        AdvancedMessageSending.blockingAskWithRetry(actor, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+//      })
+      var inputsToBeUpdated = new ArrayBuffer[ActorRef]()
+      val routees = output.foreach(output => {
+        val routees = output.getRoutees()
+        routees.foreach(routee => {
+          if(routee.getReceiverActor()==mostSkewedWorker) {
+            inputsToBeUpdated.append(routee.getSenderActor())
+          }
+        })
       })
-      sender ! Ack
+      sender ! (inputsToBeUpdated, new LayerTag(tag.workflow,tag.operator,tag.layer))
     case AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker) =>
       val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
       flowControlActors.foreach(actor => {

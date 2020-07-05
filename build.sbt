@@ -32,6 +32,8 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies += "com.twitter" %% "chill-akka" % "0.9.3"
+libraryDependencies += "com.twitter" %% "util-core" % "20.6.0"
+libraryDependencies += "com.twitter" %% "bijection-core" % "0.9.7"
 libraryDependencies += "com.typesafe.play" %% "play-json" % "2.7.3"
 libraryDependencies += "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8"
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.22.0"

@@ -36,6 +36,10 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
     return null
   }
 
+  def getRoutees(): Array[BaseRoutee] = {
+    return null
+  }
+
   /**
    * Policy between a worker actor and its downstream layer of actors.
    * @param linkTag

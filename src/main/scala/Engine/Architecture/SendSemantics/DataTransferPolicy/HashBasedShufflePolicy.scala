@@ -35,6 +35,10 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
     }
   }
 
+  override def getRoutees(): Array[BaseRoutee] = {
+    return routees
+  }
+
   override def pause(): Unit = {
     for(i <- routees){
       i.pause()
