@@ -112,7 +112,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   def onSaveEndSending(seq: Long): Unit = {
     if(input.registerEnd(sender,seq)){
 //      if(tag.operator.contains("Join2-main/0")) {
-//        println("END accepted")
+//        println("END came for Join2-main/0")
 //      }
       if(restartedByPrincipal) {
         println("END accepted for the restarted worker")
@@ -243,7 +243,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
+      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
 //        for((k,v) <- input.endToBeReceived) {
 //          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
