@@ -482,7 +482,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       println(s"Join1 principal got UpdateRouting message")
       allWorkers.foreach(worker => {
-        worker ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
+        AdvancedMessageSending.blockingAskWithRetry(worker, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
       })
       println(s"Join1 principal now adding receivers")
       allWorkers.foreach(worker => {

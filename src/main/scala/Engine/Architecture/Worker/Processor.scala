@@ -329,8 +329,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
       flowControlActors.foreach(actor => {
-        actor ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
+        AdvancedMessageSending.blockingAskWithRetry(actor, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
       })
+      sender ! Ack
     case AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker) =>
       val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
       flowControlActors.foreach(actor => {
