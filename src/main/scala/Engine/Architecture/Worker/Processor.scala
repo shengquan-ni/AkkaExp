@@ -399,7 +399,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
 
-  override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse receiveRestartFromPrevWorker orElse super.running
+  override def running: Receive = receiveDataMessages orElse reactOnUpstreamExhausted orElse receiveSkewDetectionMessages orElse receiveBuildTableReplicationMsg orElse receiveRestartFromPrevWorker orElse super.running
 
   override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking  orElse super.paused
 
