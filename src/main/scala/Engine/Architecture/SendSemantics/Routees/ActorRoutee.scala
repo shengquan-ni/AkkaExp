@@ -46,6 +46,6 @@ abstract class ActorRoutee(receiver: ActorRef) extends BaseRoutee(receiver) {
   }
 
   override def dispose(): Unit = {
-    senderActor ! PoisonPill
+    // senderActor ! PoisonPill
   }
 }
