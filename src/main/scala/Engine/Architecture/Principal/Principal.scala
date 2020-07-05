@@ -480,9 +480,11 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       })
       sender ! join2ActorsSkewMap
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
+      println(s"Join1 principal got UpdateRouting message")
       allWorkers.foreach(worker => {
         worker ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
       })
+      println(s"Join1 principal now adding receivers")
       allWorkers.foreach(worker => {
         worker ! AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker)
       })
