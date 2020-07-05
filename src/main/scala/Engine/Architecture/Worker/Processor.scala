@@ -50,6 +50,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var totalBatchProcessed = 0
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
   var restartProcessingMap = new mutable.HashSet[(ActorRef,Int,ActorRef)]() // (principalStartingMitigation, mitigationCount, prevWorker)
+  var restartedByPrincipal: Boolean = false
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -110,9 +111,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   def onSaveEndSending(seq: Long): Unit = {
     if(input.registerEnd(sender,seq)){
-      if(tag.operator.contains("Join2-main/0")) {
-        println("END accepted")
-      }
+//      if(tag.operator.contains("Join2-main/0")) {
+//        println("END accepted")
+//      }
       synchronized {
         val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
@@ -228,6 +229,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         //        }
         //        println()
       }
+      if(restartedByPrincipal) {
+        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+      }
       onReceiveEndSending(seq)
     case DataMessage(seq,payload) =>
       if(tag.operator.contains("Join2")) {
@@ -243,6 +247,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //        }
 //        println()
       }
+      if(restartedByPrincipal) {
+        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+      }
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
       if(tag.operator.contains("Join2")) {
@@ -257,6 +264,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   final def allowUpdateInputLinking:Receive = {
     case UpdateInputLinking(inputActor,edgeID) =>
       sender ! Ack
+      if(restartedByPrincipal) {
+        println(s"INPUT LINKING UPDATED")
+      }
       aliveUpstreams.add(edgeID)
       input.addSender(inputActor,edgeID)
   }
@@ -324,6 +334,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   final def receiveRestartFromPrincipal: Receive = {
     case RestartProcessingFreeWorker(principalRef, mitigationCount) =>
       println(s"RECEIVED RESTART from principal ${tag.getGlobalIdentity}")
+      restartedByPrincipal = true
       output.foreach(policy => {
         policy.resetPolicy()
         policy.propagateRestartForward(principalRef, mitigationCount)
