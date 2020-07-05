@@ -114,6 +114,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //      if(tag.operator.contains("Join2-main/0")) {
 //        println("END accepted")
 //      }
+      if(restartedByPrincipal) {
+        println("END accepted for the restarted worker")
+      }
       synchronized {
         val currentEdge: LayerTag = input.actorToEdge(sender)
         processingQueue += ((currentEdge,null))
