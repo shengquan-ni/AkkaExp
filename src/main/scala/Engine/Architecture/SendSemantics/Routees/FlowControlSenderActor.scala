@@ -207,6 +207,7 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
       if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {
         AdvancedMessageSending.blockingAskWithRetry(freeWorker,UpdateInputLinking(self,layerTag),10)
         addReceiver(freeWorker)
+        println(s"ROUTING UPDATED: remaining data ${messagesToBeSent.size}")
       }
   }
 
