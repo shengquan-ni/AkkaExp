@@ -216,11 +216,10 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
         addReceiver(freeWorker)
         println(s"ROUTING UPDATED: remaining data ${messagesToBeSent.size}")
       }
-      else if(handleOfEndSending != null) {
+      else if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending != null) {
         println(s"ROUTING UPDATED: End already sent")
+        handleOfEndSending += (freeWorker->(0,context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(freeWorker))))
         freeWorker ! RequireAck(EndSending(0))
-      } else {
-        println(s"ROUTING UPDATED: Should never reach here")
       }
   }
 
