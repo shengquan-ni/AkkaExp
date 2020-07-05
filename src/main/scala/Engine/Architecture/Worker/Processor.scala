@@ -499,6 +499,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             Breaks.break()
         }
       }
+      if(restartedByPrincipal) {
+        println("On completing being called for restarted worker")
+      }
       onCompleting()
       try{
         dataProcessor.dispose()
@@ -544,8 +547,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       }
       if(batch == null){
         dataProcessor.onUpstreamExhausted(from)
-        if(tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
-          println(s"Join2-0 sending ReportUpstreamExhausted to itself - ${formatter.format(new Date(System.currentTimeMillis()))}")
+//        if(tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
+//          println(s"Join2-0 sending ReportUpstreamExhausted to itself - ${formatter.format(new Date(System.currentTimeMillis()))}")
+//        }
+        if(restartedByPrincipal) {
+          println(s"Restarted worker sending ReportUpstreamExhausted to itself")
         }
         self ! ReportUpstreamExhausted(from)
         aliveUpstreams.remove(from) //remove a particular layer
