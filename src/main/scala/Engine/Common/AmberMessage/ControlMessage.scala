@@ -50,4 +50,6 @@ object ControlMessage{
 
   final case class UpdateRoutingForSkewMitigation(mostSkewedWorker: ActorRef, freeWorker: ActorRef)
 
+  final case class AddFreeWorkerAsReceiver(mostSkewedWorker: ActorRef, freeWorker: ActorRef)
+
 }

@@ -1,7 +1,7 @@
 package Engine.Architecture.SendSemantics.Routees
 
 
-import Engine.Common.AmberMessage.ControlMessage.{Ack, AckOfEndSending, AckWithSequenceNumber, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, RestartProcessing, RestartProcessingToFlowControlActor, Resume, UpdateRoutingForSkewMitigation}
+import Engine.Common.AmberMessage.ControlMessage.{Ack, AckOfEndSending, AckWithSequenceNumber, AddFreeWorkerAsReceiver, GetSkewMetricsFromFlowControl, Pause, ReportTime, RequireAck, RestartProcessing, RestartProcessingToFlowControlActor, Resume, UpdateRoutingForSkewMitigation}
 import Engine.Common.AmberMessage.WorkerMessage.{DataMessage, EndSending, UpdateInputLinking}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import akka.actor.{Actor, ActorLogging, ActorRef, Cancellable, PoisonPill, Props, Stash}
@@ -206,6 +206,12 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {
         AdvancedMessageSending.blockingAskWithRetry(freeWorker,UpdateInputLinking(self,layerTag),10)
+        // addReceiver(freeWorker)
+        // println(s"ROUTING UPDATED: remaining data ${messagesToBeSent.size}")
+      }
+
+    case AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker) =>
+      if(allReceivers.contains(mostSkewedWorker) && handleOfEndSending==null) {
         addReceiver(freeWorker)
         println(s"ROUTING UPDATED: remaining data ${messagesToBeSent.size}")
       }

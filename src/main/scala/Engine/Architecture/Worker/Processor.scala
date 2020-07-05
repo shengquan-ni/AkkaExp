@@ -331,7 +331,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       flowControlActors.foreach(actor => {
         actor ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
       })
-
+    case AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker) =>
+      val flowControlActors: ArrayBuffer[ActorRef] = getFlowActors()
+      flowControlActors.foreach(actor => {
+        actor ! AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker)
+      })
   }
 
   final def receiveRestartFromPrincipal: Receive = {

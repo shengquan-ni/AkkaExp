@@ -483,6 +483,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       allWorkers.foreach(worker => {
         worker ! UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker)
       })
+      allWorkers.foreach(worker => {
+        worker ! AddFreeWorkerAsReceiver(mostSkewedWorker,freeWorker)
+      })
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){
