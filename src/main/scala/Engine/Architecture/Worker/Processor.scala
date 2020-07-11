@@ -243,7 +243,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0")) {
+      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0") || restartedByPrincipal) {
         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}. SeqExpt ${input.seqNumMap(sender)} - SeqRec ${msg.sequenceNumber}")
 //        for((k,v) <- input.endToBeReceived) {
 //          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
