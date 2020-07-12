@@ -125,8 +125,9 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
         handleOfEndSending = new mutable.HashMap[ActorRef,(Long,Cancellable)]()
         for(i<- 0 to allReceivers.size-1) {
           handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
-          msg.sequenceNumber = sequenceNumberFromFlowActor(i)
-          allReceivers(i) ! RequireAck(msg)
+          val endMsg:EndSending = EndSending(sequenceNumberFromFlowActor(i))
+          // msg.sequenceNumber = sequenceNumberFromFlowActor(i)
+          allReceivers(i) ! RequireAck(endMsg)
         }
       }
 
