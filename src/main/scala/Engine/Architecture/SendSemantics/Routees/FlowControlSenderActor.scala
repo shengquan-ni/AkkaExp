@@ -126,7 +126,6 @@ class FlowControlSenderActor(val receiver:ActorRef, val layerTag:LayerTag) exten
         for(i<- 0 to allReceivers.size-1) {
           handleOfEndSending += (allReceivers(i)->(sequenceNumberFromFlowActor(i),context.system.scheduler.scheduleOnce(sendingTimeout,self,EndSendingTimedOut(allReceivers(i)))))
           val endMsg:EndSending = EndSending(sequenceNumberFromFlowActor(i))
-          // msg.sequenceNumber = sequenceNumberFromFlowActor(i)
           allReceivers(i) ! RequireAck(endMsg)
         }
       }
