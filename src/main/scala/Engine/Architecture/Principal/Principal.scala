@@ -236,17 +236,17 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
     val tagAndMetricsArr =  AdvancedMessageSending.blockingAskWithRetry(unCompletedWorkers.toArray, QuerySkewDetectionMetrics, 3).asInstanceOf[ArrayBuffer[(String,SkewMetrics)]]
 
-    var i=0
-    for (worker <- unCompletedWorkers) {
-      workersSkewMap += (worker -> tagAndMetricsArr(i))
-      i += 1
-    }
+//    var i=0
+//    for (worker <- unCompletedWorkers) {
+//      workersSkewMap += (worker -> tagAndMetricsArr(i))
+//      i += 1
+//    }
 
-//    unCompletedWorkers.foreach(worker =>{
-//      // (Join2Worker, SkewMetrics)
-//      val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
-//      workersSkewMap += (worker -> (tag,metrics))
-//    })
+    unCompletedWorkers.foreach(worker =>{
+      // (Join2Worker, SkewMetrics)
+      val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
+      workersSkewMap += (worker -> (tag,metrics))
+    })
 
     if(join1Principal == null) {
       join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
