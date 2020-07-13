@@ -67,6 +67,8 @@ object AdvancedMessageSending {
       futures.append(receiver ? message)
     }
 
+    println(s"Futures size = ${futures.size}")
+
     var retArray = new ArrayBuffer[Any]()
     var i=0
     while(i < maxAttempts) {
