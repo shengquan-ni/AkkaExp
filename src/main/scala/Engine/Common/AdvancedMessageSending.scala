@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks
 import scala.concurrent.duration._
 //import com.twitter.util.{Await, Future, Duration}
-// import com.twitter.bijection.Conversion.asMethod
+//import com.twitter.bijection.Conversion.asMethod
 
 import scala.collection.mutable.ArrayBuffer
 import collection.JavaConverters._
@@ -60,6 +60,29 @@ object AdvancedMessageSending {
 //    com.twitter.util.Await.all(futures: _*)
 //
 //  }
+
+  def blockingAskWithRetry(receivers: Array[ActorRef], message: Any, maxAttempts: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): ArrayBuffer[Any] = {
+    var futures: ArrayBuffer[Future[Any]] = new ArrayBuffer[Future[Any]]()
+    for(receiver <- receivers) {
+      futures.append(receiver ? message)
+    }
+
+    var retArray = new ArrayBuffer[Any]()
+    var i=0
+    while(i < maxAttempts) {
+      Try {
+        for(future<-futures) {
+          // note that we are not sending the message again
+          val ret = scala.concurrent.Await.result(future,timeout.duration)
+          retArray.append(ret)
+        }
+        Breaks.break()
+      }
+      retArray.clear()
+      i += 1
+    }
+    retArray
+  }
 
   //this is blocking the actor, be careful!
   def blockingAskWithRetry(receiver: ActorRef, message: Any, maxAttempts: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter):Any ={
