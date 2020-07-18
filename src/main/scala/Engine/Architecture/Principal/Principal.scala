@@ -234,7 +234,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   def SkewDetection()(implicit sender:ActorRef): ActorRef = {
     var workersSkewMap: mutable.HashMap[ActorRef,(String,SkewMetrics)] = new mutable.HashMap[ActorRef,(String,SkewMetrics)]()
 
-    val tagAndMetricsArr =  AdvancedMessageSending.blockingAskWithRetry(unCompletedWorkers.toArray, QuerySkewDetectionMetrics, 3).asInstanceOf[ArrayBuffer[(String,SkewMetrics)]]
+    // val tagAndMetricsArr =  AdvancedMessageSending.blockingAskWithRetry(unCompletedWorkers.toArray, QuerySkewDetectionMetrics, 3).asInstanceOf[ArrayBuffer[(String,SkewMetrics)]]
 
 //    var i=0
 //    for (worker <- unCompletedWorkers) {
