@@ -71,18 +71,20 @@ object AdvancedMessageSending {
 
     var retArray = new ArrayBuffer[Any]()
     var i=0
-    while(i < maxAttempts) {
-      Try {
-        for(future<-futures) {
-          // note that we are not sending the message again
-          val ret = scala.concurrent.Await.result(future,timeout.duration)
-          retArray.append(ret)
+    Breaks.breakable {
+      while(i < maxAttempts) {
+        Try {
+          for(future<-futures) {
+            // note that we are not sending the message again
+            val ret = scala.concurrent.Await.result(future,timeout.duration)
+            retArray.append(ret)
+          }
+          println(s"Retarray got ${retArray.size}")
+          Breaks.break()
         }
-        println(s"Retarray got ${retArray.size}")
-        Breaks.break()
+        retArray.clear()
+        i += 1
       }
-      retArray.clear()
-      i += 1
     }
     retArray
   }
