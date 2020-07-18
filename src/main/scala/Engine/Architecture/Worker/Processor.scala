@@ -225,16 +225,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveDataMessages:Receive = {
     case EndSending(seq) =>
-      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
-        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
-        //        for((k,v) <- input.endToBeReceived) {
-        //          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
-        //        }
-        //        println()
-      }
-      if(restartedByPrincipal) {
-        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
-      }
+//      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
+//         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+//                for((k,v) <- input.endToBeReceived) {
+//                  print(s"${k.getGlobalIdentity} needs ${v.size}, ")
+//                }
+//                println()
+//      }
+//      if(restartedByPrincipal) {
+//        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+//      }
       onReceiveEndSending(seq)
     case DataMessage(seq,payload) =>
       if(tag.operator.contains("Join2")) {
@@ -243,16 +243,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0") || restartedByPrincipal) {
-        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}. SeqExpt ${input.seqNumMap(sender)} - SeqRec ${msg.sequenceNumber}")
+//      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0") || restartedByPrincipal) {
+//        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}. SeqExpt ${input.seqNumMap(sender)} - SeqRec ${msg.sequenceNumber}")
 //        for((k,v) <- input.endToBeReceived) {
 //          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
 //        }
 //        println()
-      }
-      if(restartedByPrincipal) {
-        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
-      }
+//      }
+//      if(restartedByPrincipal) {
+//        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+//      }
       onReceiveEndSending(msg.sequenceNumber)
     case RequireAck(msg: DataMessage) =>
       if(tag.operator.contains("Join2")) {
