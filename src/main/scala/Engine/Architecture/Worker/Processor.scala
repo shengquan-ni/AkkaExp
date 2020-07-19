@@ -225,13 +225,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveDataMessages:Receive = {
     case EndSending(seq) =>
-//      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
-//         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
-//                for((k,v) <- input.endToBeReceived) {
-//                  print(s"${k.getGlobalIdentity} needs ${v.size}, ")
-//                }
-//                println()
-//      }
+      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy")) {
+         println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
+        println()
+      }
 //      if(restartedByPrincipal) {
 //        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
 //      }
@@ -243,13 +240,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       onReceiveDataMessage(seq,payload)
     case RequireAck(msg: EndSending) =>
       sender ! AckOfEndSending
-//      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0") || restartedByPrincipal) {
-//        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}. SeqExpt ${input.seqNumMap(sender)} - SeqRec ${msg.sequenceNumber}")
-//        for((k,v) <- input.endToBeReceived) {
-//          print(s"${k.getGlobalIdentity} needs ${v.size}, ")
-//        }
-//        println()
-//      }
+      if(tag.getGlobalIdentity.contains("sample-GroupBy3-localGroupBy") || tag.getGlobalIdentity.contains("sample-Join2-main/0") || restartedByPrincipal) {
+        println(s"${tag.getGlobalIdentity} received END, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}. SeqExpt ${input.seqNumMap(sender)} - SeqRec ${msg.sequenceNumber}")
+        println()
+      }
 //      if(restartedByPrincipal) {
 //        println(s"${tag.getGlobalIdentity} received END after restart, needs ${input.endToBeReceived(input.endToBeReceived.keys.head).size}")
 //      }
@@ -304,7 +298,6 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       count += 1
       flowControlActorsForJoin.foreach( actor => actor ! ReportTime(tag, count))
       // sender ! ReportSkewMetrics(tag, new SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
-      println(s"${tag.getGlobalIdentity} responding to QuerySkewDetectionMetrics")
       sender ! (tag.getGlobalIdentity, SkewMetrics(processingQueue.length, totalBatchPutInInternalQueue, input.stashedMessage(senderForJoin).size))
   }
 
