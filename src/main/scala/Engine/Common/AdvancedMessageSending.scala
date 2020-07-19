@@ -61,6 +61,30 @@ object AdvancedMessageSending {
 //
 //  }
 
+  def blockingAskWithRetryForDiffMsg(receiversAndMsg : Array[(ActorRef, Any)], maxAttempts: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): ArrayBuffer[Any] = {
+    var futures: ArrayBuffer[Future[Any]] = new ArrayBuffer[Future[Any]]()
+    for(receiverAndMsg <- receiversAndMsg) {
+      futures.append(receiverAndMsg._1 ? receiverAndMsg._2)
+    }
+    var retArray = new ArrayBuffer[Any]()
+    var i=0
+    Breaks.breakable {
+      while(i < maxAttempts) {
+        Try {
+          for(future<-futures) {
+            // note that we are not sending the message again
+            val ret = scala.concurrent.Await.result(future,timeout.duration)
+            retArray.append(ret)
+          }
+          Breaks.break()
+        }
+        retArray.clear()
+        i += 1
+      }
+    }
+    retArray
+  }
+
   def blockingAskWithRetry(receivers: Array[ActorRef], message: Any, maxAttempts: Int)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): ArrayBuffer[Any] = {
     var futures: ArrayBuffer[Future[Any]] = new ArrayBuffer[Future[Any]]()
     for(receiver <- receivers) {

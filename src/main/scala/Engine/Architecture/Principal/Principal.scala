@@ -235,18 +235,11 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     var workersSkewMap: mutable.HashMap[ActorRef,(String,SkewMetrics)] = new mutable.HashMap[ActorRef,(String,SkewMetrics)]()
 
     val tagAndMetricsArr =  AdvancedMessageSending.blockingAskWithRetry(unCompletedWorkers.toArray, QuerySkewDetectionMetrics, 3).asInstanceOf[ArrayBuffer[(String,SkewMetrics)]]
-
     var i=0
     for (worker <- unCompletedWorkers) {
       workersSkewMap += (worker -> tagAndMetricsArr(i))
       i += 1
     }
-
-//    unCompletedWorkers.foreach(worker =>{
-//      // (Join2Worker, SkewMetrics)
-//      val (tag,metrics): (String,SkewMetrics) = AdvancedMessageSending.blockingAskWithRetry(worker, QuerySkewDetectionMetrics, 3).asInstanceOf[(String,SkewMetrics)]
-//      workersSkewMap += (worker -> (tag,metrics))
-//    })
 
     if(join1Principal == null) {
       join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
@@ -258,10 +251,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     var mostDataToProcess: Int = -1
 
     unCompletedWorkers.foreach(worker => {
-      // var sum1 = 0
       var sum2 = 0
       flowControlSkewMap.getOrElse(worker, new ArrayBuffer[(ActorRef,Int,Int)]()).foreach(metric=> {
-        // sum1 += metric._2
         // Find total # of messages the worker is yet to receive
         sum2 += metric._3
       })

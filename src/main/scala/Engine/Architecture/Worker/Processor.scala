@@ -363,10 +363,16 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case RestartProcessingFreeWorker(principalRef, mitigationCount) =>
       println(s"RECEIVED RESTART from principal ${tag.getGlobalIdentity}")
       restartedByPrincipal = true
+      var receiversAndMessages = new ArrayBuffer[(ActorRef,Any)]
       output.foreach(policy => {
         policy.resetPolicy()
-        policy.propagateRestartForward(principalRef, mitigationCount)
+        policy.getRoutees().foreach(routee => {
+          receiversAndMessages.append((routee.getReceiverActor(), RestartProcessing(principalRef, mitigationCount, routee.getSenderActor(), LayerTag(tag.workflow, tag.operator, tag.layer) )))
+        })
+        // policy.propagateRestartForward(principalRef, mitigationCount)
       })
+
+      AdvancedMessageSending.blockingAskWithRetryForDiffMsg(receiversAndMessages.toArray, 3)
 
       // sender ! ReportState(WorkerState.Restarted)
       // AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
@@ -391,18 +397,39 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         // But the below logic is called for free-worker separately when Join1 workers receive receiveRouteUpdateMessages()
         aliveUpstreams.add(edgeID)
         input.addSender(senderActor,edgeID)
+
         if(dPThreadState == ThreadState.Completed) {
           output.foreach(policy => {
             policy.resetPolicy()
-            policy.propagateRestartForward(principalRef,mitigationCount)
-          })
-          AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
-          context.become(restart)
-        } else {
-          output.foreach(policy => {
-            policy.propagateRestartForward(principalRef,mitigationCount)
           })
         }
+
+        var receiversAndMessages = new ArrayBuffer[(ActorRef,Any)]
+        output.foreach(policy => {
+          policy.getRoutees().foreach(routee => {
+            receiversAndMessages.append((routee.getReceiverActor(), RestartProcessing(principalRef, mitigationCount, routee.getSenderActor(), LayerTag(tag.workflow, tag.operator, tag.layer) )))
+          })
+        })
+
+        AdvancedMessageSending.blockingAskWithRetryForDiffMsg(receiversAndMessages.toArray, 3)
+
+        if(dPThreadState == ThreadState.Completed) {
+          AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
+          context.become(restart)
+        }
+
+//        if(dPThreadState == ThreadState.Completed) {
+//          output.foreach(policy => {
+//            policy.resetPolicy()
+//            policy.propagateRestartForward(principalRef,mitigationCount)
+//          })
+//          AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
+//          context.become(restart)
+//        } else {
+//          output.foreach(policy => {
+//            policy.propagateRestartForward(principalRef,mitigationCount)
+//          })
+//        }
         sender ! Ack
       }
   }
