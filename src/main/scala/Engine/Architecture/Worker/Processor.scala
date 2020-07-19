@@ -317,7 +317,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case ReplicateBuildTable(to) =>
       if(tag.operator.contains("Join2")) {
         val hashTable:util.ArrayList[Any] = dataProcessor.getBuildHashTable()
-        hashTable.forEach(map => to!ReceiveHashTable(map))
+        var receiverAndMsgArr = new ArrayBuffer[(ActorRef, Any)]()
+        hashTable.forEach(map => {receiverAndMsgArr.append((to,ReceiveHashTable(map)))})
+        AdvancedMessageSending.blockingAskWithRetryForDiffMsg(receiverAndMsgArr.toArray, 3)
+        // hashTable.forEach(map => to ! ReceiveHashTable(map))
       }
       sender ! Ack
   }
