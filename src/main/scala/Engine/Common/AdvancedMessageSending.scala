@@ -79,7 +79,6 @@ object AdvancedMessageSending {
             val ret = scala.concurrent.Await.result(future,timeout.duration)
             retArray.append(ret)
           }
-          println(s"Retarray got ${retArray.size}")
           Breaks.break()
         }
         retArray.clear()

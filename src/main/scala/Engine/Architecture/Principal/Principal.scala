@@ -256,6 +256,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     println()
     var mostSkewedWorker: ActorRef = null
     var mostDataToProcess: Int = -1
+
     unCompletedWorkers.foreach(worker => {
       // var sum1 = 0
       var sum2 = 0
@@ -484,15 +485,27 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
       // Map of [Join2Worker -> Array(Join1FlowControlActor, TotalToBeSent, MessagesYetToBeSent)]
       var join2ActorsSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = new mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]()
-      allWorkers.foreach(worker => {
-        // Map of [Join2Worker -> (Join1FlowControlActor, TotalToBeSent, MessagesYetToBeSent)]
-        val skewMetricsFromPrevWorker: SkewMetricsFromPreviousWorker = AdvancedMessageSending.blockingAskWithRetry(worker, GetSkewMetricsFromFlowControl, 3).asInstanceOf[SkewMetricsFromPreviousWorker]
-        for((key,value) <- skewMetricsFromPrevWorker.flowActorSkewMap) {
+
+      val skewMetricsFromPrevWorkersArr = AdvancedMessageSending.blockingAskWithRetry(allWorkers.toArray, GetSkewMetricsFromFlowControl, 3).asInstanceOf[ArrayBuffer[SkewMetricsFromPreviousWorker]]
+      var i=0
+      for( _ <- allWorkers) {
+        for((key,value) <- skewMetricsFromPrevWorkersArr(i).flowActorSkewMap) {
           var oldValue: ArrayBuffer[(ActorRef,Int,Int)] = join2ActorsSkewMap.getOrElse(key, new ArrayBuffer[(ActorRef,Int,Int)]())
           oldValue += value
           join2ActorsSkewMap.put(key,oldValue)
         }
-      })
+        i += 1
+      }
+
+//      allWorkers.foreach(worker => {
+//        // Map of [Join2Worker -> (Join1FlowControlActor, TotalToBeSent, MessagesYetToBeSent)]
+//        val skewMetricsFromPrevWorker: SkewMetricsFromPreviousWorker = AdvancedMessageSending.blockingAskWithRetry(worker, GetSkewMetricsFromFlowControl, 3).asInstanceOf[SkewMetricsFromPreviousWorker]
+//        for((key,value) <- skewMetricsFromPrevWorker.flowActorSkewMap) {
+//          var oldValue: ArrayBuffer[(ActorRef,Int,Int)] = join2ActorsSkewMap.getOrElse(key, new ArrayBuffer[(ActorRef,Int,Int)]())
+//          oldValue += value
+//          join2ActorsSkewMap.put(key,oldValue)
+//        }
+//      })
       sender ! join2ActorsSkewMap
     case UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker) =>
       println(s"Join1 principal got UpdateRouting message")
