@@ -430,7 +430,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse receiveRestartFromPrevWorker orElse super.ready
 
-  def restart: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking
+  def restart: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking  orElse receiveHashTable
 
   override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
 
