@@ -413,19 +413,6 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
           context.become(restart)
         }
-
-//        if(dPThreadState == ThreadState.Completed) {
-//          output.foreach(policy => {
-//            policy.resetPolicy()
-//            policy.propagateRestartForward(principalRef,mitigationCount)
-//          })
-//          AdvancedMessageSending.blockingAskWithRetry(context.parent, ReportState(WorkerState.Restarted), 3)
-//          context.become(restart)
-//        } else {
-//          output.foreach(policy => {
-//            policy.propagateRestartForward(principalRef,mitigationCount)
-//          })
-//        }
         sender ! Ack
       }
   }

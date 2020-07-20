@@ -267,8 +267,6 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
   def SkewMitigation(principalRef: ActorRef, mitigationCount: Int, mostSkewedWorker: ActorRef, freeWorker:ActorRef): Unit = {
-    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
-    println(s"Replication done - ${formatter.format(new Date(System.currentTimeMillis()))}")
     AdvancedMessageSending.blockingAskWithRetry(freeWorker, RestartProcessingFreeWorker(principalRef, mitigationCount), 3)
     println(s"Restart message propagated - ${formatter.format(new Date(System.currentTimeMillis()))}")
 
@@ -279,6 +277,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     }
     val layerTag: LayerTag = layerCompletedCounter.keys.head
     layerCompletedCounter(layerTag) += 1
+
+    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
+    println(s"Replication done - ${formatter.format(new Date(System.currentTimeMillis()))}")
 
     println(s"GETTING INFO FROM JOIN1 PRINCIPAL")
     val (inputsToBeUpdated: ArrayBuffer[ActorRef], lyTag:LayerTag) = AdvancedMessageSending.blockingAskWithRetry(join1Principal, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
