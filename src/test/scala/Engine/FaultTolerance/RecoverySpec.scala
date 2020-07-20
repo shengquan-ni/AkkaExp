@@ -91,7 +91,7 @@ with BeforeAndAfterAll {
     parent.expectMsg(ReportState(ControllerState.Running))
     Thread.sleep(100)
     controller ! StopCurrentStage
-    parent.expectNoMessage(1.minute)
+    parent.expectNoMessage(5.seconds)
     controller ! RecoverCurrentStage
     parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
     controller ! Start

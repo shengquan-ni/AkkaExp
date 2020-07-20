@@ -107,6 +107,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
   val timer = new Stopwatch()
   val pauseTimer = new Stopwatch()
+  var recoveryMode = false
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
@@ -149,6 +150,11 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   }
 
   private def recoverCurrentStage(): Unit ={
+    recoveryMode = true
+    principalInCurrentStage.foreach{
+      x =>
+        principalStates.remove(x)
+    }
     principalInCurrentStage.clear()
     frontier.clear()
     if(prevFrontier != null) {
@@ -171,10 +177,19 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         principalStates(p) = PrincipalState.Uninitialized
         principalInCurrentStage.add(p)
       }
-      workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
-        case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
-        case other => throw new AmberException("principal didn't return updated metadata")
-      } ))
+      workflow.startOperators.foreach{
+        x =>
+          val principal = principalBiMap.get(x)
+          AdvancedMessageSending.nonBlockingAskWithRetry(principal,AckedPrincipalInitialization(Array()),10,0, y => y match {
+          case AckWithInformation(z) =>
+            workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
+            //assign exception breakpoint before all breakpoints
+            if(!recoveryMode) {
+              AdvancedMessageSending.blockingAskWithRetry(principal,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.operator+"-ExceptionBreakpoint")),10)
+            }
+          case other => throw new AmberException("principal didn't return updated metadata")
+        } )
+      }
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
     case ContinuedInitialization =>
       log.info("continue initialization")
@@ -183,16 +198,25 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       for(k <- frontier){
         val v = workflow.operators(k)
         if(!principalBiMap.containsKey(k)){
-          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
-          principalBiMap.put(k,p)
-          principalStates(p) = PrincipalState.Uninitialized
+          val newPrincipal = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
+          principalBiMap.put(k,newPrincipal)
         }
-        principalInCurrentStage.add(principalBiMap.get(k))
+        val p = principalBiMap.get(k)
+        principalInCurrentStage.add(p)
       }
-      frontier.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
-        case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
-        case other => throw new AmberException("principal didn't return updated metadata")
-      } ))
+      frontier.foreach {
+        x =>
+          val principal = principalBiMap.get(x)
+          AdvancedMessageSending.nonBlockingAskWithRetry(principal, AckedPrincipalInitialization(Array()), 10, 0, y => y match {
+            case AckWithInformation(z) =>
+              workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
+              //assign exception breakpoint before all breakpoints
+              if (!recoveryMode) {
+                AdvancedMessageSending.blockingAskWithRetry(principal, AssignBreakpoint(new ExceptionGlobalBreakpoint(x.operator + "-ExceptionBreakpoint")), 10)
+              }
+            case other => throw new AmberException("principal didn't return updated metadata")
+          })
+      }
       val next = frontier.flatMap(workflow.outLinks(_))
       frontier.clear()
       frontier ++= next
@@ -208,8 +232,6 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         }else{
           log.info("fully initialized!")
         }
-        //assign exception breakpoint before all breakpoints
-        principalBiMap.entrySet().forEach(x => AdvancedMessageSending.blockingAskWithRetry(x.getValue,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.getKey.operator+"-ExceptionBreakpoint")),10))
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         unstashAll()
@@ -245,9 +267,15 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             principalBiMap.put(k, p)
             principalStates(p) = PrincipalState.Uninitialized
           }
-          principalInCurrentStage.add(principalBiMap.get(k))
-          AdvancedMessageSending.blockingAskWithRetry(principalBiMap.get(k),AckedPrincipalInitialization(prevInfo),10, y => y match {
-            case AckWithInformation(z) => workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
+          val principal = principalBiMap.get(k)
+          principalInCurrentStage.add(principal)
+          AdvancedMessageSending.blockingAskWithRetry(principal,AckedPrincipalInitialization(prevInfo),10, y => y match {
+            case AckWithInformation(z) =>
+              workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
+              //assign exception breakpoint before all breakpoints
+              if(!recoveryMode) {
+                AdvancedMessageSending.blockingAskWithRetry(principal,AssignBreakpoint(new ExceptionGlobalBreakpoint(k.operator+"-ExceptionBreakpoint")),10)
+              }
             case other => throw new AmberException("principal didn't return updated metadata")
           })
           for (from <- workflow.inLinks(k)) {
@@ -269,7 +297,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   private[this] def ready:Receive ={
     case Start =>
       log.info("received start signal")
-      timer.start()
+      if(!timer.isRunning) {
+        timer.start()
+      }
       workflow.startOperators.foreach { x =>
         if(!startDependencies.contains(x))
           AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x), Start, 10, 0)
@@ -320,6 +350,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
               context.become(completed)
               self ! PoisonPill
             }else{
+              recoveryMode = false
               principalInCurrentStage.clear()
               context.become(receive)
               self ! ContinuedInitialization

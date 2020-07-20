@@ -101,9 +101,23 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     workersTriggeredBreakpoint = null
     layerCompletedCounter = null
     globalBreakpoints.foreach(_._2.reset())
+    timer.reset()
+    stage1Timer.reset()
+    stage2Timer.reset()
+    context.become(receive)
   }
 
   final def ready:Receive = {
+    case StopCurrentStage =>
+      allWorkers.foreach(_ ! PoisonPill)
+      resetAll()
+    case RecoveryPacket(amberTag, seq1,seq2) =>
+      if(receivedRecoveryInformation.contains(amberTag)){
+        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
+      }
+      else{
+        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
+      }
     case Start =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
@@ -466,7 +480,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               if(receivedRecoveryInformation.contains(workerTag))
                 worker ! AckedWorkerInitialization(receivedRecoveryInformation(workerTag))
               else
-                worker ! AckedWorkerInitialization
+                worker ! AckedWorkerInitialization()
               i += 1
           }
       }
@@ -491,7 +505,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
     case WorkerMessage.ReportState(state) =>
       if(state != WorkerState.Ready){
-         sender ! AckedWorkerInitialization
+         sender ! AckedWorkerInitialization()
       }else if(setWorkerState(sender,state)){
         if(whenAllUncompletedWorkersBecome(WorkerState.Ready)){
           safeRemoveAskHandle()
