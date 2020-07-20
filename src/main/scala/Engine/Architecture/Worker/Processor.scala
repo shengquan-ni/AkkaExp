@@ -314,13 +314,17 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   final def receiveBuildTableReplicationMsg:Receive = {
-    case ReplicateBuildTable(to) =>
+    case ReplicateBuildTableAndUpdateInputLinking(freeWorker, prevPrincipalTag) =>
       if(tag.operator.contains("Join2")) {
         val hashTable:util.ArrayList[Any] = dataProcessor.getBuildHashTable()
         var receiverAndMsgArr = new ArrayBuffer[(ActorRef, Any)]()
-        hashTable.forEach(map => {receiverAndMsgArr.append((to,ReceiveHashTable(map)))})
+        hashTable.forEach(map => {receiverAndMsgArr.append((freeWorker,ReceiveHashTable(map)))})
+
+        val sendersFromPrevOp = input.getInputsFromLayer(prevPrincipalTag)
+        val layerTag: LayerTag = input.actorToEdge.getOrElse(sendersFromPrevOp(0), null)
+        receiverAndMsgArr.append((freeWorker, UpdateInputsLinking(sendersFromPrevOp,layerTag)))
+
         AdvancedMessageSending.blockingAskWithRetryForDiffMsg(receiverAndMsgArr.toArray, 3)
-        // hashTable.forEach(map => to ! ReceiveHashTable(map))
       }
       sender ! Ack
   }

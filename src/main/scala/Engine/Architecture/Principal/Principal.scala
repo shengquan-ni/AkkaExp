@@ -59,6 +59,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var skewQueryStartTime = 0L
   val formatter = new SimpleDateFormat("HH:mm:ss.SSS z")
   var join1Principal: ActorRef = null
+  var join1OperatorTag: OperatorTag = null
   var countOfSkewQuery: Int = 1
   var mitigationCount: Int = 0
 
@@ -242,7 +243,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     }
 
     if(join1Principal == null) {
-      join1Principal = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[ActorRef]
+      (join1Principal,join1OperatorTag)  = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[(ActorRef, OperatorTag)]
     }
     // Map of [Join2Worker -> Array(Join1FlowControlActor, TotalToBeSent, MessagesYetToBeSent)]
     val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
@@ -278,14 +279,14 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     val layerTag: LayerTag = layerCompletedCounter.keys.head
     layerCompletedCounter(layerTag) += 1
 
-    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTable(freeWorker), 3)
-    println(s"Replication done - ${formatter.format(new Date(System.currentTimeMillis()))}")
+    AdvancedMessageSending.blockingAskWithRetry(mostSkewedWorker, ReplicateBuildTableAndUpdateInputLinking(freeWorker, join1OperatorTag), 3)
+    println(s"Replication done and Input updating done - ${formatter.format(new Date(System.currentTimeMillis()))}")
 
-    println(s"GETTING INFO FROM JOIN1 PRINCIPAL")
-    val (inputsToBeUpdated: ArrayBuffer[ActorRef], lyTag:LayerTag) = AdvancedMessageSending.blockingAskWithRetry(join1Principal, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
-
-    println(s"SENDING INFO TO FREE WORKER")
-    AdvancedMessageSending.blockingAskWithRetry(freeWorker, UpdateInputsLinking(inputsToBeUpdated, lyTag), 3)
+//    println(s"GETTING INFO FROM JOIN1 PRINCIPAL")
+//    val (inputsToBeUpdated: ArrayBuffer[ActorRef], lyTag:LayerTag) = AdvancedMessageSending.blockingAskWithRetry(join1Principal, UpdateRoutingForSkewMitigation(mostSkewedWorker,freeWorker), 3)
+//
+//    println(s"SENDING INFO TO FREE WORKER")
+//    AdvancedMessageSending.blockingAskWithRetry(freeWorker, UpdateInputsLinking(inputsToBeUpdated, lyTag), 3)
 
     println(s"OPENING THE FLOODGATES")
     join1Principal ! AddFreeWorkerAsReceiver(mostSkewedWorker, freeWorker)

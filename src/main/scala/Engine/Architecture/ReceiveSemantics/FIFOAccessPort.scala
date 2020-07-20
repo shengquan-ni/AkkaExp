@@ -1,10 +1,11 @@
 package Engine.Architecture.ReceiveSemantics
-import Engine.Common.AmberTag.LayerTag
+import Engine.Common.AmberTag.{LayerTag, OperatorTag}
 import Engine.Common.AmberTuple.{AmberTuple, Tuple}
 import Engine.Common.TableMetadata
 import akka.actor.ActorRef
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class FIFOAccessPort {
   val seqNumMap = new mutable.AnyRefMap[ActorRef,Long]
@@ -16,6 +17,16 @@ class FIFOAccessPort {
   val actorToEdge = new mutable.AnyRefMap[ActorRef,LayerTag]
 
   def isFinished: Boolean = endToBeReceived.isEmpty
+
+  def getInputsFromLayer(prevPrincipalTag: OperatorTag): Array[ActorRef] = {
+    var sendersFromPrevOp : ArrayBuffer[ActorRef] = new ArrayBuffer[ActorRef]()
+    for((key,value) <- actorToEdge) {
+      if(value.operator == prevPrincipalTag.operator) {
+        sendersFromPrevOp.append(key)
+      }
+    }
+    sendersFromPrevOp.toArray
+  }
 
   def addSender(sender:ActorRef, from:LayerTag): Unit ={
     val edge = actorToEdge.values.find(m => m == from)

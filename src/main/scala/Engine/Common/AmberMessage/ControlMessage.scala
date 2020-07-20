@@ -1,6 +1,6 @@
 package Engine.Common.AmberMessage
 
-import Engine.Common.AmberTag.{LayerTag, WorkerTag}
+import Engine.Common.AmberTag.{LayerTag, OperatorTag, WorkerTag}
 import akka.actor.ActorRef
 
 
@@ -38,7 +38,7 @@ object ControlMessage{
 
   final case class ReportTime(tag: WorkerTag, count: Integer)
 
-  final case class ReplicateBuildTable(to:ActorRef)
+  final case class ReplicateBuildTableAndUpdateInputLinking(freeWorker:ActorRef, prevPrincipalTag: OperatorTag)
 
   final case class RestartProcessing(principalRef: ActorRef, mitigationCount:Int, inputActor: ActorRef, fromLayer:LayerTag)
 

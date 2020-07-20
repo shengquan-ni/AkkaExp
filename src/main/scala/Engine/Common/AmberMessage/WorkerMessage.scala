@@ -18,7 +18,7 @@ object WorkerMessage {
 
   final case class UpdateInputLinking(inputActor: ActorRef, fromLayer:LayerTag)
 
-  final case class UpdateInputsLinking(inputActors: ArrayBuffer[ActorRef], fromLayer:LayerTag)
+  final case class UpdateInputsLinking(inputActors: Array[ActorRef], fromLayer:LayerTag)
 
   final case class UpdateOutputLinking(policy:DataTransferPolicy, link:LinkTag, receivers:Array[BaseRoutee])
 
