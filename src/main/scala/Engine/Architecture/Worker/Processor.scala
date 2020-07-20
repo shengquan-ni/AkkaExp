@@ -12,6 +12,7 @@ import Engine.Common.AmberMessage.ControlMessage.{QueryState, _}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import Engine.Common.AmberTuple.{AmberTuple, Tuple}
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.FaultTolerance.Recovery.RecoveryPacket
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -165,6 +166,11 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     }
   }
 
+  override def onPaused(): Unit ={
+    context.parent ! RecoveryPacket(tag, generatedCount, processedCount)
+    context.parent ! ReportState(WorkerState.Paused)
+  }
+
   override def onPausing(): Unit = {
     super.onPausing()
     synchronized {
@@ -182,7 +188,8 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     }
   }
 
-  override def onInitialization(): Unit = {
+  override def onInitialization(recoveryInformation:Seq[(Long,Long)]): Unit = {
+    super.onInitialization(recoveryInformation)
     dataProcessor.initialize()
   }
 
@@ -310,6 +317,14 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         dPThreadState = ThreadState.Idle
       }
     }
+  }
+
+  override def onInterrupted(operations: => Unit): Unit = {
+    if(receivedRecoveryInformation.contains((generatedCount,processedCount))){
+      pausedFlag = true
+      receivedRecoveryInformation.remove((generatedCount,processedCount))
+    }
+    super.onInterrupted(operations)
   }
 
 

@@ -48,4 +48,9 @@ class CountGlobalBreakpoint(id:String, val target:Long) extends GlobalBreakpoint
 
   override def isCompleted: Boolean = isTriggered
 
+  override def reset(): Unit = {
+    super.reset()
+    current = 0
+  }
+
 }

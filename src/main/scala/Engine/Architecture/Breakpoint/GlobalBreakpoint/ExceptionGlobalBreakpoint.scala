@@ -43,4 +43,9 @@ class ExceptionGlobalBreakpoint(id:String) extends GlobalBreakpoint(id) {
   }
 
   override def isCompleted: Boolean = false
+
+  override def reset(): Unit = {
+    super.reset()
+    exceptions = new ArrayBuffer[(ActorRef,ExceptionBreakpoint)]()
+  }
 }

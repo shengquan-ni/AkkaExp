@@ -2,7 +2,7 @@ package Engine.Architecture.DeploySemantics.Layer
 
 import Engine.Architecture.DeploySemantics.DeployStrategy.DeployStrategy
 import Engine.Architecture.DeploySemantics.DeploymentFilter.DeploymentFilter
-import Engine.Architecture.Worker.Processor
+import Engine.Architecture.Worker.{Generator, Processor}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import Engine.Common.TupleProcessor
 import Engine.Operators.OperatorMetadata
@@ -26,5 +26,6 @@ class ProcessorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProcessor, _n
       layer(i)=context.actorOf(Processor.props(metadata(i),workerTag).withDeploy(Deploy(scope = RemoteScope(deployStrategy.next()))))
     }
   }
+
 
 }

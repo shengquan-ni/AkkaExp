@@ -36,4 +36,8 @@ object ControlMessage{
   final case class ModifyTuple(faultedTuple:FaultedTuple)
 
   final case class ResumeTuple(faultedTuple:FaultedTuple)
+
+  final case class StopCurrentStage()
+
+  final case class RecoverCurrentStage()
 }

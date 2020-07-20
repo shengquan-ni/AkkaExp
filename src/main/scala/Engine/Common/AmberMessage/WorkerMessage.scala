@@ -11,7 +11,7 @@ import akka.actor.ActorRef
 
 object WorkerMessage {
 
-  final case class AckedWorkerInitialization()
+  final case class AckedWorkerInitialization(recoveryInformation:Seq[(Long,Long)] = Nil)
 
   final case class UpdateInputLinking(inputActor: ActorRef, fromLayer:LayerTag)
 

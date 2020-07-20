@@ -11,6 +11,7 @@ import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberTag.WorkerTag
 import Engine.Common.AmberTuple.Tuple
+import Engine.FaultTolerance.Recovery.RecoveryPacket
 import akka.actor.{ActorLogging, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
@@ -45,6 +46,11 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, generating: {} ms, generated {} tuples",(System.nanoTime()-startTime)/1000000,generateTime/1000000,generatedCount)}
+  }
+
+  override def onPaused(): Unit ={
+    context.parent ! RecoveryPacket(tag, generatedCount, 0)
+    context.parent ! ReportState(WorkerState.Paused)
   }
 
 
@@ -96,9 +102,19 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
     }
   }
 
-  override def onInitialization(): Unit = {
+  override def onInitialization(recoveryInformation:Seq[(Long,Long)]): Unit = {
+    super.onInitialization(recoveryInformation)
     dataProducer.initialize()
   }
+
+  override def onInterrupted(operations: => Unit): Unit = {
+    if(receivedRecoveryInformation.contains((generatedCount,0))){
+      pausedFlag = true
+      receivedRecoveryInformation.remove((generatedCount,0))
+    }
+    super.onInterrupted(operations)
+  }
+
 
   override def onStart(): Unit = {
     Future {

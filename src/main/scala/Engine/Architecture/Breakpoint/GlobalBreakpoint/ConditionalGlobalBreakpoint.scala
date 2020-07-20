@@ -46,4 +46,9 @@ class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple => Boolean) ext
 
   override def isCompleted: Boolean = false
 
+  override def reset(): Unit = {
+    super.reset()
+    localbreakpoints = new ArrayBuffer[(ActorRef, LocalBreakpoint)]()
+  }
+
 }

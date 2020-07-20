@@ -63,4 +63,10 @@ abstract class GlobalBreakpoint(val id:String) extends Serializable {
     allWorkers.foreach(x => AdvancedMessageSending.blockingAskWithRetry(x,RemoveBreakpoint(id),10))
   }
 
+  def reset(): Unit ={
+    unReportedWorkers = new mutable.HashSet[ActorRef]()
+    allWorkers = new mutable.HashSet[ActorRef]()
+    version = 0
+  }
+
 }

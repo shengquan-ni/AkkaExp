@@ -13,10 +13,11 @@ import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.ControllerMessage.ReportGlobalBreakpointTriggered
 import Engine.Common.AmberMessage.WorkerMessage
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
-import Engine.Common.AmberTag.{LayerTag, OperatorTag}
+import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag, WorkerTag}
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
+import Engine.FaultTolerance.Recovery.RecoveryPacket
 import Engine.Operators.OperatorMetadata
-import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
+import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, PoisonPill, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 import akka.pattern.after
@@ -51,6 +52,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var periodicallyAskHandle:Cancellable = _
   var workersTriggeredBreakpoint:Iterable[ActorRef] = _
   var layerCompletedCounter:mutable.HashMap[LayerTag,Int] = _
+  var receivedRecoveryInformation = new mutable.HashMap[AmberTag,Seq[(Long,Long)]]()
   val timer = new Stopwatch()
   val stage1Timer = new Stopwatch()
   val stage2Timer = new Stopwatch()
@@ -79,11 +81,26 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def whenAllUncompletedWorkersBecome(state:WorkerState.Value): Boolean = unCompletedWorkerStates.forall(_ == state)
   final def whenAllWorkersCompleted:Boolean = allWorkerStates.forall(_ == WorkerState.Completed)
-  final def saveRemoveAskHandle(): Unit = {
+  final def safeRemoveAskHandle(): Unit = {
     if (periodicallyAskHandle != null) {
       periodicallyAskHandle.cancel()
       periodicallyAskHandle = null
     }
+  }
+
+
+  final def resetAll(): Unit ={
+    workerLayers = null
+    workerEdges = null
+    layerDependencies = null
+    workerStateMap = null
+    layerMetadata = null
+    isUserPaused = false
+    safeRemoveAskHandle()
+    periodicallyAskHandle = null
+    workersTriggeredBreakpoint = null
+    layerCompletedCounter = null
+    globalBreakpoints.foreach(_._2.reset())
   }
 
   final def ready:Receive = {
@@ -118,7 +135,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       sender ! Ack
     case Pause =>
       allWorkers.foreach(worker => worker ! Pause)
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(0.milliseconds,30.seconds,self,EnforceStateCheck)
       context.become(pausing)
       unstashAll()
@@ -126,6 +143,16 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
   final def running:Receive = {
+    case StopCurrentStage =>
+      allWorkers.foreach(_ ! PoisonPill)
+      resetAll()
+    case RecoveryPacket(amberTag, seq1,seq2) =>
+      if(receivedRecoveryInformation.contains(amberTag)){
+        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
+      }
+      else{
+        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
+      }
     case WorkerMessage.ReportState(state) =>
       log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
@@ -133,7 +160,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           case WorkerState.LocalBreakpointTriggered =>
             if(whenAllUncompletedWorkersBecome(WorkerState.LocalBreakpointTriggered)){
               //only one worker and it triggered breakpoint
-              saveRemoveAskHandle()
+              safeRemoveAskHandle()
               periodicallyAskHandle = context.system.scheduler.schedule(0.milliseconds,30.seconds,self,EnforceStateCheck)
               workersTriggeredBreakpoint = allWorkers
               context.parent ! ReportState(PrincipalState.CollectingBreakpoints)
@@ -147,7 +174,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
                 stage1Timer.stop()
               }
               context.system.scheduler.scheduleOnce(tau,() => unCompletedWorkers.foreach(worker => worker ! Pause))
-              saveRemoveAskHandle()
+              safeRemoveAskHandle()
               periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
               context.become(pausing)
               unstashAll()
@@ -176,7 +203,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         isUserPaused = true
       }
       allWorkers.foreach(worker => worker ! Pause)
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.become(pausing)
       unstashAll()
@@ -207,6 +234,13 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   final lazy val allowedStatesOnPausing: Set[WorkerState.Value] = Set(WorkerState.Completed, WorkerState.Paused, WorkerState.LocalBreakpointTriggered)
 
   final def pausing:Receive={
+    case RecoveryPacket(amberTag, seq1,seq2) =>
+      if(receivedRecoveryInformation.contains(amberTag)){
+        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
+      }
+      else{
+        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
+      }
     case EnforceStateCheck =>
       for((k,v) <- workerStateMap){
         if(!allowedStatesOnPausing.contains(v)){
@@ -219,18 +253,18 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         sender ! Pause
       }else if(setWorkerState(sender,state)) {
         if (whenAllWorkersCompleted) {
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           context.parent ! ReportState(PrincipalState.Completed)
           context.become(completed)
           unstashAll()
         }else if (whenAllUncompletedWorkersBecome(WorkerState.Paused)) {
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           context.parent ! ReportState(PrincipalState.Paused)
           context.become(paused)
           unstashAll()
         }else if (unCompletedWorkerStates.forall(x => x == WorkerState.Paused || x == WorkerState.LocalBreakpointTriggered)) {
           workersTriggeredBreakpoint = workerStateMap.filter(_._2 == WorkerState.LocalBreakpointTriggered).keys
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           periodicallyAskHandle = context.system.scheduler.schedule(1.milliseconds, 30.seconds, self, EnforceStateCheck)
           context.parent ! ReportState(PrincipalState.CollectingBreakpoints)
           context.become(collectingBreakpoints)
@@ -262,7 +296,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               i.report(map)
             }
             context.parent ! ReportGlobalBreakpointTriggered(map)
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             context.parent ! ReportState(PrincipalState.Paused)
             context.become(paused)
             unstashAll()
@@ -334,12 +368,12 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
         sender ! Resume
       }else if(setWorkerState(sender,state)) {
         if(whenAllWorkersCompleted){
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           context.parent ! ReportState(PrincipalState.Completed)
           context.become(completed)
           unstashAll()
         }else if(allWorkerStates.forall(_ != WorkerState.Paused)){
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           if(allWorkerStates.exists(_ != WorkerState.Ready)) {
             context.parent ! ReportState(PrincipalState.Running)
             context.become(running)
@@ -358,11 +392,21 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
 
   final def paused:Receive={
+    case StopCurrentStage =>
+      allWorkers.foreach(_ ! PoisonPill)
+      resetAll()
+    case RecoveryPacket(amberTag, seq1,seq2) =>
+      if(receivedRecoveryInformation.contains(amberTag)){
+        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
+      }
+      else{
+        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
+      }
     case Resume =>
       isUserPaused = false //reset
       assert(unCompletedWorkerStates.nonEmpty)
       unCompletedWorkers.foreach(worker => worker ! Resume)
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.become(resuming)
       unstashAll()
@@ -413,8 +457,20 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
       layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> workerLayers.head.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
-      allWorkers.foreach(x => x ! AckedWorkerInitialization)
-      saveRemoveAskHandle()
+      workerLayers.foreach{
+        x =>
+          var i = 0
+          x.layer.foreach{
+            worker =>
+              val workerTag = WorkerTag(x.tag,i)
+              if(receivedRecoveryInformation.contains(workerTag))
+                worker ! AckedWorkerInitialization(receivedRecoveryInformation(workerTag))
+              else
+                worker ! AckedWorkerInitialization
+              i += 1
+          }
+      }
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.become(initializing)
       unstashAll()
@@ -438,8 +494,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
          sender ! AckedWorkerInitialization
       }else if(setWorkerState(sender,state)){
         if(whenAllUncompletedWorkersBecome(WorkerState.Ready)){
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           workerEdges.foreach(x => x.link())
+          globalBreakpoints.values.foreach(metadata.assignBreakpoint(workerLayers,workerStateMap,_))
           context.parent ! ReportState(PrincipalState.Ready)
           context.become(ready)
           unstashAll()

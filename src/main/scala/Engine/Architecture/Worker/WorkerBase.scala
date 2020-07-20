@@ -25,13 +25,14 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   implicit val logAdapter: LoggingAdapter = log
 
   val receivedFaultedTupleIds:mutable.HashSet[Long] = new mutable.HashSet[Long]()
+  val receivedRecoveryInformation: mutable.HashSet[(Long,Long)] = new mutable.HashSet[(Long, Long)]()
 
   var pausedFlag = false
   var userFixedTuple: Tuple = _
   @elidable(INFO) var startTime = 0L
 
-  def onInitialization(): Unit = {
-
+  def onInitialization(recoveryInformation:Seq[(Long,Long)]): Unit = {
+    receivedRecoveryInformation ++= recoveryInformation
   }
 
   def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
@@ -173,8 +174,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   override def receive:Receive = {
-    case AckedWorkerInitialization =>
-      onInitialization()
+    case AckedWorkerInitialization(recoveryInformation) =>
+      onInitialization(recoveryInformation)
       context.parent ! ReportState(WorkerState.Ready)
       context.become(ready)
       unstashAll()

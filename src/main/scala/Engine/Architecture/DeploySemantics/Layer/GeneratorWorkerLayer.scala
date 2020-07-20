@@ -35,7 +35,6 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
       layer = layer.take(idx)
       numWorkers = idx+1
     }
-
   }
 
 }

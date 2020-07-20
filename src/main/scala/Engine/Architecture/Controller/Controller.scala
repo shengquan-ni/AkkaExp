@@ -95,9 +95,11 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   implicit val logAdapter: LoggingAdapter = log
 
   val principalBiMap:BiMap[OperatorTag,ActorRef] = HashBiMap.create[OperatorTag,ActorRef]()
+  val principalInCurrentStage = new mutable.HashSet[ActorRef]()
   val principalStates = new mutable.AnyRefMap[ActorRef,PrincipalState.Value]
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
+  var prevFrontier:mutable.HashSet[OperatorTag] = _
   val stashedFrontier = new mutable.HashSet[OperatorTag]
   val stashedNodes = new mutable.HashSet[ActorRef]()
   val linksToIgnore = new mutable.HashSet[(OperatorTag,OperatorTag)]
@@ -132,11 +134,30 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   }
 
 
-  final def saveRemoveAskHandle(): Unit = {
+  final def safeRemoveAskHandle(): Unit = {
     if (periodicallyAskHandle != null) {
       periodicallyAskHandle.cancel()
       periodicallyAskHandle = null
     }
+  }
+
+
+  private def stopCurrentStage(): Unit ={
+    principalInCurrentStage.foreach{
+      x => x ! StopCurrentStage
+    }
+  }
+
+  private def recoverCurrentStage(): Unit ={
+    principalInCurrentStage.clear()
+    frontier.clear()
+    if(prevFrontier != null) {
+      frontier ++= prevFrontier
+    }else{
+      frontier ++= workflow.startOperators
+    }
+    context.become(receive)
+    self ! ContinuedInitialization
   }
 
   override def receive: Receive = {
@@ -148,6 +169,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
+        principalInCurrentStage.add(p)
       }
       workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
@@ -156,18 +178,24 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
     case ContinuedInitialization =>
       log.info("continue initialization")
+      prevFrontier = frontier
       val nodes = availableNodes
       for(k <- frontier){
         val v = workflow.operators(k)
-        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
-        principalBiMap.put(k,p)
-        principalStates(p) = PrincipalState.Uninitialized
+        if(!principalBiMap.containsKey(k)){
+          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
+          principalBiMap.put(k,p)
+          principalStates(p) = PrincipalState.Uninitialized
+        }
+        principalInCurrentStage.add(principalBiMap.get(k))
       }
-      workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
+      frontier.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
         case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
         case other => throw new AmberException("principal didn't return updated metadata")
       } ))
-      frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
+      val next = frontier.flatMap(workflow.outLinks(_))
+      frontier.clear()
+      frontier ++= next
     case PrincipalMessage.ReportState(state) =>
       assert(state == PrincipalState.Ready)
       principalStates(sender) = state
@@ -212,9 +240,12 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             }
             case None =>
           }
-          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
-          principalBiMap.put(k,p)
-          principalStates(p) = PrincipalState.Uninitialized
+          if(!principalBiMap.containsKey(k)) {
+            val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))), v.tag.operator)
+            principalBiMap.put(k, p)
+            principalStates(p) = PrincipalState.Uninitialized
+          }
+          principalInCurrentStage.add(principalBiMap.get(k))
           AdvancedMessageSending.blockingAskWithRetry(principalBiMap.get(k),AckedPrincipalInitialization(prevInfo),10, y => y match {
             case AckWithInformation(z) => workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
             case other => throw new AmberException("principal didn't return updated metadata")
@@ -266,6 +297,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   }
 
   private[this] def running:Receive ={
+    case StopCurrentStage =>
+      stopCurrentStage()
+    case RecoverCurrentStage =>
+      recoverCurrentStage()
     case PrincipalMessage.ReportState(state) =>
       principalStates(sender) = state
       state match{
@@ -279,12 +314,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             timer.stop()
             log.info("workflow completed! Time Elapsed: "+timer.toString())
             timer.reset()
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
               self ! PoisonPill
             }else{
+              principalInCurrentStage.clear()
               context.become(receive)
               self ! ContinuedInitialization
             }
@@ -302,7 +338,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       //workflow.startOperators.foreach(principalBiMap.get(_) ! Pause)
       //frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
       log.info("received pause signal")
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.parent ! ReportState(ControllerState.Pausing)
       context.become(pausing)
@@ -338,7 +374,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           frontier.clear()
           log.info("workflow completed! Time Elapsed: "+timer.toString())
           timer.reset()
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           if(frontier.isEmpty){
             context.parent ! ReportState(ControllerState.Completed)
             context.become(completed)
@@ -352,7 +388,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           frontier.clear()
           log.info("workflow paused! Time Elapsed: "+pauseTimer.toString())
           pauseTimer.reset()
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
           context.become(paused)
           unstashAll()
@@ -369,11 +405,15 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   }
 
   private[this] def paused:Receive = {
+    case StopCurrentStage =>
+      stopCurrentStage()
+    case RecoverCurrentStage =>
+      recoverCurrentStage()
     case Resume =>
       workflow.endOperators.foreach(principalBiMap.get(_) ! Resume)
       frontier ++= workflow.endOperators.flatMap(workflow.inLinks(_))
       log.info("received resume signal")
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.parent ! ReportState(ControllerState.Resuming)
       context.become(resuming)
@@ -395,13 +435,13 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           frontier.clear()
           if(principalStates.values.exists(_ != PrincipalState.Ready)) {
             log.info("workflow resumed!")
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Running)
             context.become(running)
             unstashAll()
           } else{
             log.info("workflow ready!")
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Ready)
             context.become(ready)
             unstashAll()
