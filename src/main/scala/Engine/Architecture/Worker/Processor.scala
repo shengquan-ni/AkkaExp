@@ -333,6 +333,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     case ReceiveHashTable(hashTable) =>
       if(tag.operator.contains("Join2")) {
         dataProcessor.renewHashTable(hashTable)
+        sender ! Ack
       }
   }
 
