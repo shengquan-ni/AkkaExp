@@ -25,6 +25,7 @@ class FIFOAccessPort {
         sendersFromPrevOp.append(key)
       }
     }
+    println(s"GET INPUTS FROM LAYER = ${sendersFromPrevOp.size}")
     sendersFromPrevOp.toArray
   }
 
