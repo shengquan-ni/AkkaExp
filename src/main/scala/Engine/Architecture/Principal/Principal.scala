@@ -243,7 +243,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     }
 
     if(join1Principal == null) {
-      (join1Principal,join1OperatorTag)  = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[(ActorRef, OperatorTag)]
+      val x  = AdvancedMessageSending.blockingAskWithRetry(context.parent, TellJoin1Actor, 3).asInstanceOf[(ActorRef, OperatorTag)]
+      join1Principal = x._1
+      join1OperatorTag = x._2
     }
     // Map of [Join2Worker -> Array(Join1FlowControlActor, TotalToBeSent, MessagesYetToBeSent)]
     val flowControlSkewMap: mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]] = AdvancedMessageSending.blockingAskWithRetry(join1Principal, QuerySkewDetectionMetrics, 3).asInstanceOf[mutable.HashMap[ActorRef,ArrayBuffer[(ActorRef,Int,Int)]]]
