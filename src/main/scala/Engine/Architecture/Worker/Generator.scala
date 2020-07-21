@@ -49,6 +49,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   }
 
   override def onPaused(): Unit ={
+    log.info(s"paused at $generatedCount , 0")
     context.parent ! RecoveryPacket(tag, generatedCount, 0)
     context.parent ! ReportState(WorkerState.Paused)
   }

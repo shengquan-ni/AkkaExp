@@ -167,6 +167,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   override def onPaused(): Unit ={
+    log.info(s"paused at $generatedCount , $processedCount")
     context.parent ! RecoveryPacket(tag, generatedCount, processedCount)
     context.parent ! ReportState(WorkerState.Paused)
   }
@@ -322,6 +323,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onInterrupted(operations: => Unit): Unit = {
     if(receivedRecoveryInformation.contains((generatedCount,processedCount))){
       pausedFlag = true
+      log.info(s"interrupted at ($generatedCount,$processedCount)")
       receivedRecoveryInformation.remove((generatedCount,processedCount))
     }
     super.onInterrupted(operations)
@@ -394,7 +396,6 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
 
   private[this] def processBatch(): Unit ={
-    //log.info("enter processBatch "+i)
     Breaks.breakable {
       beforeProcessingBatch()
       processStart=System.nanoTime()
@@ -463,6 +464,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               println(batch(processingIndex))
           }
           processingIndex += 1
+          exitIfPaused()
           while(dataProcessor.hasNext){
             exitIfPaused()
             var nextTuple:Tuple = null

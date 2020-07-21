@@ -202,6 +202,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           principalBiMap.put(k,newPrincipal)
         }
         val p = principalBiMap.get(k)
+        principalStates(p) = PrincipalState.Uninitialized
         principalInCurrentStage.add(p)
       }
       frontier.foreach {
@@ -221,9 +222,8 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       frontier.clear()
       frontier ++= next
     case PrincipalMessage.ReportState(state) =>
-      assert(state == PrincipalState.Ready)
       principalStates(sender) = state
-      if(principalStates.size == workflow.operators.size && principalStates.values.forall(_ == PrincipalState.Ready)){
+      if(principalStates.size == workflow.operators.size && principalStates.values.forall(_ != PrincipalState.Uninitialized)){
         frontier.clear()
         if(stashedFrontier.nonEmpty) {
           log.info("partially initialized!")
@@ -236,7 +236,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         context.become(ready)
         unstashAll()
       }else{
-        val next = frontier.filter(i => workflow.inLinks(i).forall(x => principalBiMap.containsKey(x) && principalStates(principalBiMap.get(x)) == PrincipalState.Ready))
+        val next = frontier.filter(i => workflow.inLinks(i).forall(x => principalBiMap.containsKey(x) && principalStates.contains(principalBiMap.get(x)) && principalStates(principalBiMap.get(x)) == PrincipalState.Ready))
         frontier --= next
         val prevInfo = next.flatMap(workflow.inLinks(_).map(x => (workflow.operators(x),Await.result(principalBiMap.get(x)?GetOutputLayer,5.seconds).asInstanceOf[ActorLayer]))).toArray
         val nodes = availableNodes
@@ -265,9 +265,9 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           if(!principalBiMap.containsKey(k)) {
             val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))), v.tag.operator)
             principalBiMap.put(k, p)
-            principalStates(p) = PrincipalState.Uninitialized
           }
           val principal = principalBiMap.get(k)
+          principalStates(principal) = PrincipalState.Uninitialized
           principalInCurrentStage.add(principal)
           AdvancedMessageSending.blockingAskWithRetry(principal,AckedPrincipalInitialization(prevInfo),10, y => y match {
             case AckWithInformation(z) =>
@@ -312,7 +312,24 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
           context.parent ! ReportState(ControllerState.Running)
           context.become(running)
           unstashAll()
-        case _ => throw new Exception("Invalid principal state received")
+        case PrincipalState.Paused =>
+          if(principalStates.values.forall(_ == PrincipalState.Completed)){
+            timer.stop()
+            log.info("workflow completed! Time Elapsed: "+timer.toString())
+            timer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Completed)
+            context.become(completed)
+            unstashAll()
+          }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)) {
+            pauseTimer.stop()
+            log.info("workflow paused! Time Elapsed: " + pauseTimer.toString())
+            pauseTimer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Paused)
+            context.become(paused)
+            unstashAll()
+          }
       }
     case PassBreakpointTo(id:String,breakpoint:GlobalBreakpoint) =>
       val opTag = OperatorTag(tag,id)
@@ -358,6 +375,28 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             unstashAll()
           }
         case PrincipalState.CollectingBreakpoints =>
+        case PrincipalState.Paused =>
+          if(principalStates.values.forall(_ == PrincipalState.Completed)){
+            if(timer.isRunning) {
+              timer.stop()
+            }
+            log.info("workflow completed! Time Elapsed: "+timer.toString())
+            timer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Completed)
+            context.become(completed)
+            unstashAll()
+          }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)) {
+            if(pauseTimer.isRunning) {
+              pauseTimer.stop()
+            }
+            log.info("workflow paused! Time Elapsed: " + pauseTimer.toString())
+            pauseTimer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Paused)
+            context.become(paused)
+            unstashAll()
+          }
         case _ => //skip others
       }
     case ReportGlobalBreakpointTriggered(bp) =>

@@ -43,6 +43,8 @@ object WorkerMessage {
 
   final case class ReportWorkerPartialCompleted(worker:WorkerTag,layer:LayerTag)
 
+  final case class CheckRecovery()
+
   final case class DataMessage(sequenceNumber:Long, payload:Array[Tuple]){
     override def equals(obj: Any): Boolean = {
       if (!obj.isInstanceOf[DataMessage]) return false

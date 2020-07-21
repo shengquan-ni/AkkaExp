@@ -5,7 +5,7 @@ import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, ModifyTuple, Pause, QueryState, ReleaseOutput, RequireAck, Resume, ResumeTuple, SkipTuple, Start, StashOutput}
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, CheckRecovery, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
@@ -48,6 +48,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   def onStart(): Unit ={
+    log.info("started!")
     startTime = System.nanoTime()
     context.parent ! ReportState(WorkerState.Running)
   }
@@ -80,7 +81,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   def onInterrupted(operations: => Unit): Unit ={
     if(pausedFlag){
-      pauseDataTransfer()
+      //pauseDataTransfer()
       operations
       Breaks.break()
     }
@@ -163,6 +164,19 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       throw new AmberException(s"update output link information of $tag is not allowed at this time")
   }
 
+  final def allowCheckRecovery:Receive = {
+    case CheckRecovery =>
+      if(receivedRecoveryInformation.contains((0,0))){
+        receivedRecoveryInformation.remove((0,0))
+        self ! Pause
+      }
+  }
+
+  final def disallowCheckRecovery:Receive = {
+    case CheckRecovery =>
+      //Skip
+  }
+
   final def stashOthers:Receive = {
     case msg =>
       log.info("stashing: "+msg)
@@ -189,6 +203,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     allowUpdateOutputLinking orElse //update linking
     allowModifyBreakpoints orElse //modify break points
     disallowQueryBreakpoint orElse  //query specific breakpoint
+    allowCheckRecovery orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] { //query triggered breakpoint
     case Start =>
       sender ! Ack
@@ -276,6 +291,10 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     disallowQueryTriggeredBreakpoints orElse[Any, Unit]  {
     case ReportFailure(e) =>
       throw e
+    case ExecutionPaused =>
+      onPaused()
+      context.become(paused)
+      unstashAll()
     case Pause =>
       log.info("received Pause message")
       onPausing()
