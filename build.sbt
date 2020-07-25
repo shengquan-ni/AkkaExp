@@ -25,22 +25,33 @@ libraryDependencies ++= Seq(
   "io.kamon" % "sigar-loader" % "1.6.6-rev002",
   "com.chuusai" %% "shapeless" % "2.3.3")
 
+val excludeHadoopJersey = ExclusionRule(organization = "com.sun.jersey")
+
 libraryDependencies ++= Seq(
-  "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion,
-  "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion excludeAll(excludeHadoopJersey),
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion excludeAll(excludeHadoopJersey),
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion excludeAll(excludeHadoopJersey),
 )
 
 // dropwizard webframework
-val dropwizardVersion = "2.0.10"
+val dropwizardVersion = "1.3.23"
 // jersey version should be the same as jersey-server that is contained in dropwizard
-val jerseyMultipartVersion = "2.31"
+val jerseyMultipartVersion = "2.25.1"
+val jacksonVersion = "2.9.10"
 
 libraryDependencies ++= Seq(
   "io.dropwizard" % "dropwizard-core" % dropwizardVersion,
+  "io.dropwizard" % "dropwizard-client" % dropwizardVersion,
+  "io.dropwizard" % "dropwizard-validation" % dropwizardVersion,
+
   "com.github.dirkraft.dropwizard" % "dropwizard-file-assets" % "0.0.2",
   "io.dropwizard-bundles" % "dropwizard-redirect-bundle" % "1.0.5",
-  "org.glassfish.jersey.media" % "jersey-media-multipart" % jerseyMultipartVersion
+  "com.liveperson" % "dropwizard-websockets" % "1.3.14",
+  "org.glassfish.jersey.media" % "jersey-media-multipart" % jerseyMultipartVersion,
+  "com.fasterxml.jackson.module" % "jackson-module-jsonSchema" % jacksonVersion,
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % jacksonVersion,
+  "javax.el" % "javax.el-api" % "3.0.0",
+
 )
 
 libraryDependencies += "com.twitter" %% "chill-akka" % "0.9.3"

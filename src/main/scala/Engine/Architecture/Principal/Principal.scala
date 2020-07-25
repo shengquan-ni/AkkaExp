@@ -4,7 +4,7 @@ import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
-import Engine.Architecture.Worker.WorkerState
+import Engine.Architecture.Worker.{WorkerState, WorkerStatistics}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.PrincipalMessage.{AssignBreakpoint, _}
 import Engine.Common.AmberMessage.StateMessage._
@@ -44,21 +44,30 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var workerEdges: Array[LinkStrategy] = _
   var layerDependencies: mutable.HashMap[String,mutable.HashSet[String]] = _
   var workerStateMap: mutable.AnyRefMap[ActorRef,WorkerState.Value] = _
+  var workerStatisticsMap: mutable.AnyRefMap[ActorRef, WorkerStatistics] = _
   var layerMetadata:Array[TableMetadata] = _
   var isUserPaused = false
   var globalBreakpoints = new mutable.AnyRefMap[String,GlobalBreakpoint]
   var periodicallyAskHandle:Cancellable = _
   var workersTriggeredBreakpoint:Iterable[ActorRef] = _
   var layerCompletedCounter:mutable.HashMap[LayerTag,Int] = _
-  val timer = new Stopwatch()
-  val stage1Timer = new Stopwatch()
-  val stage2Timer = new Stopwatch()
+  val timer = Stopwatch.createUnstarted();
+  val stage1Timer = Stopwatch.createUnstarted();
+  val stage2Timer = Stopwatch.createUnstarted();
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
   def allWorkers: Iterable[ActorRef] = workerStateMap.keys
   def unCompletedWorkerStates: Iterable[WorkerState.Value] = workerStateMap.filter(x => x._2!= WorkerState.Completed).values
   def unCompletedWorkers:Iterable[ActorRef] = workerStateMap.filter(x => x._2!= WorkerState.Completed).keys
   def availableNodes:Array[Address] = Await.result(context.actorSelection("/user/cluster-info") ? GetAvailableNodeAddresses,5.seconds).asInstanceOf[Array[Address]]
+
+  private def setWorkerStatistics(worker: ActorRef, workerStatistics: WorkerStatistics): Unit = {
+    workerStatisticsMap(worker) = workerStatistics
+  }
+
+  private def aggregateWorkerStatistics(): Int = {
+    workerStatisticsMap.values.map(s => s.outputRowCount).sum
+  }
 
   private def setWorkerState(worker:ActorRef, state:WorkerState.Value): Boolean = {
     assert(workerStateMap.contains(worker))
@@ -100,6 +109,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         case _ => //throw new AmberException("Invalid worker state received!")
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case StashOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
@@ -109,6 +120,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case GetInputLayer => sender ! workerLayers.head.clone()
     case GetOutputLayer => sender ! workerLayers.last.clone()
     case QueryState => sender ! ReportState(PrincipalState.Ready)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Ready, aggregateWorkerStatistics()))
     case Resume => context.parent ! ReportState(PrincipalState.Ready)
     case AssignBreakpoint(breakpoint) =>
       globalBreakpoints(breakpoint.id) = breakpoint
@@ -165,6 +177,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           case _ => //skip others for now
         }
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
@@ -193,6 +207,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
     case Resume => context.parent ! ReportState(PrincipalState.Running)
     case QueryState => sender ! ReportState(PrincipalState.Running)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Running, aggregateWorkerStatistics()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -232,7 +247,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         }
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case QueryState => sender ! ReportState(PrincipalState.Pausing)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Pausing, aggregateWorkerStatistics()))
     case Pause =>
       if(sender != self){
         isUserPaused = true
@@ -273,6 +291,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }
           }
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case ReportedTriggeredBreakpoints(bps) =>
       bps.foreach(x =>{
         val bp = globalBreakpoints(x.id)
@@ -343,7 +363,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         }
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case QueryState => sender ! ReportState(PrincipalState.Resuming)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Resuming, aggregateWorkerStatistics()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -367,6 +390,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case GetOutputLayer => sender ! workerLayers.last.layer
     case Pause => context.parent ! ReportState(PrincipalState.Paused)
     case QueryState => sender ! ReportState(PrincipalState.Paused)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Paused, aggregateWorkerStatistics()))
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -379,6 +405,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case ReleaseOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,ReleaseOutput,10,0))
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
+    case CollectSinkResults =>
+
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)
       if(sender == context.parent){
@@ -406,6 +436,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
       layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> x._2.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
+      workerStatisticsMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerStatistics(WorkerState.Uninitialized, 0))).toMap.toSeq:_*)
       allWorkers.foreach(x => x ! AckedWorkerInitialization)
       saveRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
@@ -413,6 +444,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       unstashAll()
       sender ! AckWithInformation(metadata)
     case QueryState => sender ! ReportState(PrincipalState.Uninitialized)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Uninitialized, aggregateWorkerStatistics()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -438,7 +470,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         }
       }
+    case WorkerMessage.ReportStatistics(statistics) =>
+      setWorkerStatistics(sender, statistics)
     case QueryState => sender ! ReportState(PrincipalState.Initializing)
+    case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Initializing, aggregateWorkerStatistics()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()

@@ -11,6 +11,10 @@ object ControlMessage{
 
   final case class QueryState()
 
+  final case class QueryStatistics()
+
+  final case class CollectSinkResults()
+
   final case class LocalBreakpointTriggered()
 
   final case class RequireAck(msg:Any)

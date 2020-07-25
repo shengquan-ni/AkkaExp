@@ -3,11 +3,13 @@ package Engine.Common.AmberMessage
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Architecture.SendSemantics.DataTransferPolicy.DataTransferPolicy
 import Engine.Architecture.SendSemantics.Routees.BaseRoutee
-import Engine.Architecture.Worker.WorkerState
+import Engine.Architecture.Worker.{WorkerState, WorkerStatistics}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberTag.{LayerTag, LinkTag, WorkerTag}
 import Engine.Common.AmberTuple.Tuple
 import akka.actor.ActorRef
+
+import scala.collection.mutable
 
 object WorkerMessage {
 
@@ -30,6 +32,10 @@ object WorkerMessage {
   final case class QueryBreakpoint(id:String)
 
   final case class ReportState(workerState: WorkerState.Value)
+
+  final case class ReportStatistics(workerStatistics: WorkerStatistics)
+
+  final case class ReportOutputResult(results: mutable.MutableList[Tuple])
 
   final case class RemoveBreakpoint(id:String)
 

@@ -3,7 +3,7 @@ package Engine.Common.AmberMessage
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
-import Engine.Architecture.Principal.PrincipalState
+import Engine.Architecture.Principal.{PrincipalState, PrincipalStatistics}
 import Engine.Common.AmberTag.{AmberTag, LayerTag, WorkerTag}
 import Engine.Operators.OperatorMetadata
 
@@ -21,6 +21,8 @@ object PrincipalMessage{
   final case class AssignBreakpoint(breakpoint:GlobalBreakpoint)
 
   final case class ReportState(principalState: PrincipalState.Value)
+
+  final case class ReportStatistics(principalStatistics: PrincipalStatistics)
 
   final case class ReportPrincipalPartialCompleted(from:AmberTag,layer:LayerTag)
 
