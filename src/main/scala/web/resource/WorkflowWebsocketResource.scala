@@ -26,8 +26,7 @@ object WorkflowWebsocketResource {
   val nextWorkflowID = new AtomicInteger(0)
 
   val sessionMap = new mutable.HashMap[String, Session]
-  val sessionJobs = new mutable.HashMap[String, mutable.Set[ActorRef]] with mutable.MultiMap[String, ActorRef]
-  val activeJobs = new mutable.MutableList[ActorRef]
+  val sessionJobs = new mutable.HashMap[String, ActorRef]
 
 }
 
@@ -72,10 +71,8 @@ class WorkflowWebsocketResource {
     ctx.workflowID = workflowID
     val texeraWorkflowCompiler = new TexeraWorkflowCompiler(TexeraWorkflow(request.operators, request.links), ctx)
 
-    println("running workflow " + workflowID)
     texeraWorkflowCompiler.init()
     val violations = texeraWorkflowCompiler.validate
-    print(violations)
     if (violations.nonEmpty) {
       send(session, WorkflowCompilationErrorEvent(violations))
       return
@@ -83,21 +80,11 @@ class WorkflowWebsocketResource {
 
     val workflow = texeraWorkflowCompiler.amberWorkflow
     val workflowTag = WorkflowTag.apply(workflowID)
-    println(workflow)
-
-//    val workflowStr = """{
-//      |"operators":[
-//      |{"limit":10,"delay":100,"operatorID":"Gen","operatorType":"Generate"},
-//      |{"operatorID":"Count","operatorType":"Aggregation"},
-//      |{"operatorID":"Sink","operatorType":"Sink"}],
-//      |"links":[
-//      |{"origin":"Gen","destination":"Count"},
-//      |{"origin":"Count","destination":"Sink"}]
-//      |}""".stripMargin
 
     val eventListener = ControllerEventListener(
       completed => {
         send(session, WorkflowCompletedEvent.apply(completed))
+        WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
       statusUpdate => {
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
@@ -109,9 +96,7 @@ class WorkflowWebsocketResource {
     controllerActorRef! AckedControllerInitialization
     controllerActorRef! Start
 
-//    WorkflowWebsocketResource.activeJobs += controllerActorRef
-//    WorkflowWebsocketResource.sessionJobs.addBinding(session.getId, controllerActorRef)
-
+    WorkflowWebsocketResource.sessionJobs(session.getId) = controllerActorRef
   }
 
 
