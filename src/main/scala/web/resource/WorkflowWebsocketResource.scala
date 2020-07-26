@@ -71,7 +71,7 @@ class WorkflowWebsocketResource {
   def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
     val workflowTag = WorkflowTag.apply(newLogic.workflowId)
     val controller: ActorRef = WorkflowWebsocketResource.sessionJobs(session.getId)
-    controller ! ModifyLogic(newLogic)
+    // controller ! ModifyLogic(newLogic)
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
