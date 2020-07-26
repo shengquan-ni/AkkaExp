@@ -3,6 +3,7 @@ package Engine.Architecture.Controller
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
+import Engine.Architecture.Controller.ControllerEvent.WorkflowCompleted
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -16,7 +17,9 @@ import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.PrincipalMessage
 import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, AssignBreakpoint, GetOutputLayer, ReportPrincipalPartialCompleted}
 import Engine.Common.AmberMessage.StateMessage.EnforceStateCheck
+import Engine.Common.AmberMessage.PrincipalMessage.ReportOutputResult
 import Engine.Common.AmberTag.{AmberTag, LayerTag, LinkTag, OperatorTag, WorkflowTag}
+import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TupleProducer}
 import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
 import Engine.Operators.Count.CountMetadata
@@ -103,6 +106,7 @@ class Controller
 
   val principalBiMap:BiMap[OperatorTag,ActorRef] = HashBiMap.create[OperatorTag,ActorRef]()
   val principalStates = new mutable.AnyRefMap[ActorRef,PrincipalState.Value]
+  val principalSinkResultMap = new mutable.HashMap[String, List[Tuple]]
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
   val stashedFrontier = new mutable.HashSet[OperatorTag]
@@ -203,8 +207,8 @@ class Controller
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         if (this.statisticsUpdateIntervalMs.nonEmpty) {
-          statusUpdateAskHandle = context.system.scheduler.schedule(0.milliseconds,
-            FiniteDuration.apply(statisticsUpdateIntervalMs.get, MILLISECONDS), self, QueryStatistics)
+//          statusUpdateAskHandle = context.system.scheduler.schedule(0.milliseconds,
+//            FiniteDuration.apply(statisticsUpdateIntervalMs.get, MILLISECONDS), self, QueryStatistics)
         }
         unstashAll()
       }else{
@@ -305,11 +309,15 @@ class Controller
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
-              if (eventListener.nonEmpty) {
-                if (eventListener.get.workflowCompletedListener != null) {
-                }
+              // collect all output results back to controller
+              val sinkPrincipals = this.workflow.endOperators.map(sinkOp => this.principalBiMap.get(sinkOp))
+              for (sinkPrincipal <- sinkPrincipals) {
+                sinkPrincipal ! CollectSinkResults
               }
-              self ! PoisonPill
+              if (this.statusUpdateAskHandle != null) {
+                this.statusUpdateAskHandle.cancel()
+              }
+//              self ! PoisonPill
             }else{
               context.become(receive)
               self ! ContinuedInitialization
@@ -442,8 +450,17 @@ class Controller
   }
 
   private[this] def completed:Receive = {
+    case PrincipalMessage.ReportOutputResult(sinkResults) =>
+      val operatorID = this.principalBiMap.inverse().get(sender()).operator
+      this.principalSinkResultMap(operatorID) = sinkResults
+      if (this.principalSinkResultMap.size == this.workflow.endOperators.size) {
+        if (this.eventListener != null && this.eventListener.get.workflowCompletedListener != null) {
+          this.eventListener.get.workflowCompletedListener.apply(WorkflowCompleted(this.principalSinkResultMap.toMap))
+        }
+        self ! PoisonPill
+      }
     case msg =>
-      //log.info("received: {} after workflow completed!",msg)
+      log.info("received: {} after workflow completed!",msg)
       if(sender !=self && !principalStates.keySet.contains(sender)){
         sender ! ReportState(ControllerState.Completed)
       }

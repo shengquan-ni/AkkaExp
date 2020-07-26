@@ -1,9 +1,9 @@
 package Engine.Architecture.Worker
 
-
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControlMessage.{Ack, CollectSinkResults, LocalBreakpointTriggered, Pause, QueryState, QueryStatistics, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportStatistics, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberMessage.WorkerMessage
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportOutputResult, ReportState, ReportStatistics, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
@@ -317,7 +317,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case QueryTriggeredBreakpoints => //skip this
     case ExecutionCompleted => //skip this as well
     case CollectSinkResults =>
-
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
     case msg =>
       if(sender == context.parent){
         sender ! ReportState(WorkerState.Completed)

@@ -97,7 +97,7 @@ class WorkflowWebsocketResource {
 
     val eventListener = ControllerEventListener(
       completed => {
-        send(session, WorkflowCompletedEvent(completed.result))
+        send(session, WorkflowCompletedEvent.apply(completed))
       },
       statusUpdate => {
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))

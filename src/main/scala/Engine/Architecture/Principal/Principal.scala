@@ -10,11 +10,13 @@ import Engine.Common.AmberMessage.PrincipalMessage.{AssignBreakpoint, _}
 import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.ControllerMessage.ReportGlobalBreakpointTriggered
-import Engine.Common.AmberMessage.WorkerMessage
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
+import Engine.Common.AmberMessage.{PrincipalMessage, WorkerMessage}
+import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, QueryTriggeredBreakpoints, ReportOutputResult, ReportUpstreamExhausted, ReportWorkerPartialCompleted, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints}
 import Engine.Common.AmberTag.{LayerTag, OperatorTag}
+import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TableMetadata}
 import Engine.Operators.OperatorMetadata
+import Engine.Operators.Sink.SimpleSinkOperatorMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Address, Cancellable, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
@@ -45,6 +47,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   var layerDependencies: mutable.HashMap[String,mutable.HashSet[String]] = _
   var workerStateMap: mutable.AnyRefMap[ActorRef,WorkerState.Value] = _
   var workerStatisticsMap: mutable.AnyRefMap[ActorRef, WorkerStatistics] = _
+  var workerSinkResultMap = new mutable.AnyRefMap[ActorRef, List[Tuple]]
   var layerMetadata:Array[TableMetadata] = _
   var isUserPaused = false
   var globalBreakpoints = new mutable.AnyRefMap[String,GlobalBreakpoint]
@@ -408,6 +411,18 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
     case CollectSinkResults =>
+      this.metadata match {
+        case sink: SimpleSinkOperatorMetadata =>
+          allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker, CollectSinkResults,10,0))
+        case _ => // ignore collect result if self is not sink
+      }
+    case WorkerMessage.ReportOutputResult(sinkResult) =>
+      workerSinkResultMap(sender) = sinkResult
+      if (workerSinkResultMap.size == allWorkers.size) {
+        val collectedResults = mutable.MutableList[Tuple]()
+        this.workerSinkResultMap.values.foreach(v => collectedResults ++= v)
+        context.parent ! PrincipalMessage.ReportOutputResult(collectedResults.toList)
+      }
 
     case msg =>
       //log.info("received {} from {} after complete",msg,sender)

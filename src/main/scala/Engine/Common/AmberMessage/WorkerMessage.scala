@@ -35,7 +35,7 @@ object WorkerMessage {
 
   final case class ReportStatistics(workerStatistics: WorkerStatistics)
 
-  final case class ReportOutputResult(results: mutable.MutableList[Tuple])
+  final case class ReportOutputResult(results: List[Tuple])
 
   final case class RemoveBreakpoint(id:String)
 
