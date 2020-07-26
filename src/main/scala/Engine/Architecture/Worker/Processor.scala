@@ -12,6 +12,8 @@ import Engine.Common.AmberTuple.{AmberTuple, Tuple}
 import Engine.Common.{AdvancedMessageSending, Constants, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
 import Engine.Operators.Filter.{FilterMetadata, FilterSpecializedTupleProcessor, FilterType}
 import Engine.Operators.KeywordSearch.{KeywordSearchMetadata, KeywordSearchTupleProcessor}
+import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Operators.Sink.SimpleSinkProcessor
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -38,6 +40,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   val aliveUpstreams = new mutable.HashSet[LayerTag]
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
+  var outputRowCount = 0
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -60,6 +63,15 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
+  }
+
+  override def getResultTuples(): mutable.MutableList[Tuple] = {
+    this.dataProcessor match {
+      case processor: SimpleSinkProcessor =>
+        processor.getResultTuples()
+      case _ =>
+        mutable.MutableList()
+    }
   }
 
   private[this] def waitProcessing:Receive={
@@ -156,6 +168,9 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     dataProcessor.initialize()
   }
 
+  override def getOutputRowCount(): Int = {
+    this.outputRowCount
+  }
 
   final def activateWhenReceiveDataMessages:Receive = {
     case EndSending(_) | DataMessage(_,_) | RequireAck(_:EndSending) | RequireAck(_:DataMessage) =>
@@ -302,6 +317,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         exitIfPaused()
         try {
           transferTuple(dataProcessor.next())
+          outputRowCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -345,6 +361,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         exitIfPaused()
         try {
           transferTuple(dataProcessor.next())
+          outputRowCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -388,6 +405,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //                log.info("break point triggered but it is not stopped")
 //              }
               transferTuple(dataProcessor.next())
+              outputRowCount += 1
             }catch{
               case e:BreakpointException =>
                 synchronized {
