@@ -34,7 +34,7 @@ class ControllerSpec
   private val logicalPlan1 =
     """{
       |"operators":[
-      |{"tableName":"/Users/avinash/TexeraOrleans/dataset/large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
+      |{"tableName":"D:\\large_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
       |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch","operatorType":"KeywordMatcher"},
       |{"operatorID":"Count","operatorType":"Aggregation"},
       |{"operatorID":"Sink","operatorType":"Sink"}],
