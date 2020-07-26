@@ -413,7 +413,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case CollectSinkResults =>
       this.metadata match {
         case sink: SimpleSinkOperatorMetadata =>
-          allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker, CollectSinkResults,10,0))
+          allWorkers.foreach(worker => worker ! CollectSinkResults )
         case _ => // ignore collect result if self is not sink
       }
     case WorkerMessage.ReportOutputResult(sinkResult) =>

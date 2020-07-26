@@ -241,6 +241,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         context.become(breakpointTriggered,discardOld = false)
         unstashAll()
       }
+    case CollectSinkResults =>
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
     case LocalBreakpointTriggered =>
       throw new AmberException("breakpoint triggered after pause")
   } orElse discardOthers
@@ -272,6 +274,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case QueryState => sender ! ReportState(WorkerState.Running)
     case QueryStatistics =>
       sender ! ReportStatistics(WorkerStatistics(WorkerState.Running, getOutputRowCount()))
+    case CollectSinkResults =>
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
   } orElse discardOthers
 
 
