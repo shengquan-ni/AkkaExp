@@ -17,7 +17,7 @@ import texera.common.schema.OperatorSchemaGenerator
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
 import web.{ TexeraWebApplication}
 import web.model.event.{HelloWorldResponse, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
-import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, PauseWorkflowRequest, TexeraWsRequest}
+import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, PauseWorkflowRequest, TexeraWsRequest, ModifyLogicRequest}
 
 import scala.collection.mutable
 
@@ -52,6 +52,9 @@ class WorkflowWebsocketResource {
       case execute: ExecuteWorkflowRequest =>
         println(execute)
         executeWorkflow(session, execute)
+      case newLogic: ModifyLogicRequest =>
+        println(newLogic)
+        modifyLogic(session, newLogic)
 
     }
 
@@ -63,6 +66,12 @@ class WorkflowWebsocketResource {
 
   def send(session: Session, event: TexeraWsEvent): Unit = {
     session.getAsyncRemote.sendText(objectMapper.writeValueAsString(event))
+  }
+
+  def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
+    val workflowTag = WorkflowTag.apply(newLogic.workflowId)
+    val controller: ActorRef = WorkflowWebsocketResource.sessionJobs(session.getId)
+    controller ! ModifyLogic(newLogic)
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
