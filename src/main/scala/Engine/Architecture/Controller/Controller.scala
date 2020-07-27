@@ -3,7 +3,7 @@ package Engine.Architecture.Controller
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.Controller.ControllerEvent.WorkflowCompleted
+import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -413,14 +413,20 @@ class Controller
       unstashAll()
     case Pause =>
     case EnforceStateCheck =>
-    case ModifyLogic(newLogic) =>
+    case ModifyLogic(newMetadata) =>
       // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
-      val json: JsValue = Json.parse(newLogic)
-      val id = json("operatorID").as[String]
-      val operatorTag = OperatorTag(tag.workflow,id)
-      val principal: ActorRef = principalBiMap.get(operatorTag)
-      AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newLogic), 3)
+
+//      val json: JsValue = Json.parse(newLogic)
+//      val id = json("operatorID").as[String]
+//      val operatorTag = OperatorTag(tag.workflow,id)
+
+      // newLogic is now an OperatorMetadata
+      val principal: ActorRef = principalBiMap.get(newMetadata.tag)
+      AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newMetadata), 3)
       context.parent ! Ack
+      if (this.eventListener != null && this.eventListener.get.modifyLogicCompletedListener != null) {
+        this.eventListener.get.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
+      }
     case msg => stash()
   }
 

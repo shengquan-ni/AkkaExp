@@ -1,5 +1,7 @@
 package Engine.Common.AmberMessage
 
+import Engine.Operators.OperatorMetadata
+
 
 object ControlMessage{
 
@@ -7,7 +9,7 @@ object ControlMessage{
 
   final case class Pause()
 
-  final case class ModifyLogic(newLogic:String)
+  final case class ModifyLogic(newMetadata:OperatorMetadata)
 
   final case class Resume()
 

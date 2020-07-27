@@ -230,22 +230,21 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   final def allowOperatorLogicUpdate:Receive = {
-    case ModifyLogic(newLogic) =>
+    case ModifyLogic(newMetadata) =>
       sender ! Ack
-      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
-      val json: JsValue = Json.parse(newLogic)
-      val operatorType = json("operatorID").as[String]
-      json("operatorType").as[String] match{
-        case "KeywordMatcher" =>
+      //val json: JsValue = Json.parse(newLogic)
+      // val operatorType = json("operatorID").as[String]
+      newMetadata match{
+        case keywordSeachOpMetadata: KeywordSearchMetadata =>
           var dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
-          dp.setPredicate(json("attributeName").as[Int],json("keyword").as[String])
+          dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
           dataProcessor = dp
-        case "Filter" =>
-          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
-          dp.filterType = 0 //unused parameter
-          dp.targetField = json("targetField").as[Int]
-          dp.threshold = DateTime.parse(json("threshold").as[String])
-          dataProcessor = dp
+//        case filterOpMetadata: FilterMetadata =>
+//          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
+//          dp.filterType = 0 //unused parameter
+//          dp.targetField = json("targetField").as[Int]
+//          dp.threshold = DateTime.parse(json("threshold").as[String])
+//          dataProcessor = dp
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
   }

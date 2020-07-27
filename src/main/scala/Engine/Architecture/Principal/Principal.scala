@@ -394,9 +394,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case GetOutputLayer => sender ! workerLayers.last.layer
     case Pause => context.parent ! ReportState(PrincipalState.Paused)
     case QueryState => sender ! ReportState(PrincipalState.Paused)
-    case ModifyLogic(newLogic) =>
+    case ModifyLogic(newMetadata) =>
       sender ! Ack
-      allWorkers.foreach(worker => AdvancedMessageSending.blockingAskWithRetry(worker, ModifyLogic(newLogic), 3))
+      allWorkers.foreach(worker => AdvancedMessageSending.blockingAskWithRetry(worker, ModifyLogic(newMetadata), 3))
     case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Paused, aggregateWorkerStatistics()))
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)

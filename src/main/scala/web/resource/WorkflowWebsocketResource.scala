@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import Engine.Architecture.Controller.ControllerEvent.WorkflowStatusUpdate
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
-import Engine.Common.AmberMessage.ControlMessage.Start
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
 import Engine.Common.AmberTag.WorkflowTag
 import akka.actor.ActorRef
@@ -15,9 +15,9 @@ import javax.websocket.server.ServerEndpoint
 import texera.common.{TexeraContext, TexeraUtils}
 import texera.common.schema.OperatorSchemaGenerator
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
-import web.{ TexeraWebApplication}
-import web.model.event.{HelloWorldResponse, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
-import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, PauseWorkflowRequest, TexeraWsRequest, ModifyLogicRequest}
+import web.TexeraWebApplication
+import web.model.event.{HelloWorldResponse, ModifyLogicCompletedEvent, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
+import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, ModifyLogicRequest, PauseWorkflowRequest, TexeraWsRequest}
 
 import scala.collection.mutable
 
@@ -69,9 +69,8 @@ class WorkflowWebsocketResource {
   }
 
   def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
-    val workflowTag = WorkflowTag.apply(newLogic.workflowId)
     val controller: ActorRef = WorkflowWebsocketResource.sessionJobs(session.getId)
-    // controller ! ModifyLogic(newLogic)
+    controller ! ModifyLogic(newLogic.newOperatorMetadata)
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
@@ -97,6 +96,9 @@ class WorkflowWebsocketResource {
       },
       statusUpdate => {
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
+      },
+      modifyLogicCompleted => {
+        send(session, ModifyLogicCompletedEvent())
       }
     )
 

@@ -16,4 +16,6 @@ object ControllerEvent {
   operatorStatistics: Map[String, PrincipalStatistics]
   )
 
+  case class ModifyLogicCompleted()
+
 }

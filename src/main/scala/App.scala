@@ -167,7 +167,6 @@ object App {
  6. set conditional breakpoint
  7. set count breakpoint
  8. set tau
- 9. modify logic
       """
 
       var current = 4
@@ -265,9 +264,9 @@ object App {
             }
           case "set tau" =>
             Constants.defaultTau = scala.io.StdIn.readInt().milliseconds
-          case "modify logic" =>
-            val newLogic = scala.io.StdIn.readLine()
-            controller ! ModifyLogic(newLogic)
+//          case "modify logic" =>
+//            val newLogic = scala.io.StdIn.readLine()
+//            controller ! ModifyLogic(newLogic)
           case other =>
             println("wrong command!")
             println(demoUsage)
