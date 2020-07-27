@@ -9,12 +9,17 @@ import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage.{QueryState, _}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import Engine.Common.AmberTuple.{AmberTuple, Tuple}
+import Engine.Common.{AdvancedMessageSending, Constants, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Operators.Filter.{FilterMetadata, FilterSpecializedTupleProcessor, FilterType}
+import Engine.Operators.KeywordSearch.{KeywordSearchMetadata, KeywordSearchTupleProcessor}
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
 import Engine.Operators.Sink.SimpleSinkProcessor
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.util.Timeout
+import com.github.nscala_time.time.Imports._
+import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -27,7 +32,7 @@ object Processor {
   def props(processor:TupleProcessor,tag:WorkerTag): Props = Props(new Processor(processor,tag))
 }
 
-class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
+class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
 
   val dataProcessExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   val processingQueue = new mutable.Queue[(LayerTag,Array[Tuple])]
@@ -224,6 +229,27 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent,ReportWorkerPartialCompleted(tag,from),10,0)
   }
 
+  final def allowOperatorLogicUpdate:Receive = {
+    case ModifyLogic(newLogic) =>
+      sender ! Ack
+      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
+      val json: JsValue = Json.parse(newLogic)
+      val operatorType = json("operatorID").as[String]
+      json("operatorType").as[String] match{
+        case "KeywordMatcher" =>
+          var dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dp.setPredicate(json("attributeName").as[Int],json("keyword").as[String])
+          dataProcessor = dp
+        case "Filter" =>
+          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
+          dp.filterType = 0 //unused parameter
+          dp.targetField = json("targetField").as[Int]
+          dp.threshold = DateTime.parse(json("threshold").as[String])
+          dataProcessor = dp
+        case t => throw new NotImplementedError("Unknown operator type: "+ t)
+      }
+  }
+
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -242,9 +268,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse super.running
 
-  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
+  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse super.paused
 
-  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
+  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse  super.breakpointTriggered
 
   override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse super.completed
 

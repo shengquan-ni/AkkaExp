@@ -226,6 +226,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           k ! QueryState
         }
       }
+
     case WorkerMessage.ReportState(state) =>
       //log.info("pausing: "+ sender +" to "+ state)
       if(!allowedStatesOnPausing(state) && state != WorkerState.Pausing){
@@ -290,7 +291,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }else{
               stage2Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
-
+              stage1Timer.start()
             }
           }
       }
@@ -393,6 +394,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case GetOutputLayer => sender ! workerLayers.last.layer
     case Pause => context.parent ! ReportState(PrincipalState.Paused)
     case QueryState => sender ! ReportState(PrincipalState.Paused)
+    case ModifyLogic(newLogic) =>
+      sender ! Ack
+      allWorkers.foreach(worker => AdvancedMessageSending.blockingAskWithRetry(worker, ModifyLogic(newLogic), 3))
     case QueryStatistics => sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Paused, aggregateWorkerStatistics()))
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
