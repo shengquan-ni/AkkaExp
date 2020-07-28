@@ -2,15 +2,16 @@ package Engine.Architecture.Controller
 
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
-import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted}
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
+import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted, WorkflowStatusUpdate}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
 import Engine.FaultTolerance.Materializer.{HashBasedMaterializer, OutputMaterializer}
 import Engine.FaultTolerance.Scanner.HDFSFolderScanTupleProducer
 import Engine.Architecture.LinkSemantics.{FullRoundRobin, HashBasedShuffle, LocalPartialToOne, OperatorLink}
-import Engine.Architecture.Principal.{Principal, PrincipalState}
+import Engine.Architecture.Principal.{Principal, PrincipalState, PrincipalStatistics}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControllerMessage._
 import Engine.Common.AmberMessage.ControlMessage._
@@ -107,6 +108,7 @@ class Controller
   val principalBiMap:BiMap[OperatorTag,ActorRef] = HashBiMap.create[OperatorTag,ActorRef]()
   val principalInCurrentStage = new mutable.HashSet[ActorRef]()
   val principalStates = new mutable.AnyRefMap[ActorRef,PrincipalState.Value]
+  val principalStatisticsMap = new mutable.AnyRefMap[ActorRef, PrincipalStatistics]
   val principalSinkResultMap = new mutable.HashMap[String, List[Tuple]]
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
@@ -160,7 +162,6 @@ class Controller
     }
   }
 
-
   private def stopCurrentStage(): Unit ={
     principalInCurrentStage.foreach{
       x => x ! StopCurrentStage
@@ -184,7 +185,22 @@ class Controller
     self ! ContinuedInitialization
   }
 
+  def triggerStatusUpdateEvent(): Unit = {
+    if (this.eventListener.nonEmpty
+      && this.eventListener.get.workflowStatusUpdateListener != null
+      && this.principalStatisticsMap.nonEmpty) {
+      val workflowStatus = this.principalStatisticsMap
+        .map(e => (this.principalBiMap.inverse().get(e._1).operator, e._2)).toMap;
+      this.eventListener.get.workflowStatusUpdateListener.apply(WorkflowStatusUpdate(workflowStatus))
+    }
+  }
+
   override def receive: Receive = {
+    case QueryStatistics =>
+      // do nothing, not initialized yet
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case AckedControllerInitialization =>
       val nodes = availableNodes
       log.info("start initialization --------cluster have "+nodes.length+" nodes---------")
@@ -253,8 +269,8 @@ class Controller
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         if (this.statisticsUpdateIntervalMs.nonEmpty) {
-//          statusUpdateAskHandle = context.system.scheduler.schedule(0.milliseconds,
-//            FiniteDuration.apply(statisticsUpdateIntervalMs.get, MILLISECONDS), self, QueryStatistics)
+          statusUpdateAskHandle = context.system.scheduler.schedule(0.milliseconds,
+            FiniteDuration.apply(statisticsUpdateIntervalMs.get, MILLISECONDS), self, QueryStatistics)
         }
         unstashAll()
       }else{
@@ -317,6 +333,11 @@ class Controller
   }
 
   private[this] def ready:Receive ={
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case Start =>
       log.info("received start signal")
       if(!timer.isRunning) {
@@ -370,6 +391,11 @@ class Controller
       stopCurrentStage()
     case RecoverCurrentStage =>
       recoverCurrentStage()
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case PrincipalMessage.ReportState(state) =>
       principalStates(sender) = state
       state match{
@@ -394,6 +420,7 @@ class Controller
               }
               if (this.statusUpdateAskHandle != null) {
                 this.statusUpdateAskHandle.cancel()
+                self ! QueryStatistics
               }
 //              self ! PoisonPill
             }else{
@@ -462,6 +489,11 @@ class Controller
   }
 
   private[this] def pausing:Receive ={
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case EnforceStateCheck =>
       frontier.flatMap(workflow.inLinks(_)).foreach(principalBiMap.get(_) ! QueryState)
     case PrincipalMessage.ReportState(state) =>
@@ -509,6 +541,11 @@ class Controller
       stopCurrentStage()
     case RecoverCurrentStage =>
       recoverCurrentStage()
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case Resume =>
       workflow.endOperators.foreach(principalBiMap.get(_) ! Resume)
       frontier ++= workflow.endOperators.flatMap(workflow.inLinks(_))
@@ -538,6 +575,11 @@ class Controller
   }
 
   private[this] def resuming: Receive = {
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case EnforceStateCheck =>
       frontier.flatMap(workflow.outLinks(_)).foreach(principalBiMap.get(_) ! QueryState)
     case PrincipalMessage.ReportState(state) =>
@@ -571,6 +613,11 @@ class Controller
   }
 
   private[this] def completed:Receive = {
+    case QueryStatistics =>
+      this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+    case PrincipalMessage.ReportStatistics(statistics) =>
+      principalStatisticsMap.update(sender, statistics)
+      triggerStatusUpdateEvent();
     case PrincipalMessage.ReportOutputResult(sinkResults) =>
       val operatorID = this.principalBiMap.inverse().get(sender()).operator
       this.principalSinkResultMap(operatorID) = sinkResults

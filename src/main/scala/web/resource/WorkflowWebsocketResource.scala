@@ -95,6 +95,8 @@ class WorkflowWebsocketResource {
         WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
       statusUpdate => {
+        System.out.println("status update:")
+        System.out.println(statusUpdate.operatorStatistics)
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
       },
       modifyLogicCompleted => {
@@ -103,7 +105,7 @@ class WorkflowWebsocketResource {
     )
 
     val controllerActorRef = TexeraWebApplication.actorSystem.actorOf(
-      Controller.props(workflowTag, workflow, false, eventListener, 1000))
+      Controller.props(workflowTag, workflow, false, eventListener, 100))
     controllerActorRef! AckedControllerInitialization
     controllerActorRef! Start
 

@@ -1,8 +1,11 @@
 package texera.operators.sleep;
 
+import Engine.Common.AmberTuple.Tuple;
 import Engine.Common.Constants;
 import Engine.Operators.Common.Map.MapMetadata;
 import Engine.Operators.OperatorMetadata;
+import scala.Function1;
+import scala.Serializable;
 import texera.common.workflow.TexeraOperator;
 import texera.common.schema.TexeraOperatorDescription;
 import texera.common.schema.OperatorGroupConstants;
@@ -21,7 +24,7 @@ public class TexeraSleepOperator extends TexeraOperator {
             sleepMilliseconds = 100;
         }
         return new MapMetadata(this.amberOperatorTag(), Constants.defaultNumWorkers(),
-                t -> {
+                (Function1<Tuple, Tuple> & Serializable) t -> {
                     try {
                         Thread.sleep(sleepMilliseconds);
                     } catch (InterruptedException e) {

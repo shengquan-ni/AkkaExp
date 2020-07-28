@@ -15,17 +15,33 @@ import akka.util.Timeout
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-
-class MapMetadata(tag:OperatorTag, val numWorkers:Int, val mapFunc: Tuple => Tuple) extends OperatorMetadata(tag){
+class MapMetadata(
+    override val tag: OperatorTag,
+    val numWorkers: Int,
+    val mapFunc: Tuple => Tuple
+) extends OperatorMetadata(tag)
+    with Serializable {
   override lazy val topology: Topology = {
-    new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new MapTupleProcessor(mapFunc),
-        numWorkers,
-        FollowPrevious(),
-        RoundRobinDeployment())
-    ),Array(),Map())
+    new Topology(
+      Array(
+        new ProcessorWorkerLayer(
+          LayerTag(tag, "main"),
+          _ =>
+            new MapTupleProcessor(mapFunc.asInstanceOf[(Tuple => Tuple) with java.io.Serializable]),
+          numWorkers,
+          FollowPrevious(),
+          RoundRobinDeployment()
+        )
+      ),
+      Array(),
+      Map()
+    )
   }
-  override def assignBreakpoint(topology: Array[ActorLayer], states: mutable.AnyRefMap[ActorRef, WorkerState.Value], breakpoint: GlobalBreakpoint)(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter): Unit = {
-    breakpoint.partition(topology(0).layer.filter(states(_)!= WorkerState.Completed))
+  override def assignBreakpoint(
+      topology: Array[ActorLayer],
+      states: mutable.AnyRefMap[ActorRef, WorkerState.Value],
+      breakpoint: GlobalBreakpoint
+  )(implicit timeout: Timeout, ec: ExecutionContext, log: LoggingAdapter): Unit = {
+    breakpoint.partition(topology(0).layer.filter(states(_) != WorkerState.Completed))
   }
 }
