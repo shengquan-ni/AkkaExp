@@ -3,6 +3,7 @@ package Engine.Architecture.Worker
 import Engine.Common.AmberMessage.WorkerMessage
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
+import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberTuple.Tuple

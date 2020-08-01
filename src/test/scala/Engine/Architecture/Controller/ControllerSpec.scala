@@ -179,24 +179,24 @@ class ControllerSpec
     parent.ref ! PoisonPill
   }
 
-  "A controller" should "be able to modify the logic after pausing the workflow1" in {
-    val parent = TestProbe()
-    val controller = parent.childActorOf(Controller.props(logicalPlan1))
-    controller ! AckedControllerInitialization
-    parent.expectMsg(ReportState(ControllerState.Ready))
-    controller ! Start
-    parent.expectMsg(ReportState(ControllerState.Running))
-    controller ! Pause
-    parent.expectMsg(ReportState(ControllerState.Pausing))
-    parent.expectMsg(ReportState(ControllerState.Paused))
-    controller ! ModifyLogic("{\"attributeName\":0,\"keyword\":\"Europe\",\"operatorID\":\"KeywordSearch\",\"operatorType\":\"KeywordMatcher\"}")
-    parent.expectMsg(Ack)
-    controller ! Resume
-    parent.expectMsg(ReportState(ControllerState.Resuming))
-    parent.expectMsg(ReportState(ControllerState.Running))
-    parent.expectMsg(1.minute, ReportState(ControllerState.Completed))
-    parent.ref ! PoisonPill
-  }
+//  "A controller" should "be able to modify the logic after pausing the workflow1" in {
+//    val parent = TestProbe()
+//    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+//    controller ! AckedControllerInitialization
+//    parent.expectMsg(ReportState(ControllerState.Ready))
+//    controller ! Start
+//    parent.expectMsg(ReportState(ControllerState.Running))
+//    controller ! Pause
+//    parent.expectMsg(ReportState(ControllerState.Pausing))
+//    parent.expectMsg(ReportState(ControllerState.Paused))
+//    controller ! ModifyLogic("{\"attributeName\":0,\"keyword\":\"Europe\",\"operatorID\":\"KeywordSearch\",\"operatorType\":\"KeywordMatcher\"}")
+//    parent.expectMsg(Ack)
+//    controller ! Resume
+//    parent.expectMsg(ReportState(ControllerState.Resuming))
+//    parent.expectMsg(ReportState(ControllerState.Running))
+//    parent.expectMsg(1.minute, ReportState(ControllerState.Completed))
+//    parent.ref ! PoisonPill
+//  }
 
   "A controller" should "be able to set and trigger conditional breakpoint in the workflow1" in {
     val parent = TestProbe()

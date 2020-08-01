@@ -73,7 +73,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       context.become(paused)
       context.become(breakpointTriggered,discardOld = false)
       unstashAll()
-    case QueryState => sender ! ReportState(WorkerState.Pausing)
     case QueryState => sender ! ReportStatistics(WorkerStatistics(WorkerState.Pausing, outputRowCount))
     case msg => stash()
   }
