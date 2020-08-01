@@ -13,7 +13,7 @@ import scala.collection.mutable
 
 object WorkerMessage {
 
-  final case class AckedWorkerInitialization()
+  final case class AckedWorkerInitialization(recoveryInformation:Seq[(Long,Long)] = Nil)
 
   final case class UpdateInputLinking(inputActor: ActorRef, fromLayer:LayerTag)
 
@@ -48,6 +48,8 @@ object WorkerMessage {
   final case class ReportUpstreamExhausted(tag: LayerTag)
 
   final case class ReportWorkerPartialCompleted(worker:WorkerTag,layer:LayerTag)
+
+  final case class CheckRecovery()
 
   final case class DataMessage(sequenceNumber:Long, payload:Array[Tuple]){
     override def equals(obj: Any): Boolean = {

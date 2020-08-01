@@ -1,7 +1,7 @@
 package Engine.Architecture.Principal
 
 import Clustering.SingleNodeListener
-import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ConditionalGlobalBreakpoint, CountGlobalBreakpoint}
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ConditionalGlobalBreakpoint, CountGlobalBreakpoint, ExceptionGlobalBreakpoint}
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.OperatorLink
 import Engine.Architecture.SendSemantics.DataTransferPolicy.{OneToOnePolicy, RoundRobinPolicy}
@@ -367,7 +367,9 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
     scan ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count1",50000))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     process ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count2",50000))
     scan ? Start
     parent.receiveWhile(10.seconds,5.seconds){
@@ -406,7 +408,9 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
     scan ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count1",50000))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     process ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count2",50000))
     scan ? Start
     parent.receiveWhile(10.seconds,5.seconds){
@@ -447,6 +451,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond1",x => x.getInt(0)>1))
     process ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond2",x =>x.getInt(0)>1))
     scan ? Start
@@ -485,6 +491,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond1",x => x.getInt(0)<=4))
     process ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond2",x =>x.getInt(0)>=8))
     scan ? Start
@@ -524,6 +532,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count1",100000))
     process ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count2",100000))
     scan ? Start
@@ -563,6 +573,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count1",100000))
     process ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count2",100000))
     scan ? Start
@@ -602,6 +614,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count1",80000))
     process ? PrincipalMessage.AssignBreakpoint(new CountGlobalBreakpoint("count2",80000))
     scan ? Start
@@ -651,6 +665,8 @@ class PrincipalSpec
     edge.link()
     val output = Await.result(process ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(100),linkTag(),Array(new DirectRoutee(testActor))))
+    scan ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex1"))
+    process ? PrincipalMessage.AssignBreakpoint(new ExceptionGlobalBreakpoint("ex2"))
     scan ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond1",x => x.getInt(0) % 8973 == 0))
     process ? PrincipalMessage.AssignBreakpoint(new ConditionalGlobalBreakpoint("cond2",x =>x.getInt(0) % 6462 == 0))
     scan ? Start

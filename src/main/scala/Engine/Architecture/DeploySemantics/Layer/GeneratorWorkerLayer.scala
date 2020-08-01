@@ -31,11 +31,10 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
         case e:Exception => println(e)
       }
     }
-    if(idx != numWorkers-1){
+    if(idx != numWorkers){
       layer = layer.take(idx)
       numWorkers = idx+1
     }
-
   }
 
 }

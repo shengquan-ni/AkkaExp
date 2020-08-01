@@ -1,10 +1,12 @@
 package Engine.Operators.HashJoin
 
 
+import Engine.Architecture.Principal.PrincipalState
 import Engine.Architecture.SendSemantics.DataTransferPolicy.{OneToOnePolicy, RoundRobinPolicy}
 import Engine.Architecture.SendSemantics.Routees.DirectRoutee
 import Engine.Architecture.Worker.Processor
 import Engine.Common.AmberField.FieldType
+import Engine.Common.AmberMessage.PrincipalMessage.ReportState
 import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, DataMessage, EndSending, ReportWorkerPartialCompleted, UpdateInputLinking, UpdateOutputLinking}
 import Engine.Common.AmberTag.{LayerTag, LinkTag, OperatorTag, WorkerTag, WorkflowTag}
 import Engine.Common.AmberTuple.Tuple
@@ -77,9 +79,9 @@ class HashJoinProcessorSpec
     execActor ? UpdateInputLinking(probe2.ref,link2.from)
     val output = new RoundRobinPolicy(50)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
-    probe1.send(execActor,DataMessage(0,dataSet1))
+    probe1.send(execActor,DataMessage(0,dataSet2))
     probe1.send(execActor,EndSending(1))
-    probe2.send(execActor,DataMessage(0,dataSet2))
+    probe2.send(execActor,DataMessage(0,dataSet1))
     probe2.send(execActor,EndSending(1))
     expectMsg(DataMessage(0,Array(
       Tuple("Japan",6,"Japan",4),
@@ -111,21 +113,24 @@ class HashJoinProcessorSpec
     execActor ? UpdateInputLinking(probe2.ref,link2.from)
     val output = new RoundRobinPolicy(50)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
-    probe1.send(execActor,DataMessage(0,dataSet1))
+    probe1.send(execActor,DataMessage(0,dataSet2))
     probe1.send(execActor,EndSending(1))
-    probe2.send(execActor,DataMessage(0,dataSet2))
+    probe2.send(execActor,DataMessage(0,dataSet1))
     probe2.send(execActor,EndSending(1))
-    expectMsg(DataMessage(0,Array(
-      Tuple("important",4,"Japan",4),
+    var res = Set[Tuple]()
+    receiveWhile(5.seconds,2.seconds){
+      case DataMessage(_,payload) => res ++= Set(payload:_*)
+      case msg =>
+    }
+    assert(res == Set(Tuple("important",4,"Japan",4),
       Tuple("asia",4,"Japan",4),
       Tuple("some",3,"cat",3),
       Tuple("cat lover",3,"cat",3),
       Tuple("Europe",2,"cat boomer",2),
       Tuple("cat boomer",2,"cat boomer",2),
       Tuple("Asia",1,"cat lover",1),
-      Tuple("cat",1,"cat lover",1)
-    )))
-    expectMsg(EndSending(1))
+      Tuple("cat",1,"cat lover",1)))
+
     Thread.sleep(1000)
     execActor ! PoisonPill
   }

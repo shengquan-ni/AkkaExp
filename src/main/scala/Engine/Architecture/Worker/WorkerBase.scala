@@ -1,9 +1,10 @@
 package Engine.Architecture.Worker
 
-import Engine.Common.AmberException.AmberException
-import Engine.Common.AmberMessage.ControlMessage.{Ack, CollectSinkResults, LocalBreakpointTriggered, Pause, QueryState, QueryStatistics, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
 import Engine.Common.AmberMessage.WorkerMessage
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportOutputResult, ReportState, ReportStatistics, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
+import Engine.Common.AmberMessage.ControlMessage._
+import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
@@ -22,14 +23,31 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
 
+  val receivedFaultedTupleIds:mutable.HashSet[Long] = new mutable.HashSet[Long]()
+  val receivedRecoveryInformation: mutable.HashSet[(Long,Long)] = new mutable.HashSet[(Long, Long)]()
+
   var pausedFlag = false
+  var userFixedTuple: Tuple = _
   @elidable(INFO) var startTime = 0L
 
-  def onInitialization(): Unit = {
+  def onInitialization(recoveryInformation:Seq[(Long,Long)]): Unit = {
+    receivedRecoveryInformation ++= recoveryInformation
+  }
+
+  def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onResumeTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onModifyTuple(faultedTuple:FaultedTuple):Unit = {
 
   }
 
   def onStart(): Unit ={
+    log.info("started!")
     startTime = System.nanoTime()
     context.parent ! ReportState(WorkerState.Running)
   }
@@ -62,7 +80,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   def onInterrupted(operations: => Unit): Unit ={
     if(pausedFlag){
-      pauseDataTransfer()
+      //pauseDataTransfer()
       operations
       Breaks.break()
     }
@@ -151,6 +169,19 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       throw new AmberException(s"update output link information of $tag is not allowed at this time")
   }
 
+  final def allowCheckRecovery:Receive = {
+    case CheckRecovery =>
+      if(receivedRecoveryInformation.contains((0,0))){
+        receivedRecoveryInformation.remove((0,0))
+        self ! Pause
+      }
+  }
+
+  final def disallowCheckRecovery:Receive = {
+    case CheckRecovery =>
+      //Skip
+  }
+
   final def stashOthers:Receive = {
     case msg =>
       log.info("stashing: "+msg)
@@ -162,8 +193,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   override def receive:Receive = {
-    case AckedWorkerInitialization =>
-      onInitialization()
+    case AckedWorkerInitialization(recoveryInformation) =>
+      onInitialization(recoveryInformation)
       context.parent ! ReportState(WorkerState.Ready)
       context.become(ready)
       unstashAll()
@@ -179,6 +210,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     allowUpdateOutputLinking orElse //update linking
     allowModifyBreakpoints orElse //modify break points
     disallowQueryBreakpoint orElse  //query specific breakpoint
+    allowCheckRecovery orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] { //query triggered breakpoint
     case Start =>
       sender ! Ack
@@ -228,6 +260,24 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         onResumed()
         context.become(running)
         unstashAll()
+    case SkipTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onSkipTuple(f)
+      }
+    case ModifyTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onModifyTuple(f)
+      }
+    case ResumeTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onResumeTuple(f)
+      }
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryStatistics =>
@@ -256,6 +306,10 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     disallowQueryTriggeredBreakpoints orElse[Any, Unit]  {
     case ReportFailure(e) =>
       throw e
+    case ExecutionPaused =>
+      onPaused()
+      context.become(paused)
+      unstashAll()
     case Pause =>
       log.info("received Pause message")
       onPausing()

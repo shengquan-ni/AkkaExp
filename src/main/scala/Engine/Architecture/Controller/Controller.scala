@@ -2,8 +2,8 @@ package Engine.Architecture.Controller
 
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
-import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted}
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -38,11 +38,11 @@ import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
 import akka.util.Timeout
+import com.github.nscala_time.time.Imports.DateTime
 import com.google.common.base.Stopwatch
 import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
-import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -77,7 +77,7 @@ object Controller{
     val id = json("operatorID").as[String]
     val tag = OperatorTag(workflowTag.workflow,id)
     json("operatorType").as[String] match{
-      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
+      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),(json \ "indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "KeywordMatcher" => new KeywordSearchMetadata(tag,Constants.defaultNumWorkers,json("attributeName").as[Int],json("keyword").as[String])
       case "Aggregation" => new CountMetadata(tag,Constants.defaultNumWorkers)
@@ -105,10 +105,12 @@ class Controller
   implicit val logAdapter: LoggingAdapter = log
 
   val principalBiMap:BiMap[OperatorTag,ActorRef] = HashBiMap.create[OperatorTag,ActorRef]()
+  val principalInCurrentStage = new mutable.HashSet[ActorRef]()
   val principalStates = new mutable.AnyRefMap[ActorRef,PrincipalState.Value]
   val principalSinkResultMap = new mutable.HashMap[String, List[Tuple]]
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
+  var prevFrontier:mutable.HashSet[OperatorTag] = _
   val stashedFrontier = new mutable.HashSet[OperatorTag]
   val stashedNodes = new mutable.HashSet[ActorRef]()
   val linksToIgnore = new mutable.HashSet[(OperatorTag,OperatorTag)]
@@ -117,6 +119,8 @@ class Controller
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
   val timer = Stopwatch.createUnstarted();
   val pauseTimer = Stopwatch.createUnstarted();
+  var recoveryMode = false
+
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
@@ -149,11 +153,35 @@ class Controller
   }
 
 
-  final def saveRemoveAskHandle(): Unit = {
+  final def safeRemoveAskHandle(): Unit = {
     if (periodicallyAskHandle != null) {
       periodicallyAskHandle.cancel()
       periodicallyAskHandle = null
     }
+  }
+
+
+  private def stopCurrentStage(): Unit ={
+    principalInCurrentStage.foreach{
+      x => x ! StopCurrentStage
+    }
+  }
+
+  private def recoverCurrentStage(): Unit ={
+    recoveryMode = true
+    principalInCurrentStage.foreach{
+      x =>
+        principalStates.remove(x)
+    }
+    principalInCurrentStage.clear()
+    frontier.clear()
+    if(prevFrontier != null) {
+      frontier ++= prevFrontier
+    }else{
+      frontier ++= workflow.startOperators
+    }
+    context.become(receive)
+    self ! ContinuedInitialization
   }
 
   override def receive: Receive = {
@@ -165,30 +193,55 @@ class Controller
         val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
         principalBiMap.put(k,p)
         principalStates(p) = PrincipalState.Uninitialized
+        principalInCurrentStage.add(p)
       }
-      workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
-        case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
-        case other => throw new AmberException("principal didn't return updated metadata")
-      } ))
+      workflow.startOperators.foreach{
+        x =>
+          val principal = principalBiMap.get(x)
+          AdvancedMessageSending.nonBlockingAskWithRetry(principal,AckedPrincipalInitialization(Array()),10,0, y => y match {
+          case AckWithInformation(z) =>
+            workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
+            //assign exception breakpoint before all breakpoints
+            if(!recoveryMode) {
+              AdvancedMessageSending.blockingAskWithRetry(principal,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.operator+"-ExceptionBreakpoint")),10)
+            }
+          case other => throw new AmberException("principal didn't return updated metadata")
+        } )
+      }
       frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
     case ContinuedInitialization =>
       log.info("continue initialization")
+      prevFrontier = frontier
       val nodes = availableNodes
       for(k <- frontier){
         val v = workflow.operators(k)
-        val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
-        principalBiMap.put(k,p)
+        if(!principalBiMap.containsKey(k)){
+          val newPrincipal = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
+          principalBiMap.put(k,newPrincipal)
+        }
+        val p = principalBiMap.get(k)
         principalStates(p) = PrincipalState.Uninitialized
+        principalInCurrentStage.add(p)
       }
-      workflow.startOperators.foreach(x => AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x),AckedPrincipalInitialization(Array()),10,0, y => y match {
-        case AckWithInformation(z) => workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
-        case other => throw new AmberException("principal didn't return updated metadata")
-      } ))
-      frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
+      frontier.foreach {
+        x =>
+          val principal = principalBiMap.get(x)
+          AdvancedMessageSending.nonBlockingAskWithRetry(principal, AckedPrincipalInitialization(Array()), 10, 0, y => y match {
+            case AckWithInformation(z) =>
+              workflow.operators(x) = z.asInstanceOf[OperatorMetadata]
+              //assign exception breakpoint before all breakpoints
+              if (!recoveryMode) {
+                AdvancedMessageSending.blockingAskWithRetry(principal, AssignBreakpoint(new ExceptionGlobalBreakpoint(x.operator + "-ExceptionBreakpoint")), 10)
+              }
+            case other => throw new AmberException("principal didn't return updated metadata")
+          })
+      }
+      val next = frontier.flatMap(workflow.outLinks(_))
+      frontier.clear()
+      frontier ++= next
     case PrincipalMessage.ReportState(state) =>
-      assert(state == PrincipalState.Ready)
       principalStates(sender) = state
-      if(principalStates.size == workflow.operators.size && principalStates.values.forall(_ == PrincipalState.Ready)){
+      if(principalStates.size == workflow.operators.size && principalStates.values.forall(_ != PrincipalState.Uninitialized)){
         frontier.clear()
         if(stashedFrontier.nonEmpty) {
           log.info("partially initialized!")
@@ -196,13 +249,6 @@ class Controller
           stashedFrontier.clear()
         }else{
           log.info("fully initialized!")
-//          for(i <- workflow.operators){
-//            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
-//              val node = principalBiMap.get(i._1)
-//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-//              stashedNodes.add(node)
-//            }
-//          }
         }
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
@@ -212,7 +258,7 @@ class Controller
         }
         unstashAll()
       }else{
-        val next = frontier.filter(i => workflow.inLinks(i).forall(x => principalBiMap.containsKey(x) && principalStates(principalBiMap.get(x)) == PrincipalState.Ready))
+        val next = frontier.filter(i => workflow.inLinks(i).forall(x => principalBiMap.containsKey(x) && principalStates.contains(principalBiMap.get(x)) && principalStates(principalBiMap.get(x)) == PrincipalState.Ready))
         frontier --= next
         val prevInfo = next.flatMap(workflow.inLinks(_).map(x => (workflow.operators(x),Await.result(principalBiMap.get(x)?GetOutputLayer,5.seconds).asInstanceOf[ActorLayer]))).toArray
         val nodes = availableNodes
@@ -238,11 +284,20 @@ class Controller
             }
             case None =>
           }
-          val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))),v.tag.operator)
-          principalBiMap.put(k,p)
-          principalStates(p) = PrincipalState.Uninitialized
-          AdvancedMessageSending.blockingAskWithRetry(principalBiMap.get(k),AckedPrincipalInitialization(prevInfo),10, y => y match {
-            case AckWithInformation(z) => workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
+          if(!principalBiMap.containsKey(k)) {
+            val p = context.actorOf(Principal.props(v).withDeploy(Deploy(scope = RemoteScope(getPrincipalNode(nodes)))), v.tag.operator)
+            principalBiMap.put(k, p)
+          }
+          val principal = principalBiMap.get(k)
+          principalStates(principal) = PrincipalState.Uninitialized
+          principalInCurrentStage.add(principal)
+          AdvancedMessageSending.blockingAskWithRetry(principal,AckedPrincipalInitialization(prevInfo),10, y => y match {
+            case AckWithInformation(z) =>
+              workflow.operators(k) = z.asInstanceOf[OperatorMetadata]
+              //assign exception breakpoint before all breakpoints
+              if(!recoveryMode) {
+                AdvancedMessageSending.blockingAskWithRetry(principal,AssignBreakpoint(new ExceptionGlobalBreakpoint(k.operator+"-ExceptionBreakpoint")),10)
+              }
             case other => throw new AmberException("principal didn't return updated metadata")
           })
           for (from <- workflow.inLinks(k)) {
@@ -264,7 +319,9 @@ class Controller
   private[this] def ready:Receive ={
     case Start =>
       log.info("received start signal")
-      timer.start()
+      if(!timer.isRunning) {
+        timer.start()
+      }
       workflow.startOperators.foreach { x =>
         if(!startDependencies.contains(x))
           AdvancedMessageSending.nonBlockingAskWithRetry(principalBiMap.get(x), Start, 10, 0)
@@ -277,7 +334,24 @@ class Controller
           context.parent ! ReportState(ControllerState.Running)
           context.become(running)
           unstashAll()
-        case _ => throw new Exception("Invalid principal state received")
+        case PrincipalState.Paused =>
+          if(principalStates.values.forall(_ == PrincipalState.Completed)){
+            timer.stop()
+            log.info("workflow completed! Time Elapsed: "+timer.toString())
+            timer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Completed)
+            context.become(completed)
+            unstashAll()
+          }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)) {
+            pauseTimer.stop()
+            log.info("workflow paused! Time Elapsed: " + pauseTimer.toString())
+            pauseTimer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Paused)
+            context.become(paused)
+            unstashAll()
+          }
       }
     case PassBreakpointTo(id:String,breakpoint:GlobalBreakpoint) =>
       val opTag = OperatorTag(tag,id)
@@ -292,6 +366,10 @@ class Controller
   }
 
   private[this] def running:Receive ={
+    case StopCurrentStage =>
+      stopCurrentStage()
+    case RecoverCurrentStage =>
+      recoverCurrentStage()
     case PrincipalMessage.ReportState(state) =>
       principalStates(sender) = state
       state match{
@@ -305,7 +383,7 @@ class Controller
             timer.stop()
             log.info("workflow completed! Time Elapsed: "+timer.toString())
             timer.reset()
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
@@ -319,24 +397,48 @@ class Controller
               }
 //              self ! PoisonPill
             }else{
+              recoveryMode = false
+              principalInCurrentStage.clear()
               context.become(receive)
               self ! ContinuedInitialization
             }
             unstashAll()
           }
         case PrincipalState.CollectingBreakpoints =>
+        case PrincipalState.Paused =>
+          if(principalStates.values.forall(_ == PrincipalState.Completed)){
+            if(timer.isRunning) {
+              timer.stop()
+            }
+            log.info("workflow completed! Time Elapsed: "+timer.toString())
+            timer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Completed)
+            context.become(completed)
+            unstashAll()
+          }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)) {
+            if(pauseTimer.isRunning) {
+              pauseTimer.stop()
+            }
+            log.info("workflow paused! Time Elapsed: " + pauseTimer.toString())
+            pauseTimer.reset()
+            safeRemoveAskHandle()
+            context.parent ! ReportState(ControllerState.Paused)
+            context.become(paused)
+            unstashAll()
+          }
         case _ => //skip others
       }
     case ReportGlobalBreakpointTriggered(bp) =>
       self ! Pause
-      log.info(bp)
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case Pause =>
       pauseTimer.start()
       workflow.operators.foreach( x => principalBiMap.get(x._1) ! Pause)
       //workflow.startOperators.foreach(principalBiMap.get(_) ! Pause)
       //frontier ++= workflow.startOperators.flatMap(workflow.outLinks(_))
       log.info("received pause signal")
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.parent ! ReportState(ControllerState.Pausing)
       context.become(pausing)
@@ -372,7 +474,7 @@ class Controller
           frontier.clear()
           log.info("workflow completed! Time Elapsed: "+timer.toString())
           timer.reset()
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           if(frontier.isEmpty){
             context.parent ! ReportState(ControllerState.Completed)
             context.become(completed)
@@ -386,7 +488,7 @@ class Controller
           frontier.clear()
           log.info("workflow paused! Time Elapsed: "+pauseTimer.toString())
           pauseTimer.reset()
-          saveRemoveAskHandle()
+          safeRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
           context.become(paused)
           unstashAll()
@@ -397,16 +499,21 @@ class Controller
           frontier ++= next.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
         }
       }
-    case ReportGlobalBreakpointTriggered(bp) => log.info(bp)
+    case ReportGlobalBreakpointTriggered(bp) =>
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case msg => stash()
   }
 
   private[this] def paused:Receive = {
+    case StopCurrentStage =>
+      stopCurrentStage()
+    case RecoverCurrentStage =>
+      recoverCurrentStage()
     case Resume =>
       workflow.endOperators.foreach(principalBiMap.get(_) ! Resume)
       frontier ++= workflow.endOperators.flatMap(workflow.inLinks(_))
       log.info("received resume signal")
-      saveRemoveAskHandle()
+      safeRemoveAskHandle()
       periodicallyAskHandle = context.system.scheduler.schedule(30.seconds,30.seconds,self,EnforceStateCheck)
       context.parent ! ReportState(ControllerState.Resuming)
       context.become(resuming)
@@ -442,13 +549,13 @@ class Controller
           frontier.clear()
           if(principalStates.values.exists(_ != PrincipalState.Ready)) {
             log.info("workflow resumed!")
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Running)
             context.become(running)
             unstashAll()
           } else{
             log.info("workflow ready!")
-            saveRemoveAskHandle()
+            safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Ready)
             context.become(ready)
             unstashAll()

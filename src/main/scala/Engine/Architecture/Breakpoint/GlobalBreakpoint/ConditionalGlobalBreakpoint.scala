@@ -1,5 +1,6 @@
 package Engine.Architecture.Breakpoint.GlobalBreakpoint
 
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, CountBreakpoint, LocalBreakpoint}
 import Engine.Common.AdvancedMessageSending
 import Engine.Common.AmberMessage.WorkerMessage.{AssignBreakpoint, QueryBreakpoint, RemoveBreakpoint}
@@ -12,17 +13,17 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
-class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple =>Boolean) extends GlobalBreakpoint(id) {
+class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple => Boolean) extends GlobalBreakpoint(id) {
 
-  var badTuples:ArrayBuffer[Tuple] = new ArrayBuffer[Tuple]()
+  var localbreakpoints:ArrayBuffer[(ActorRef,LocalBreakpoint)] = new ArrayBuffer[(ActorRef,LocalBreakpoint)]()
 
   override def acceptImpl(sender:ActorRef, localBreakpoint: LocalBreakpoint):Unit = {
     if(localBreakpoint.isTriggered){
-      badTuples.append(localBreakpoint.asInstanceOf[ConditionalBreakpoint].badTuple)
+      localbreakpoints.append((sender,localBreakpoint))
     }
   }
 
-  override def isTriggered: Boolean = badTuples.nonEmpty
+  override def isTriggered: Boolean = localbreakpoints.nonEmpty
 
   override def partitionImpl(layer: Array[ActorRef])(implicit timeout:Timeout, ec:ExecutionContext, log:LoggingAdapter, id:String, version:Long): Iterable[ActorRef] = {
     for(x <- layer) {
@@ -32,12 +33,22 @@ class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple =>Boolean) exte
   }
 
 
-  override def report(): String = {
-    val result = s"Conditional Breakpoint[$id]: ${badTuples.mkString(",")} triggered the breakpoint"
-    badTuples.clear()
-    result
+  override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
+    for(i <- localbreakpoints){
+      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.triggeredTupleId,false))
+      if(map.contains(k)){
+        map(k).append("condition unsatisfied")
+      }else{
+        map(k) = ArrayBuffer[String]("condition unsatisfied")
+      }
+    }
   }
 
   override def isCompleted: Boolean = false
+
+  override def reset(): Unit = {
+    super.reset()
+    localbreakpoints = new ArrayBuffer[(ActorRef, LocalBreakpoint)]()
+  }
 
 }

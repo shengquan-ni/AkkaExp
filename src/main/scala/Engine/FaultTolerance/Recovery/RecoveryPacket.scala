@@ -1,5 +1,5 @@
 package Engine.FaultTolerance.Recovery
 
-class RecoveryPacket {
+import Engine.Common.AmberTag.AmberTag
 
-}
+final case class RecoveryPacket(tag:AmberTag, generatedCount:Long, processedCount:Long)

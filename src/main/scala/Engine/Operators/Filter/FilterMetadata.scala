@@ -6,20 +6,27 @@ import Engine.Architecture.DeploySemantics.DeploymentFilter.{FollowPrevious, Use
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, ProcessorWorkerLayer}
 import Engine.Architecture.Worker.WorkerState
 import Engine.Common.AmberTag.{AmberTag, LayerTag, OperatorTag}
+import Engine.Operators.Filter.FilterType.AmberDateTime
 import Engine.Operators.OperatorMetadata
 import akka.actor.ActorRef
 import akka.event.LoggingAdapter
 import akka.util.Timeout
-import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports.DateTime
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import reflect.{ClassTag, classTag}
 
 
 class FilterMetadata[T : Ordering](tag:OperatorTag, val numWorkers:Int, val targetField:Int, val filterType: FilterType.Val[T], val threshold:T) extends OperatorMetadata(tag){
   override lazy val topology: Topology = {
     new Topology(Array(
-      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => new FilterSpecializedTupleProcessor(targetField,1,threshold.asInstanceOf[DateTime]),
+      new ProcessorWorkerLayer(LayerTag(tag,"main"),_ => {
+        threshold match {
+          case d:DateTime => new FilterSpecializedTupleProcessor(targetField, filterType.asInstanceOf[FilterType.Val[DateTime]], threshold.asInstanceOf[DateTime])
+          case others => new FilterTupleProcessor[T](targetField, filterType, threshold.asInstanceOf[T])
+        }
+      },
         numWorkers,
         FollowPrevious(),
         RoundRobinDeployment())

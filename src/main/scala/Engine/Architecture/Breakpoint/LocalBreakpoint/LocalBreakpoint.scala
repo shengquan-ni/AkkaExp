@@ -8,9 +8,15 @@ abstract class LocalBreakpoint(val id:String,val version:Long) extends Serializa
 
   def isTriggered:Boolean
 
-  def isFaultedTuple:Boolean
+  def needUserFix:Boolean = isTriggered
 
   var isReported = false
 
+  var triggeredTuple:Tuple = _
+
   def isDirty:Boolean
+
+  var isInput = false
+
+  var triggeredTupleId: Long = -1
 }
