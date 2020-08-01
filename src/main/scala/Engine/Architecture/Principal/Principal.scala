@@ -551,7 +551,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Paused, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Completed, aggregateWorkerStatistics()))
     case CollectSinkResults =>
       this.metadata match {
         case sink: SimpleSinkOperatorMetadata =>

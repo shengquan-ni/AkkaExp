@@ -615,6 +615,7 @@ class Controller
   private[this] def completed:Receive = {
     case QueryStatistics =>
       this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
+      this.exitIfCompleted
     case PrincipalMessage.ReportStatistics(statistics) =>
       principalStatisticsMap.update(sender, statistics)
       triggerStatusUpdateEvent();
@@ -625,13 +626,30 @@ class Controller
         if (this.eventListener != null && this.eventListener.get.workflowCompletedListener != null) {
           this.eventListener.get.workflowCompletedListener.apply(WorkflowCompleted(this.principalSinkResultMap.toMap))
         }
-        self ! PoisonPill
       }
+      this.exitIfCompleted
     case msg =>
       log.info("received: {} after workflow completed!",msg)
       if(sender !=self && !principalStates.keySet.contains(sender)){
         sender ! ReportState(ControllerState.Completed)
       }
+      this.exitIfCompleted
   }
+
+  private[this] def exitIfCompleted: Unit = {
+    val reportStatistics = this.eventListener != null && this.eventListener.get.workflowStatusUpdateListener != null;
+    val reportOutputResult = this.eventListener != null && this.eventListener.get.workflowCompletedListener != null;
+
+    val reportStatisticsCompleted = !reportStatistics ||
+      this.principalStatisticsMap.values.forall(v => v.operatorState == PrincipalState.Completed)
+    val reportOutputResultCompleted = !reportOutputResult ||
+      this.principalSinkResultMap.size == this.workflow.endOperators.size
+
+    if (reportStatisticsCompleted && reportOutputResultCompleted) {
+      self ! PoisonPill;
+    }
+
+  }
+
 
 }

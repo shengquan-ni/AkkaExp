@@ -95,8 +95,7 @@ class WorkflowWebsocketResource {
         WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
       statusUpdate => {
-        System.out.println("status update:")
-        System.out.println(statusUpdate.operatorStatistics)
+        println(statusUpdate.operatorStatistics)
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
       },
       modifyLogicCompleted => {

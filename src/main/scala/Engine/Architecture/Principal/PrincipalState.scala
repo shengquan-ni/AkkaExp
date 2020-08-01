@@ -16,6 +16,8 @@ Completed -> ()                             =>   ()
 
 
 object PrincipalState extends Enumeration {
+  type PrincipalState = Value
+
   val Uninitialized,
   Initializing,
   Ready,
