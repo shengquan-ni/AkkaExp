@@ -18,4 +18,6 @@ object ControllerEvent {
 
   case class ModifyLogicCompleted()
 
+  case class BreakpointTriggered()
+
 }

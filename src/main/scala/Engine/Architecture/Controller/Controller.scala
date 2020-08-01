@@ -4,7 +4,8 @@ package Engine.Architecture.Controller
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted, WorkflowStatusUpdate}
+import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowStatusUpdate}
+import Engine.Architecture.Controller.ControllerEvent.{WorkflowStatusUpdate, BreakpointTriggered, ModifyLogicCompleted, WorkflowCompleted}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -459,6 +460,10 @@ class Controller
     case ReportGlobalBreakpointTriggered(bp) =>
       self ! Pause
       context.parent ! ReportGlobalBreakpointTriggered(bp)
+      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
+        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered())
+      }
+      log.info(bp)
     case Pause =>
       pauseTimer.start()
       workflow.operators.foreach( x => principalBiMap.get(x._1) ! Pause)

@@ -3,7 +3,7 @@ package web.resource
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
-import Engine.Architecture.Controller.ControllerEvent.WorkflowStatusUpdate
+import Engine.Architecture.Controller.ControllerEvent.{BreakpointTriggered, WorkflowStatusUpdate}
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
 import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
@@ -16,7 +16,7 @@ import texera.common.{TexeraContext, TexeraUtils}
 import texera.common.schema.OperatorSchemaGenerator
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
 import web.TexeraWebApplication
-import web.model.event.{HelloWorldResponse, ModifyLogicCompletedEvent, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
+import web.model.event.{BreakpointTriggeredEvent, HelloWorldResponse, ModifyLogicCompletedEvent, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
 import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, ModifyLogicRequest, PauseWorkflowRequest, TexeraWsRequest}
 
 import scala.collection.mutable
@@ -100,6 +100,9 @@ class WorkflowWebsocketResource {
       },
       modifyLogicCompleted => {
         send(session, ModifyLogicCompletedEvent())
+      },
+      breakpointTriggered => {
+        send(session, BreakpointTriggeredEvent())
       }
     )
 
