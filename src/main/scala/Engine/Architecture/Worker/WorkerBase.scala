@@ -4,8 +4,9 @@ package Engine.Architecture.Worker
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberException.AmberException
-import Engine.Common.AmberMessage.ControlMessage.{Ack, LocalBreakpointTriggered, ModifyTuple, Pause, QueryState, ReleaseOutput, RequireAck, Resume, ResumeTuple, SkipTuple, Start, StashOutput}
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportState, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberMessage.ControlMessage._
+import Engine.Common.AmberMessage.WorkerMessage
+import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
@@ -87,6 +88,12 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   def onBreakpointTriggered(): Unit = {
     context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
+  }
+
+  def getOutputRowCount(): Int
+
+  def getResultTuples(): mutable.MutableList[Tuple] = {
+    mutable.MutableList()
   }
 
   final def allowStashOrReleaseOutput:Receive = {
@@ -180,6 +187,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       unstashAll()
     case QueryState =>
       sender ! ReportState(WorkerState.Uninitialized)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Uninitialized, getOutputRowCount()))
     case _ => stash()
   }
 
@@ -198,6 +207,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       unstashAll()
     case Resume => context.parent ! ReportState(WorkerState.Ready)
     case QueryState => sender ! ReportState(WorkerState.Ready)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Ready, getOutputRowCount()))
   } orElse discardOthers
 
   def pausedBeforeStart:Receive =
@@ -220,6 +231,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       unstashAll()
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getOutputRowCount()))
   } orElse discardOthers
 
 
@@ -253,6 +266,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       }
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getOutputRowCount()))
     case QueryBreakpoint(id) =>
       val toReport = breakpoints.find(_.id == id)
       if(toReport.isDefined) {
@@ -262,6 +277,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         context.become(breakpointTriggered,discardOld = false)
         unstashAll()
       }
+    case CollectSinkResults =>
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
     case LocalBreakpointTriggered =>
       throw new AmberException("breakpoint triggered after pause")
   } orElse discardOthers
@@ -291,6 +308,10 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       unstashAll()
     case Resume => context.parent ! ReportState(WorkerState.Running)
     case QueryState => sender ! ReportState(WorkerState.Running)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Running, getOutputRowCount()))
+    case CollectSinkResults =>
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
   } orElse discardOthers
 
 
@@ -317,10 +338,12 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
        context.unbecome()
        unstashAll()
      }
-    case QueryState => sender ! ReportState(WorkerState.LocalBreakpointTriggered)
-    case DataMessage(_,_) | EndSending(_) => stash()
-    case Resume | Pause => context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
-    case LocalBreakpointTriggered => //discard this
+   case QueryState => sender ! ReportState(WorkerState.LocalBreakpointTriggered)
+   case QueryStatistics =>
+     sender ! ReportStatistics(WorkerStatistics(WorkerState.LocalBreakpointTriggered, getOutputRowCount()))
+   case DataMessage(_,_) | EndSending(_) => stash()
+   case Resume | Pause => context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
+   case LocalBreakpointTriggered => //discard this
   } orElse stashOthers
 
   def completed:Receive=
@@ -329,8 +352,12 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     allowModifyBreakpoints orElse
     allowQueryBreakpoint orElse[Any, Unit] {
     case QueryState => sender ! ReportState(WorkerState.Paused)
+    case QueryStatistics =>
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Completed, getOutputRowCount()))
     case QueryTriggeredBreakpoints => //skip this
     case ExecutionCompleted => //skip this as well
+    case CollectSinkResults =>
+      sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
     case msg =>
       if(sender == context.parent){
         sender ! ReportState(WorkerState.Completed)

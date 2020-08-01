@@ -3,6 +3,7 @@ package Engine.Common.AmberMessage
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberTuple.Tuple
+import Engine.Operators.OperatorMetadata
 
 
 object ControlMessage{
@@ -11,9 +12,15 @@ object ControlMessage{
 
   final case class Pause()
 
+  final case class ModifyLogic(newMetadata:OperatorMetadata)
+
   final case class Resume()
 
   final case class QueryState()
+
+  final case class QueryStatistics()
+
+  final case class CollectSinkResults()
 
   final case class LocalBreakpointTriggered()
 

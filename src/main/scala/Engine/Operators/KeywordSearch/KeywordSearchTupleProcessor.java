@@ -16,6 +16,11 @@ public class KeywordSearchTupleProcessor implements TupleProcessor {
         this.keyword = keyword;
     }
 
+    public void setPredicate(int targetField, String keyword) {
+        this.targetField = targetField;
+        this.keyword = keyword;
+    }
+
     @Override
     public void accept(Tuple tuple) {
         if(tuple.getString(targetField).contains(keyword)){

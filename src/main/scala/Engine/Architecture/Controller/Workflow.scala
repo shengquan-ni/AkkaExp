@@ -4,7 +4,17 @@ import Engine.Common.AmberTag.OperatorTag
 import Engine.Common.AmberUtils
 import Engine.Operators.OperatorMetadata
 
-import scala.collection.mutable
+import scala.collection.{JavaConverters, mutable}
+
+//object Workflow {
+//  def apply(operators: java.util.Map[OperatorTag,OperatorMetadata],
+//            outLinks:java.util.Map[OperatorTag, java.util.Set[OperatorTag]]): Workflow = {
+//    val operatorsScala = JavaConverters.mapAsScalaMap(operators);
+//    val outLinksScala = JavaConverters.mapAsScalaMap(outLinks).map(kv => (kv._1, JavaConverters.asScalaSet(kv._2).toSet)).toMap
+//    new Workflow(operatorsScala, outLinksScala)
+//  }
+//
+//}
 
 class Workflow(val operators:mutable.Map[OperatorTag,OperatorMetadata],val outLinks:Map[OperatorTag,Set[OperatorTag]]) {
   val inLinks: Map[OperatorTag, Set[OperatorTag]] = AmberUtils.reverseMultimap(outLinks)

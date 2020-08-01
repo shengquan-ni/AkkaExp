@@ -3,6 +3,7 @@ package Engine.Architecture.Controller
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
+import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -16,7 +17,9 @@ import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.PrincipalMessage
 import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, AssignBreakpoint, GetOutputLayer, ReportPrincipalPartialCompleted}
 import Engine.Common.AmberMessage.StateMessage.EnforceStateCheck
+import Engine.Common.AmberMessage.PrincipalMessage.ReportOutputResult
 import Engine.Common.AmberTag.{AmberTag, LayerTag, LinkTag, OperatorTag, WorkflowTag}
+import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TupleProducer}
 import Engine.Operators.SimpleCollection.SimpleSourceOperatorMetadata
 import Engine.Operators.Count.CountMetadata
@@ -53,6 +56,9 @@ object Controller{
 
   def props(json:String, withCheckpoint:Boolean = false): Props = Props(fromJsonString(json,withCheckpoint))
 
+  def props(tag: WorkflowTag, workflow: Workflow, withCheckpoint: Boolean, eventListener: ControllerEventListener, statusUpdateInterval: Long): Props =
+    Props(new Controller(tag, workflow, withCheckpoint, Option.apply(eventListener), Option.apply(statusUpdateInterval)))
+
   private def fromJsonString(jsonString:String, withCheckpoint:Boolean):Controller ={
     val json: JsValue = Json.parse(jsonString)
     val tag:WorkflowTag = WorkflowTag("sample")
@@ -63,7 +69,7 @@ object Controller{
         .map { case (k,v) => (k,v.map(_._2).toSet)}
     val operatorArray:JsArray = (json \ "operators").as[JsArray]
     val operators:mutable.Map[OperatorTag,OperatorMetadata] = mutable.Map(operatorArray.value.map(x => (OperatorTag(tag,x("operatorID").as[String]),jsonToOperatorMetadata(tag,x))):_*)
-    new Controller(tag,new Workflow(operators,links),withCheckpoint)
+    new Controller(tag,new Workflow(operators,links),withCheckpoint, Option.empty, Option.empty)
 
   }
 
@@ -89,28 +95,38 @@ object Controller{
 
 
 
-class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:Boolean) extends Actor with ActorLogging with Stash {
+class Controller
+(
+  val tag: WorkflowTag, val workflow: Workflow, val withCheckpoint: Boolean,
+  val eventListener: Option[ControllerEventListener], val statisticsUpdateIntervalMs: Option[Long]
+) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
 
   val principalBiMap:BiMap[OperatorTag,ActorRef] = HashBiMap.create[OperatorTag,ActorRef]()
   val principalStates = new mutable.AnyRefMap[ActorRef,PrincipalState.Value]
+  val principalSinkResultMap = new mutable.HashMap[String, List[Tuple]]
   val edges = new mutable.AnyRefMap[LinkTag, OperatorLink]
   val frontier = new mutable.HashSet[OperatorTag]
   val stashedFrontier = new mutable.HashSet[OperatorTag]
   val stashedNodes = new mutable.HashSet[ActorRef]()
   val linksToIgnore = new mutable.HashSet[(OperatorTag,OperatorTag)]
   var periodicallyAskHandle:Cancellable = _
+  var statusUpdateAskHandle: Cancellable = _
   var startDependencies = new mutable.HashMap[AmberTag,mutable.HashMap[AmberTag,mutable.HashSet[LayerTag]]]
-  val timer = new Stopwatch()
-  val pauseTimer = new Stopwatch()
+  val timer = Stopwatch.createUnstarted();
+  val pauseTimer = Stopwatch.createUnstarted();
 
   def allPrincipals: Iterable[ActorRef] = principalStates.keys
   def unCompletedPrincipals: Iterable[ActorRef] = principalStates.filter(x => x._2 != PrincipalState.Completed).keys
   def allUnCompletedPrincipalStates: Iterable[PrincipalState.Value] = principalStates.filter(x => x._2 != PrincipalState.Completed).values
   def availableNodes:Array[Address] = Await.result(context.actorSelection("/user/cluster-info") ? GetAvailableNodeAddresses,5.seconds).asInstanceOf[Array[Address]]
   def getPrincipalNode(nodes:Array[Address]):Address = self.path.address//nodes(util.Random.nextInt(nodes.length))
+
+  private def queryExecuteStatistics(): Unit = {
+
+  }
 
   //if checkpoint activated:
   private def insertCheckpoint(from:OperatorMetadata,to:OperatorMetadata): Unit ={
@@ -129,6 +145,7 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
     val firstLayer = to.topology.layers.head
     to.topology.layers +:= scanLayer
     to.topology.links +:= new HashBasedShuffle(scanLayer,firstLayer,Constants.defaultBatchSize,hashFunc)
+
   }
 
 
@@ -184,6 +201,10 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
         principalBiMap.entrySet().forEach(x => AdvancedMessageSending.blockingAskWithRetry(x.getValue,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.getKey.operator+"-ExceptionBreakpoint")),10))
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
+        if (this.statisticsUpdateIntervalMs.nonEmpty) {
+//          statusUpdateAskHandle = context.system.scheduler.schedule(0.milliseconds,
+//            FiniteDuration.apply(statisticsUpdateIntervalMs.get, MILLISECONDS), self, QueryStatistics)
+        }
         unstashAll()
       }else{
         val next = frontier.filter(i => workflow.inLinks(i).forall(x => principalBiMap.containsKey(x) && principalStates(principalBiMap.get(x)) == PrincipalState.Ready))
@@ -283,7 +304,15 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
             if(frontier.isEmpty){
               context.parent ! ReportState(ControllerState.Completed)
               context.become(completed)
-              self ! PoisonPill
+              // collect all output results back to controller
+              val sinkPrincipals = this.workflow.endOperators.map(sinkOp => this.principalBiMap.get(sinkOp))
+              for (sinkPrincipal <- sinkPrincipals) {
+                sinkPrincipal ! CollectSinkResults
+              }
+              if (this.statusUpdateAskHandle != null) {
+                this.statusUpdateAskHandle.cancel()
+              }
+//              self ! PoisonPill
             }else{
               context.become(receive)
               self ! ContinuedInitialization
@@ -380,6 +409,20 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
       unstashAll()
     case Pause =>
     case EnforceStateCheck =>
+    case ModifyLogic(newMetadata) =>
+      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
+
+//      val json: JsValue = Json.parse(newLogic)
+//      val id = json("operatorID").as[String]
+//      val operatorTag = OperatorTag(tag.workflow,id)
+
+      // newLogic is now an OperatorMetadata
+      val principal: ActorRef = principalBiMap.get(newMetadata.tag)
+      AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newMetadata), 3)
+      context.parent ! Ack
+      if (this.eventListener != null && this.eventListener.get.modifyLogicCompletedListener != null) {
+        this.eventListener.get.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
+      }
     case msg => stash()
   }
 
@@ -417,8 +460,17 @@ class Controller(val tag:WorkflowTag,val workflow:Workflow, val withCheckpoint:B
   }
 
   private[this] def completed:Receive = {
+    case PrincipalMessage.ReportOutputResult(sinkResults) =>
+      val operatorID = this.principalBiMap.inverse().get(sender()).operator
+      this.principalSinkResultMap(operatorID) = sinkResults
+      if (this.principalSinkResultMap.size == this.workflow.endOperators.size) {
+        if (this.eventListener != null && this.eventListener.get.workflowCompletedListener != null) {
+          this.eventListener.get.workflowCompletedListener.apply(WorkflowCompleted(this.principalSinkResultMap.toMap))
+        }
+        self ! PoisonPill
+      }
     case msg =>
-      //log.info("received: {} after workflow completed!",msg)
+      log.info("received: {} after workflow completed!",msg)
       if(sender !=self && !principalStates.keySet.contains(sender)){
         sender ! ReportState(ControllerState.Completed)
       }

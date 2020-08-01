@@ -9,7 +9,7 @@ import java.net._
 
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ConditionalGlobalBreakpoint, CountGlobalBreakpoint}
 import Engine.Architecture.Controller.Controller
-import Engine.Common.AmberMessage.ControlMessage.{Pause, Resume, Start}
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, Start}
 import Engine.Common.AmberMessage.ControllerMessage.{AckedControllerInitialization, PassBreakpointTo}
 import Engine.Common.Constants
 import akka.util.Timeout
@@ -264,6 +264,9 @@ object App {
             }
           case "set tau" =>
             Constants.defaultTau = scala.io.StdIn.readInt().milliseconds
+//          case "modify logic" =>
+//            val newLogic = scala.io.StdIn.readLine()
+//            controller ! ModifyLogic(newLogic)
           case other =>
             println("wrong command!")
             println(demoUsage)
@@ -271,4 +274,5 @@ object App {
       }
     }
   }
+
 }

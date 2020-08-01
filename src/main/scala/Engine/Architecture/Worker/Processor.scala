@@ -11,11 +11,17 @@ import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage.{QueryState, _}
 import Engine.Common.AmberTag.{LayerTag, WorkerTag}
 import Engine.Common.AmberTuple.{AmberTuple, Tuple}
+import Engine.Common.{AdvancedMessageSending, Constants, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Operators.Filter.{FilterMetadata, FilterSpecializedTupleProcessor, FilterType}
+import Engine.Operators.KeywordSearch.{KeywordSearchMetadata, KeywordSearchTupleProcessor}
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
+import Engine.Operators.Sink.SimpleSinkProcessor
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.util.Timeout
+import com.github.nscala_time.time.Imports._
+import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -28,7 +34,7 @@ object Processor {
   def props(processor:TupleProcessor,tag:WorkerTag): Props = Props(new Processor(processor,tag))
 }
 
-class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
+class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends WorkerBase  {
 
   val dataProcessExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   val processingQueue = new mutable.Queue[(LayerTag,Array[Tuple])]
@@ -38,6 +44,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var processingIndex = 0
   var processedCount:Long = 0L
   var generatedCount:Long = 0L
+  var outputRowCount = 0
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -90,6 +97,15 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   override def onCompleted(): Unit = {
     super.onCompleted()
     ElidableStatement.info{log.info("completed its job. total: {} ms, processing: {} ms",(System.nanoTime()-startTime)/1000000,processTime/1000000)}
+  }
+
+  override def getResultTuples(): mutable.MutableList[Tuple] = {
+    this.dataProcessor match {
+      case processor: SimpleSinkProcessor =>
+        processor.getResultTuples()
+      case _ =>
+        mutable.MutableList()
+    }
   }
 
   private[this] def waitProcessing:Receive={
@@ -186,6 +202,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     dataProcessor.initialize()
   }
 
+  override def getOutputRowCount(): Int = {
+    this.outputRowCount
+  }
 
   final def activateWhenReceiveDataMessages:Receive = {
     case EndSending(_) | DataMessage(_,_) | RequireAck(_:EndSending) | RequireAck(_:DataMessage) =>
@@ -244,6 +263,26 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       AdvancedMessageSending.nonBlockingAskWithRetry(context.parent,ReportWorkerPartialCompleted(tag,from),10,0)
   }
 
+  final def allowOperatorLogicUpdate:Receive = {
+    case ModifyLogic(newMetadata) =>
+      sender ! Ack
+      //val json: JsValue = Json.parse(newLogic)
+      // val operatorType = json("operatorID").as[String]
+      newMetadata match{
+        case keywordSeachOpMetadata: KeywordSearchMetadata =>
+          var dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
+          dataProcessor = dp
+//        case filterOpMetadata: FilterMetadata =>
+//          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
+//          dp.filterType = 0 //unused parameter
+//          dp.targetField = json("targetField").as[Int]
+//          dp.threshold = DateTime.parse(json("threshold").as[String])
+//          dataProcessor = dp
+        case t => throw new NotImplementedError("Unknown operator type: "+ t)
+      }
+  }
+
 
   override def postStop(): Unit = {
     processingQueue.clear()
@@ -262,9 +301,9 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse super.running
 
-  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.paused
+  override def paused: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse super.paused
 
-  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.breakpointTriggered
+  override def breakpointTriggered: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse  super.breakpointTriggered
 
   override def completed: Receive = disallowDataMessages orElse disallowUpdateInputLinking orElse super.completed
 
@@ -346,6 +385,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         try {
           transferTuple(nextTuple,generatedCount)
           generatedCount += 1
+          outputRowCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -405,6 +445,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         try {
           transferTuple(nextTuple,generatedCount)
           generatedCount += 1
+          outputRowCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -468,6 +509,10 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             try {
               transferTuple(nextTuple,generatedCount)
               generatedCount += 1
+//              if(breakpoints.exists(_.isTriggered)){
+//                log.info("break point triggered but it is not stopped")
+//              }
+              outputRowCount += 1
             }catch{
               case e:BreakpointException =>
                 synchronized {
