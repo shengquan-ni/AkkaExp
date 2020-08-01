@@ -2,7 +2,7 @@ package Engine.Architecture.Controller
 
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
-import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
+import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowCompleted}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
@@ -38,11 +38,11 @@ import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
 import akka.util.Timeout
+import com.github.nscala_time.time.Imports.DateTime
 import com.google.common.base.Stopwatch
 import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
-import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -77,7 +77,7 @@ object Controller{
     val id = json("operatorID").as[String]
     val tag = OperatorTag(workflowTag.workflow,id)
     json("operatorType").as[String] match{
-      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
+      case "LocalScanSource" => new LocalFileScanMetadata(tag,Constants.defaultNumWorkers,json("tableName").as[String],json("delimiter").as[String].charAt(0),(json \ "indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "HDFSScanSource" => new HDFSFileScanMetadata(tag,Constants.defaultNumWorkers,json("host").as[String],json("tableName").as[String],json("delimiter").as[String].charAt(0),json("indicesToKeep").asOpt[Array[Int]].orNull,null)
       case "KeywordMatcher" => new KeywordSearchMetadata(tag,Constants.defaultNumWorkers,json("attributeName").as[Int],json("keyword").as[String])
       case "Aggregation" => new CountMetadata(tag,Constants.defaultNumWorkers)
@@ -196,14 +196,9 @@ class Controller
           stashedFrontier.clear()
         }else{
           log.info("fully initialized!")
-//          for(i <- workflow.operators){
-//            if(i._2.isInstanceOf[HDFSFileScanMetadata] && workflow.outLinks(i._1).head.operator.contains("Join")){
-//              val node = principalBiMap.get(i._1)
-//              AdvancedMessageSending.nonBlockingAskWithRetry(node,StashOutput,10,0)
-//              stashedNodes.add(node)
-//            }
-//          }
         }
+        //assign exception breakpoint before all breakpoints
+        principalBiMap.entrySet().forEach(x => AdvancedMessageSending.blockingAskWithRetry(x.getValue,AssignBreakpoint(new ExceptionGlobalBreakpoint(x.getKey.operator+"-ExceptionBreakpoint")),10))
         context.parent ! ReportState(ControllerState.Ready)
         context.become(ready)
         if (this.statisticsUpdateIntervalMs.nonEmpty) {
@@ -329,7 +324,7 @@ class Controller
       }
     case ReportGlobalBreakpointTriggered(bp) =>
       self ! Pause
-      log.info(bp)
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case Pause =>
       pauseTimer.start()
       workflow.operators.foreach( x => principalBiMap.get(x._1) ! Pause)
@@ -397,7 +392,8 @@ class Controller
           frontier ++= next.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
         }
       }
-    case ReportGlobalBreakpointTriggered(bp) => log.info(bp)
+    case ReportGlobalBreakpointTriggered(bp) =>
+      context.parent ! ReportGlobalBreakpointTriggered(bp)
     case msg => stash()
   }
 

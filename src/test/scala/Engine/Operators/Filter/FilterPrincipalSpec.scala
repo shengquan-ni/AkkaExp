@@ -21,6 +21,7 @@ import akka.pattern.ask
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.github.nscala_time.time.Imports.DateTime
 
 class FilterPrincipalSpec
   extends TestKit(ActorSystem("FilterPrincipalSpec"))
@@ -39,6 +40,19 @@ class FilterPrincipalSpec
     Tuple(222),
     Tuple(4567),
     Tuple(0)
+  )
+
+  val dataSet2 = Array(
+    Tuple("1990-10-10"),
+    Tuple("2001-10-10"),
+    Tuple("1992-10-10"),
+    Tuple("1993-10-10"),
+    Tuple("1994-10-10"),
+    Tuple("1990-09-02"),
+    Tuple("2020-01-01"),
+    Tuple("1997-10-10"),
+    Tuple("1992-10-10"),
+    Tuple("1990-02-10")
   )
 
   val workflowTag = WorkflowTag("sample")
@@ -93,5 +107,45 @@ class FilterPrincipalSpec
     parent.expectMsg(ReportState(PrincipalState.Completed))
     assert(res == Set(Tuple(1234),Tuple(7832),Tuple(222),Tuple(4567)))
   }
+
+  "An Principal with 5 workers" should "filter out date > 2000-01-01" in {
+    implicit val timeout = Timeout(5.seconds)
+    implicit def ord: Ordering[DateTime] = Ordering.by(_.getMillis)
+    val metadata = new TableMetadata("table1",new TupleMetadata(Array[FieldType.Value](FieldType.String)))
+    val sendActor = system.actorOf(Processor.props(new SimpleTupleProcessor(),workerTag()))
+    ignoreMsg{
+      case UpdateInputLinking(_,_) => true
+    }
+
+    val originLayer = layerTag()
+    val senderLayer = layerTag()
+    val countPartialLayer = layerTag()
+    val countFinalLayer = layerTag()
+
+    sendActor ? AckedWorkerInitialization
+    sendActor ? UpdateInputLinking(testActor,originLayer)
+    val parent = TestProbe()
+    val receiver = TestProbe()
+    parent.ignoreMsg{ case ReportPrincipalPartialCompleted(x,y) => true }
+    val principal = parent.childActorOf(Principal.props(new FilterMetadata[DateTime](opTag(),5,0,FilterType.Greater[DateTime],DateTime.parse("2000-01-01"))))
+    principal ? AckedPrincipalInitialization(Array())
+    parent.expectMsg(ReportState(PrincipalState.Ready))
+    val input = Await.result(principal ? GetInputLayer,timeout.duration).asInstanceOf[ActorLayer]
+    sendActor ? UpdateOutputLinking(new RoundRobinPolicy(1),LinkTag(senderLayer,countPartialLayer),input.layer.map(new DirectRoutee(_)))
+    //input.layer.foreach(x => x ? UpdateInputLinking(sendActor,senderLayer))
+    val output = Await.result(principal ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
+    output.layer.foreach(x => x ? UpdateOutputLinking(new OneToOnePolicy(10),LinkTag(countPartialLayer,countFinalLayer),Array(new DirectRoutee(receiver.ref))))
+    sendActor ! DataMessage(0,dataSet2)
+    sendActor ! EndSending(1)
+    parent.expectMsg(ReportState(PrincipalState.Running))
+    var res = Set[Tuple]()
+    receiver.receiveWhile(5.seconds,2.seconds){
+      case DataMessage(_,payload) => res ++= Set(payload:_*)
+      case msg =>
+    }
+    parent.expectMsg(ReportState(PrincipalState.Completed))
+    assert(res == Set(Tuple("2001-10-10"),Tuple("2020-01-01")))
+  }
+
 
 }

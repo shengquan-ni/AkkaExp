@@ -4,17 +4,13 @@ import Engine.Common.AmberTuple.Tuple
 
 class ConditionalBreakpoint(val predicate:Tuple => Boolean)(implicit id:String, version:Long) extends LocalBreakpoint(id,version) {
 
-  var badTuple:Tuple = _
+  var _isTriggered = false
 
   override def accept(tuple: Tuple): Unit = {
-    if(predicate(tuple)){
-      badTuple = tuple
-    }
+     _isTriggered = predicate(tuple)
   }
 
-  override def isTriggered: Boolean = badTuple != null
-
-  override def isFaultedTuple: Boolean = isTriggered
+  override def isTriggered: Boolean = _isTriggered
 
   override def isDirty: Boolean = isTriggered
 }

@@ -90,11 +90,11 @@ class HashJoinPrincipalSpec
     sendActor2 ! UpdateOutputLinking(new HashBasedShufflePolicy(1,outerHash),LinkTag(outertableTag,joinTag),joinMetadata.topology.layers.head.layer.map(new DirectRoutee(_)))
     val output = Await.result(principal ? GetOutputLayer,timeout.duration).asInstanceOf[ActorLayer]
     output.layer.foreach(x => x ! UpdateOutputLinking(new OneToOnePolicy(10),linkTag(),Array(new DirectRoutee(receiver.ref))))
-    sendActor1 ! DataMessage(0,dataSet1)
+    sendActor1 ! DataMessage(0,dataSet2)
     sendActor1 ! EndSending(1)
     //wait for first table to finish
     Thread.sleep(1000)
-    sendActor2 ! DataMessage(0,dataSet2)
+    sendActor2 ! DataMessage(0,dataSet1)
     sendActor2 ! EndSending(1)
     parent.expectMsg(ReportState(PrincipalState.Running))
     var res = Set[Tuple]()

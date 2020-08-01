@@ -2,6 +2,8 @@ package Engine.Architecture.Worker
 
 import java.util.concurrent.Executors
 
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.{ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Architecture.ReceiveSemantics.FIFOAccessPort
 import Engine.Common.AmberException.{AmberException, BreakpointException}
 import Engine.Common.AmberMessage.WorkerMessage._
@@ -40,6 +42,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   val aliveUpstreams = new mutable.HashSet[LayerTag]
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
+  var processedCount:Long = 0L
+  var generatedCount:Long = 0L
   var outputRowCount = 0
 
   @elidable(INFO) var processTime = 0L
@@ -57,6 +61,36 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       Future{
         afterFinishProcessing()
       }(dataProcessExecutor)
+    }
+  }
+
+  override def onSkipTuple(faultedTuple: FaultedTuple): Unit = {
+    if(faultedTuple.isInput){
+      processingIndex+=1
+      processedCount+=1
+    }else{
+      //if it's output tuple, it will be ignored
+    }
+  }
+
+  override def onResumeTuple(faultedTuple: FaultedTuple): Unit = {
+    if(!faultedTuple.isInput){
+      var i = 0
+      while (i < output.length) {
+        output(i).accept(faultedTuple.tuple)
+        i += 1
+      }
+      generatedCount+=1
+    }else{
+      //if its input tuple, the same breakpoint will be triggered again
+    }
+  }
+
+  override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {
+    if(!faultedTuple.isInput){
+      userFixedTuple = faultedTuple.tuple
+    }else{
+      processingQueue.front._2(processingIndex) = faultedTuple.tuple
     }
   }
 
@@ -275,6 +309,25 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
 
   private[this] def beforeProcessingBatch(): Unit ={
+    if(userFixedTuple != null) {
+      try {
+        transferTuple(userFixedTuple, generatedCount)
+        userFixedTuple = null
+        generatedCount += 1
+      } catch {
+        case e: BreakpointException =>
+          synchronized {
+            dPThreadState = ThreadState.LocalBreakpointTriggered
+          }
+          self ! LocalBreakpointTriggered
+          processTime += System.nanoTime() - processStart
+          Breaks.break()
+        case e: Exception =>
+          self ! ReportFailure(e)
+          processTime += System.nanoTime() - processStart
+          Breaks.break()
+      }
+    }
   }
 
   private[this] def afterProcessingBatch(): Unit ={
@@ -314,8 +367,24 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       dataProcessor.noMore()
       while (dataProcessor.hasNext) {
         exitIfPaused()
+        var nextTuple:Tuple = null
+        try{
+          nextTuple = dataProcessor.next()
+        }catch{
+          case e:Exception =>
+            synchronized {
+              dPThreadState = ThreadState.LocalBreakpointTriggered
+            }
+            self ! LocalBreakpointTriggered
+            breakpoints(0).triggeredTuple = nextTuple
+            breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+            breakpoints(0).triggeredTupleId = generatedCount
+            processTime += System.nanoTime()-processStart
+            Breaks.break()
+        }
         try {
-          transferTuple(dataProcessor.next())
+          transferTuple(nextTuple,generatedCount)
+          generatedCount += 1
           outputRowCount += 1
         }catch{
           case e:BreakpointException =>
@@ -358,8 +427,24 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       //check if there is tuple left to be outputted
       while(dataProcessor.hasNext){
         exitIfPaused()
+        var nextTuple:Tuple = null
+        try{
+          nextTuple = dataProcessor.next()
+        }catch{
+          case e:Exception =>
+            synchronized {
+              dPThreadState = ThreadState.LocalBreakpointTriggered
+            }
+            self ! LocalBreakpointTriggered
+            breakpoints(0).triggeredTuple = nextTuple
+            breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+            breakpoints(0).triggeredTupleId = generatedCount
+            processTime += System.nanoTime()-processStart
+            Breaks.break()
+        }
         try {
-          transferTuple(dataProcessor.next())
+          transferTuple(nextTuple,generatedCount)
+          generatedCount += 1
           outputRowCount += 1
         }catch{
           case e:BreakpointException =>
@@ -386,10 +471,17 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           exitIfPaused()
           try {
             dataProcessor.accept(batch(processingIndex))
+            processedCount += 1
           }catch{
             case e:Exception =>
-              self ! ReportFailure(e)
-              log.info(e.toString)
+              synchronized {
+                dPThreadState = ThreadState.LocalBreakpointTriggered
+              }
+              self ! LocalBreakpointTriggered
+              breakpoints(0).triggeredTuple = batch(processingIndex)
+              breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+              breakpoints(0).asInstanceOf[ExceptionBreakpoint].isInput = true
+              breakpoints(0).triggeredTupleId = processedCount
               processTime += System.nanoTime()-processStart
               Breaks.break()
             case other:Any =>
@@ -399,18 +491,33 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           processingIndex += 1
           while(dataProcessor.hasNext){
             exitIfPaused()
+            var nextTuple:Tuple = null
+            try{
+              nextTuple = dataProcessor.next()
+            }catch{
+              case e:Exception =>
+                synchronized {
+                  dPThreadState = ThreadState.LocalBreakpointTriggered
+                }
+                self ! LocalBreakpointTriggered
+                breakpoints(0).triggeredTuple = nextTuple
+                breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+                breakpoints(0).triggeredTupleId = generatedCount
+                processTime += System.nanoTime()-processStart
+                Breaks.break()
+            }
             try {
+              transferTuple(nextTuple,generatedCount)
+              generatedCount += 1
 //              if(breakpoints.exists(_.isTriggered)){
 //                log.info("break point triggered but it is not stopped")
 //              }
-              transferTuple(dataProcessor.next())
               outputRowCount += 1
             }catch{
               case e:BreakpointException =>
                 synchronized {
                   dPThreadState = ThreadState.LocalBreakpointTriggered
                 }
-//                log.info("break point triggered")
                 self ! LocalBreakpointTriggered
                 processTime += System.nanoTime()-processStart
                 Breaks.break()
@@ -426,6 +533,5 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       afterProcessingBatch()
       processTime += System.nanoTime()-processStart
     }
-    //log.info("leave processBatch "+i)
   }
 }

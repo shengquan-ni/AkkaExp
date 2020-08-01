@@ -1,6 +1,7 @@
 package Engine.Architecture.Principal
 
 import Clustering.ClusterListener.GetAvailableNodeAddresses
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
 import Engine.Architecture.DeploySemantics.Layer.ActorLayer
 import Engine.Architecture.LinkSemantics.LinkStrategy
@@ -155,8 +156,10 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             }else{
               //no tau involved since we know a very small tau works best
               if(!stage2Timer.isRunning){
-                stage1Timer.stop()
                 stage2Timer.start()
+              }
+              if(stage1Timer.isRunning){
+                stage1Timer.stop()
               }
               context.system.scheduler.scheduleOnce(tau,() => unCompletedWorkers.foreach(worker => worker ! Pause))
               saveRemoveAskHandle()
@@ -171,7 +174,9 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
             sender ! Resume
           case WorkerState.Completed =>
             if (whenAllWorkersCompleted) {
-              timer.stop()
+              if(timer.isRunning){
+                timer.stop()
+              }
               log.info(metadata.tag.toString+" completed! Time Elapsed: "+timer.toString())
               context.parent ! ReportState(PrincipalState.Completed)
               context.become(completed)
@@ -273,24 +278,26 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       if(setWorkerState(sender,state)) {
           if(unCompletedWorkerStates.forall(_ == WorkerState.Paused)){
             //all breakpoint resolved, it's safe to report to controller and then Pause(on triggered, or user paused) else Resume
+            val map = new mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]
             for(i <- globalBreakpoints.values.filter(_.isTriggered)){
               isUserPaused = true //upgrade pause
-              val report = i.report()
-              log.info(report)
-              context.parent ! ReportGlobalBreakpointTriggered(report)
+              i.report(map)
             }
+            context.parent ! ReportGlobalBreakpointTriggered(map)
             saveRemoveAskHandle()
             context.parent ! ReportState(PrincipalState.Paused)
             context.become(paused)
             unstashAll()
             if(!isUserPaused){
               log.info("no global breakpoint triggered, continue")
-              stage2Timer.stop()
-              stage1Timer.start()
               self ! Resume
             }else{
-              stage2Timer.stop()
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
+            }
+            if(stage2Timer.isRunning){
+              stage2Timer.stop()
+            }
+            if(!stage1Timer.isRunning){
               stage1Timer.start()
             }
           }
@@ -453,7 +460,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           currentLayer = inLinks.filter(x => !x._1.isBuilt && x._2.forall(_.isBuilt)).keys
         }
       }
-      layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> x._2.layer.length).toSeq:_*)
+      layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> workerLayers.head.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
       workerStatisticsMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerStatistics(WorkerState.Uninitialized, 0))).toMap.toSeq:_*)
       allWorkers.foreach(x => x ! AckedWorkerInitialization)

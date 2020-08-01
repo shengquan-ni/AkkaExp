@@ -1,5 +1,6 @@
 package Engine.Architecture.Breakpoint.GlobalBreakpoint
 
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AdvancedMessageSending
 import Engine.Common.AmberMessage.WorkerMessage.{QueryBreakpoint, RemoveBreakpoint}
@@ -8,6 +9,7 @@ import akka.event.LoggingAdapter
 import akka.util.Timeout
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 abstract class GlobalBreakpoint(val id:String) extends Serializable {
@@ -47,7 +49,7 @@ abstract class GlobalBreakpoint(val id:String) extends Serializable {
 
   def isRepartitionRequired: Boolean = unReportedWorkers.isEmpty
 
-  def report():String
+  def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit
 
   def isCompleted:Boolean
 

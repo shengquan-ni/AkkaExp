@@ -10,9 +10,9 @@ class CountBreakpoint(val target:Long)(implicit id:String,version:Long) extends 
     current += 1
   }
 
-  override def isTriggered: Boolean = current == target
+  override def needUserFix: Boolean = false
 
-  override def isFaultedTuple: Boolean = false
+  override def isTriggered: Boolean = current == target
 
   override def isDirty: Boolean = isReported
 }

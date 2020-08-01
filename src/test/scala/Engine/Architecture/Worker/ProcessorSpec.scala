@@ -1,6 +1,6 @@
 package Engine.Architecture.Worker
 
-import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, CountBreakpoint}
+import Engine.Architecture.Breakpoint.LocalBreakpoint.{ConditionalBreakpoint, CountBreakpoint, ExceptionBreakpoint}
 import Engine.Architecture.SendSemantics.DataTransferPolicy.OneToOnePolicy
 import Engine.Architecture.SendSemantics.Routees.DirectRoutee
 import Engine.Common.AmberMessage.ControlMessage.{Pause, QueryState, Resume}
@@ -261,6 +261,7 @@ class ProcessorSpec
     execActor ? UpdateInputLinking(testActor,null)
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",0))
     execActor ! DataMessage(0,Array(Tuple(1)))
     probe.expectMsg(ReportState(WorkerState.Running))
@@ -270,7 +271,7 @@ class ProcessorSpec
     execActor ! DataMessage(4,Array(Tuple(5)))
     probe.expectMsg(ReportState(WorkerState.LocalBreakpointTriggered))
     val tmp = Await.result(execActor ? QueryTriggeredBreakpoints, 5.seconds).asInstanceOf[ReportedTriggeredBreakpoints].bps(0)
-    system.log.info("received bad tuple: {}",tmp.asInstanceOf[ConditionalBreakpoint].badTuple)
+    system.log.info("received bad tuple: {}",tmp.asInstanceOf[ConditionalBreakpoint].triggeredTuple)
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",1))
     probe.expectMsg(ReportState(WorkerState.Paused))
     execActor ! Resume
@@ -278,7 +279,7 @@ class ProcessorSpec
     execActor ! DataMessage(5,Array(Tuple(6)))
     probe.expectMsg(ReportState(WorkerState.LocalBreakpointTriggered))
     val tmp1 = Await.result(execActor ? QueryTriggeredBreakpoints, 5.seconds).asInstanceOf[ReportedTriggeredBreakpoints].bps(0)
-    system.log.info("received bad tuple: {}",tmp1.asInstanceOf[ConditionalBreakpoint].badTuple)
+    system.log.info("received bad tuple: {}",tmp1.asInstanceOf[ConditionalBreakpoint].triggeredTuple)
     execActor ? AssignBreakpoint(new ConditionalBreakpoint(x => x.getInt(0) >= 5)("cond1",2))
     probe.expectMsg(ReportState(WorkerState.Paused))
     execActor ! Resume
@@ -299,6 +300,7 @@ class ProcessorSpec
     execActor ? UpdateInputLinking(testActor,null)
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new CountBreakpoint(5)("count1",0))
     execActor ! DataMessage(0,Array(Tuple(1)))
     probe.expectMsg(ReportState(WorkerState.Running))
@@ -329,6 +331,7 @@ class ProcessorSpec
     execActor ? UpdateInputLinking(testActor,null)
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new CountBreakpoint(5)("count1",0))
     execActor ! DataMessage(0,Array(Tuple(1)))
     probe.expectMsg(ReportState(WorkerState.Running))
@@ -360,6 +363,7 @@ class ProcessorSpec
     execActor ? UpdateInputLinking(testActor,null)
     val output = new OneToOnePolicy(1)
     execActor ? UpdateOutputLinking(output,linkTag(),Array(new DirectRoutee(testActor)))
+    execActor ? AssignBreakpoint(new ExceptionBreakpoint()("ex",0))
     execActor ? AssignBreakpoint(new CountBreakpoint(5)("count1",0))
     execActor ! DataMessage(0,Array(Tuple(1)))
     probe.expectMsg(ReportState(WorkerState.Running))

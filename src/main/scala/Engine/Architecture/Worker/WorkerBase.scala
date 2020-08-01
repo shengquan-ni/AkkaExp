@@ -1,9 +1,12 @@
 package Engine.Architecture.Worker
 
+
+import Engine.Architecture.Breakpoint.FaultedTuple
+import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberException.AmberException
-import Engine.Common.AmberMessage.ControlMessage.{Ack, CollectSinkResults, LocalBreakpointTriggered, Pause, QueryState, QueryStatistics, ReleaseOutput, RequireAck, Resume, Start, StashOutput}
+import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.WorkerMessage
-import Engine.Common.AmberMessage.WorkerMessage.{AckedWorkerInitialization, AssignBreakpoint, DataMessage, EndSending, ExecutionCompleted, ExecutionPaused, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint, ReportFailure, ReportOutputResult, ReportState, ReportStatistics, ReportedQueriedBreakpoint, ReportedTriggeredBreakpoints, UpdateOutputLinking}
+import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.ElidableStatement
 import akka.actor.{Actor, ActorLogging, Stash}
@@ -22,10 +25,25 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   implicit val timeout:Timeout = 5.seconds
   implicit val logAdapter: LoggingAdapter = log
 
+  val receivedFaultedTupleIds:mutable.HashSet[Long] = new mutable.HashSet[Long]()
+
   var pausedFlag = false
+  var userFixedTuple: Tuple = _
   @elidable(INFO) var startTime = 0L
 
   def onInitialization(): Unit = {
+
+  }
+
+  def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onResumeTuple(faultedTuple:FaultedTuple):Unit = {
+
+  }
+
+  def onModifyTuple(faultedTuple:FaultedTuple):Unit = {
 
   }
 
@@ -228,6 +246,24 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
         onResumed()
         context.become(running)
         unstashAll()
+    case SkipTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onSkipTuple(f)
+      }
+    case ModifyTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onModifyTuple(f)
+      }
+    case ResumeTuple(f) =>
+      sender ! Ack
+      if(!receivedFaultedTupleIds.contains(f.id)){
+        receivedFaultedTupleIds.add(f.id)
+        onResumeTuple(f)
+      }
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryStatistics =>

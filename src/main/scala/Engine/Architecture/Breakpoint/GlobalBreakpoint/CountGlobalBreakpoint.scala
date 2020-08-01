@@ -1,4 +1,5 @@
 package Engine.Architecture.Breakpoint.GlobalBreakpoint
+import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.{CountBreakpoint, LocalBreakpoint}
 import Engine.Common.AdvancedMessageSending
 import Engine.Common.AmberMessage.WorkerMessage.{AssignBreakpoint, QueryBreakpoint, QueryTriggeredBreakpoints, RemoveBreakpoint}
@@ -7,6 +8,7 @@ import akka.event.LoggingAdapter
 import akka.util.Timeout
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 
 class CountGlobalBreakpoint(id:String, val target:Long) extends GlobalBreakpoint(id) {
@@ -40,7 +42,9 @@ class CountGlobalBreakpoint(id:String, val target:Long) extends GlobalBreakpoint
 
   override def isRepartitionRequired: Boolean = unReportedWorkers.isEmpty && target != current
 
-  override def report(): String = s"Count Breakpoint[$id]: current = $current, target = $target"
+  override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
+    map((null,null)) = ArrayBuffer[String](id+" reached "+target)
+  }
 
   override def isCompleted: Boolean = isTriggered
 
