@@ -139,4 +139,31 @@ with BeforeAndAfterAll {
 
 
 
+  "A controller" should "pause, stop and restart, then pause the execution of the workflow1" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    Thread.sleep(100)
+    controller ! Pause
+    parent.expectMsg(ReportState(ControllerState.Pausing))
+    parent.expectMsg(ReportState(ControllerState.Paused))
+    controller ! StopCurrentStage
+    parent.expectNoMessage(5.seconds)
+    controller ! RecoverCurrentStage
+    parent.expectMsg(ReportState(ControllerState.Ready))
+    controller ! Start
+    parent.expectMsg(5.minutes, ReportState(ControllerState.Running))
+    parent.expectMsg(5.minutes, ReportState(ControllerState.Paused))
+    controller ! Resume
+    parent.expectMsg(5.minutes, ReportState(ControllerState.Resuming))
+    parent.expectMsg(5.minutes, ReportState(ControllerState.Running))
+    parent.expectMsg(5.minutes, ReportState(ControllerState.Completed))
+    parent.ref ! PoisonPill
+  }
+
+
+
 }
