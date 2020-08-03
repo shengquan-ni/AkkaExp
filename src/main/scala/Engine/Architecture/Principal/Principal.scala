@@ -374,7 +374,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               isUserPaused = true //upgrade pause
               i.report(map)
             }
-            context.parent ! ReportGlobalBreakpointTriggered(map)
+            context.parent ! ReportGlobalBreakpointTriggered(map, this.metadata.tag.operator)
             safeRemoveAskHandle()
             context.parent ! ReportState(PrincipalState.Paused)
             context.become(paused)

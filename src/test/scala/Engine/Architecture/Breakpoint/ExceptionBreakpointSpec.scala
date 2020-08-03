@@ -88,7 +88,7 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.expectMsg(ReportState(ControllerState.Running))
     var isCompleted = false
     parent.receiveWhile(30.seconds,10.seconds){
-      case ReportGlobalBreakpointTriggered(bp) =>
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
         for(i <- bp){
           log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
           AdvancedMessageSending.blockingAskWithRetry(i._1._1, SkipTuple(i._1._2),5)
@@ -112,7 +112,7 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.expectMsg(ReportState(ControllerState.Running))
     var isCompleted = false
     parent.receiveWhile(30.seconds,10.seconds){
-      case ReportGlobalBreakpointTriggered(bp) =>
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
         for(i <- bp){
           log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
           val fixed = new FaultedTuple(Tuple("Asia","Rwanda","1","0","0","0","0","0","0","12","12","120","12"),i._1._2.id,i._1._2.isInput)
@@ -138,7 +138,7 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.expectMsg(ReportState(ControllerState.Running))
     var isCompleted = false
     parent.receiveWhile(30.seconds,10.seconds){
-      case ReportGlobalBreakpointTriggered(bp) =>
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
         for(i <- bp){
           log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
           AdvancedMessageSending.blockingAskWithRetry(i._1._1, ResumeTuple(i._1._2),5)
@@ -163,7 +163,7 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.expectMsg(ReportState(ControllerState.Running))
     var isCompleted = false
     parent.receiveWhile(30.seconds,10.seconds){
-      case ReportGlobalBreakpointTriggered(bp) =>
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
         for(i <- bp){
           log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
           AdvancedMessageSending.blockingAskWithRetry(i._1._1, SkipTuple(i._1._2),5)

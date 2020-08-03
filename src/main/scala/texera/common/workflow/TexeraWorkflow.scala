@@ -1,10 +1,12 @@
 package texera.common.workflow
 
-import scala.beans.BeanProperty
 import scala.collection.mutable
+
+case class TexeraBreakpointInfo(operatorID: String, breakpoint: TexeraBreakpoint)
 
 case class TexeraWorkflow
 (
-  @BeanProperty operators: mutable.MutableList[TexeraOperator],
-  @BeanProperty links: mutable.MutableList[TexeraOperatorLink]
+  operators: mutable.MutableList[TexeraOperator],
+  links: mutable.MutableList[TexeraOperatorLink],
+  breakpoints: mutable.MutableList[TexeraBreakpointInfo]
 )

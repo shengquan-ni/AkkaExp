@@ -10,7 +10,6 @@ import akka.actor.ActorRef
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-
 object ControllerMessage {
 
   final case class AckedControllerInitialization()
@@ -19,13 +18,11 @@ object ControllerMessage {
 
   final case class ReportState(controllerState: ControllerState.Value)
 
-  final case class ReportGlobalBreakpointTriggered(report: mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]])
+  final case class ReportGlobalBreakpointTriggered(
+      report: mutable.HashMap[(ActorRef, FaultedTuple), ArrayBuffer[String]],
+      operatorID: String = null
+  )
 
   final case class PassBreakpointTo(operatorID: String, breakpoint: GlobalBreakpoint)
 
-
 }
-
-
-
-

@@ -1,23 +1,19 @@
 package web.resource
 
-import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
-import Engine.Architecture.Controller.ControllerEvent.{BreakpointTriggered, WorkflowStatusUpdate}
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
-import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Start}
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
 import Engine.Common.AmberTag.WorkflowTag
 import akka.actor.ActorRef
-import javax.websocket
-import javax.websocket.{CloseReason, OnClose, OnMessage, OnOpen, Session}
 import javax.websocket.server.ServerEndpoint
-import texera.common.{TexeraContext, TexeraUtils}
-import texera.common.schema.OperatorSchemaGenerator
+import javax.websocket._
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
+import texera.common.{TexeraContext, TexeraUtils}
 import web.TexeraWebApplication
-import web.model.event.{BreakpointTriggeredEvent, HelloWorldResponse, ModifyLogicCompletedEvent, TexeraWsEvent, WorkflowCompilationErrorEvent, WorkflowCompletedEvent, WorkflowStatusUpdateEvent}
-import web.model.request.{ExecuteWorkflowRequest, HelloWorldRequest, ModifyLogicRequest, PauseWorkflowRequest, TexeraWsRequest}
+import web.model.event._
+import web.model.request._
 
 import scala.collection.mutable
 
@@ -26,7 +22,7 @@ object WorkflowWebsocketResource {
   val nextWorkflowID = new AtomicInteger(0)
 
   val sessionMap = new mutable.HashMap[String, Session]
-  val sessionJobs = new mutable.HashMap[String, ActorRef]
+  val sessionJobs = new mutable.HashMap[String, (TexeraWorkflowCompiler, ActorRef)]
 
 }
 
@@ -43,7 +39,6 @@ class WorkflowWebsocketResource {
 
   @OnMessage
   def myOnMsg(session: Session, message: String): Unit = {
-    println(message)
     val request = objectMapper.readValue(message, classOf[TexeraWsRequest])
     println(request)
     request match {
@@ -55,29 +50,46 @@ class WorkflowWebsocketResource {
       case newLogic: ModifyLogicRequest =>
         println(newLogic)
         modifyLogic(session, newLogic)
-
+      case pause: PauseWorkflowRequest =>
+        pauseWorkflow(session)
+      case resume: ResumeWorkflowRequest =>
+        resumeWorkflow(session)
     }
 
   }
 
   @OnClose
-  def myOnClose(session: Session, cr: CloseReason): Unit = {
-  }
+  def myOnClose(session: Session, cr: CloseReason): Unit = {}
 
   def send(session: Session, event: TexeraWsEvent): Unit = {
     session.getAsyncRemote.sendText(objectMapper.writeValueAsString(event))
   }
 
   def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
-    val controller: ActorRef = WorkflowWebsocketResource.sessionJobs(session.getId)
-    controller ! ModifyLogic(newLogic.newOperatorMetadata)
+    val texeraOperator = newLogic.operator
+    val (compiler, controller) = WorkflowWebsocketResource.sessionJobs(session.getId)
+    compiler.initOperator(texeraOperator)
+    controller ! ModifyLogic(texeraOperator.amberOperator)
+  }
+
+  def pauseWorkflow(session: Session): Unit = {
+    val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
+    controller ! Pause
+  }
+
+  def resumeWorkflow(session: Session): Unit = {
+    val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
+    controller ! Resume
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
-    val ctx = new TexeraContext
+    val context = new TexeraContext
     val workflowID = Integer.toString(WorkflowWebsocketResource.nextWorkflowID.incrementAndGet)
-    ctx.workflowID = workflowID
-    val texeraWorkflowCompiler = new TexeraWorkflowCompiler(TexeraWorkflow(request.operators, request.links), ctx)
+    context.workflowID = workflowID
+    val texeraWorkflowCompiler = new TexeraWorkflowCompiler(
+      TexeraWorkflow(request.operators, request.links, request.breakpoints),
+      context
+    )
 
     texeraWorkflowCompiler.init()
     val violations = texeraWorkflowCompiler.validate
@@ -95,24 +107,28 @@ class WorkflowWebsocketResource {
         WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
       statusUpdate => {
-        println(statusUpdate.operatorStatistics)
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
       },
       modifyLogicCompleted => {
         send(session, ModifyLogicCompletedEvent())
       },
       breakpointTriggered => {
-        send(session, BreakpointTriggeredEvent())
+        send(session, BreakpointTriggeredEvent.apply(breakpointTriggered))
+      },
+      workflowPaused => {
+        send(session, WorkflowPausedEvent())
       }
     )
 
     val controllerActorRef = TexeraWebApplication.actorSystem.actorOf(
-      Controller.props(workflowTag, workflow, false, eventListener, 100))
-    controllerActorRef! AckedControllerInitialization
-    controllerActorRef! Start
+      Controller.props(workflowTag, workflow, false, eventListener, 100)
+    )
+    controllerActorRef ! AckedControllerInitialization
+    texeraWorkflowCompiler.initializeBreakpoint(controllerActorRef)
+    controllerActorRef ! Start
 
-    WorkflowWebsocketResource.sessionJobs(session.getId) = controllerActorRef
+    WorkflowWebsocketResource.sessionJobs(session.getId) =
+      (texeraWorkflowCompiler, controllerActorRef)
   }
-
 
 }

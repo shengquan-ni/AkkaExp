@@ -1,11 +1,17 @@
 package Engine.Architecture.Controller
 
-import Engine.Architecture.Controller.ControllerEvent.{WorkflowCompleted, WorkflowStatusUpdate, ModifyLogicCompleted, BreakpointTriggered}
+import Engine.Architecture.Controller.ControllerEvent.{
+  BreakpointTriggered,
+  ModifyLogicCompleted,
+  WorkflowCompleted,
+  WorkflowPaused,
+  WorkflowStatusUpdate
+}
 
-case class ControllerEventListener
-(
-  val workflowCompletedListener: WorkflowCompleted => Unit,
-  val workflowStatusUpdateListener: WorkflowStatusUpdate => Unit,
-  val modifyLogicCompletedListener: ModifyLogicCompleted => Unit,
-  val breakpointTriggeredListener: BreakpointTriggered => Unit,
+case class ControllerEventListener(
+    val workflowCompletedListener: WorkflowCompleted => Unit,
+    val workflowStatusUpdateListener: WorkflowStatusUpdate => Unit,
+    val modifyLogicCompletedListener: ModifyLogicCompleted => Unit,
+    val breakpointTriggeredListener: BreakpointTriggered => Unit,
+    val workflowPausedListener: WorkflowPaused => Unit
 )

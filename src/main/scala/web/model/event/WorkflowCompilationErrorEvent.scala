@@ -6,5 +6,5 @@ import scala.beans.BeanProperty
 
 case class WorkflowCompilationErrorEvent
 (
-  @BeanProperty violations: Map[String, Set[TexeraConstraintViolation]]
+  violations: Map[String, Set[TexeraConstraintViolation]]
 ) extends TexeraWsEvent

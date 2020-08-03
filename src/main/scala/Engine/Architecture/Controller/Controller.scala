@@ -4,8 +4,7 @@ package Engine.Architecture.Controller
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.Controller.ControllerEvent.{ModifyLogicCompleted, WorkflowStatusUpdate}
-import Engine.Architecture.Controller.ControllerEvent.{WorkflowStatusUpdate, BreakpointTriggered, ModifyLogicCompleted, WorkflowCompleted}
+import Engine.Architecture.Controller.ControllerEvent.{BreakpointTriggered, ModifyLogicCompleted, WorkflowCompleted, WorkflowPaused, WorkflowStatusUpdate}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -371,6 +370,9 @@ class Controller
             pauseTimer.reset()
             safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Paused)
+            if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
+              this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+            }
             context.become(paused)
             unstashAll()
           }
@@ -452,18 +454,21 @@ class Controller
             pauseTimer.reset()
             safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Paused)
+            if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
+              this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+            }
             context.become(paused)
             unstashAll()
           }
         case _ => //skip others
       }
-    case ReportGlobalBreakpointTriggered(bp) =>
+    case ReportGlobalBreakpointTriggered(bp, opID) =>
       self ! Pause
-      context.parent ! ReportGlobalBreakpointTriggered(bp)
+      context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
       if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
-        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered())
+        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
       }
-      log.info(bp)
+      log.info(bp.toString())
     case Pause =>
       pauseTimer.start()
       workflow.operators.foreach( x => principalBiMap.get(x._1) ! Pause)
@@ -527,6 +532,9 @@ class Controller
           pauseTimer.reset()
           safeRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
+          if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
+            this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+          }
           context.become(paused)
           unstashAll()
         }else{
@@ -536,8 +544,8 @@ class Controller
           frontier ++= next.filter(workflow.outLinks.contains).flatMap(workflow.outLinks(_))
         }
       }
-    case ReportGlobalBreakpointTriggered(bp) =>
-      context.parent ! ReportGlobalBreakpointTriggered(bp)
+    case ReportGlobalBreakpointTriggered(bp, opID) =>
+      context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
     case msg => stash()
   }
 
