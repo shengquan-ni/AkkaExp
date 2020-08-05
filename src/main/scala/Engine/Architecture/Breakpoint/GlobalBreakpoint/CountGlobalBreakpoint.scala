@@ -14,9 +14,12 @@ import scala.concurrent.ExecutionContext
 class CountGlobalBreakpoint(id:String, val target:Long) extends GlobalBreakpoint(id) {
 
   var current:Long = 0
+  var localbreakpoints:ArrayBuffer[(ActorRef,LocalBreakpoint)] = new ArrayBuffer[(ActorRef,LocalBreakpoint)]()
 
   override def acceptImpl(sender:ActorRef, localBreakpoint: LocalBreakpoint): Unit = {
     current += localBreakpoint.asInstanceOf[CountBreakpoint].current
+    if(localBreakpoint.isTriggered)
+      localbreakpoints.append((sender,localBreakpoint))
   }
 
   override def isTriggered: Boolean = current == target
@@ -43,7 +46,15 @@ class CountGlobalBreakpoint(id:String, val target:Long) extends GlobalBreakpoint
   override def isRepartitionRequired: Boolean = unReportedWorkers.isEmpty && target != current
 
   override def report(map:mutable.HashMap[(ActorRef,FaultedTuple),ArrayBuffer[String]]):Unit = {
-    map((null,null)) = ArrayBuffer[String](id+" reached "+target)
+    for(i <- localbreakpoints){
+      val k = (i._1,new FaultedTuple(i._2.triggeredTuple,i._2.triggeredTupleId,false))
+      if(map.contains(k)){
+        map(k).append(s"count reached $target")
+      }else{
+        map(k) = ArrayBuffer[String](s"count reached $target")
+      }
+    }
+    localbreakpoints.clear()
   }
 
   override def isCompleted: Boolean = isTriggered

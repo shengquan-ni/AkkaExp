@@ -40,6 +40,7 @@ class ExceptionGlobalBreakpoint(id:String) extends GlobalBreakpoint(id) {
         map(k) = ArrayBuffer[String](i._2.error.toString)
       }
     }
+    exceptions.clear()
   }
 
   override def isCompleted: Boolean = false

@@ -178,4 +178,30 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     parent.ref ! PoisonPill
   }
 
+
+
+  "A workflow" should "be able to trigger count breakpoint in the workflow2, then resume it" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan2))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
+    controller ! PassBreakpointTo("Gen", new CountGlobalBreakpoint("CountBreakpoint", 500))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    var isCompleted = false
+    parent.receiveWhile(30.seconds,10.seconds){
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
+        for(i <- bp){
+          log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
+        }
+        controller ! Resume
+      case ReportState(ControllerState.Paused) =>
+      case ReportState(ControllerState.Completed) =>
+        isCompleted = true
+      case _ =>
+    }
+    assert(isCompleted)
+    parent.ref ! PoisonPill
+  }
+
 }

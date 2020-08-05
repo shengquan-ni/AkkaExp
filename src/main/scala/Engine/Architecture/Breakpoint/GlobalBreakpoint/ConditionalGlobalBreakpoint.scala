@@ -42,6 +42,7 @@ class ConditionalGlobalBreakpoint(id:String, val predicate:Tuple => Boolean) ext
         map(k) = ArrayBuffer[String]("condition unsatisfied")
       }
     }
+    localbreakpoints.clear()
   }
 
   override def isCompleted: Boolean = false

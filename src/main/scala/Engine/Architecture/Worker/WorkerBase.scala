@@ -115,6 +115,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       log.info("Remove breakpoint: "+id)
       sender ! Ack
       removeBreakpoint(id)
+
   }
 
   final def disallowModifyBreakpoints:Receive = {
@@ -257,6 +258,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     allowModifyBreakpoints orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] {
     case Resume =>
+        unhandledFaultedTuples.values.foreach(onResumeTuple)
+        unhandledFaultedTuples.clear()
         onResuming()
         onResumed()
         context.become(running)
@@ -265,18 +268,21 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
       sender ! Ack
       if(!receivedFaultedTupleIds.contains(f.id)){
         receivedFaultedTupleIds.add(f.id)
+        unhandledFaultedTuples.remove(f.id)
         onSkipTuple(f)
       }
     case ModifyTuple(f) =>
       sender ! Ack
       if(!receivedFaultedTupleIds.contains(f.id)){
         receivedFaultedTupleIds.add(f.id)
+        unhandledFaultedTuples.remove(f.id)
         onModifyTuple(f)
       }
     case ResumeTuple(f) =>
       sender ! Ack
       if(!receivedFaultedTupleIds.contains(f.id)){
         receivedFaultedTupleIds.add(f.id)
+        unhandledFaultedTuples.remove(f.id)
         onResumeTuple(f)
       }
     case Pause => context.parent ! ReportState(WorkerState.Paused)

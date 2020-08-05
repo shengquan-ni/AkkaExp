@@ -46,6 +46,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var outputRowCount = 0
   var processedCount:Long = 0L
   var generatedCount:Long = 0L
+  var currentInputTuple:Tuple = _
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -393,9 +394,10 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               dPThreadState = ThreadState.LocalBreakpointTriggered
             }
             self ! LocalBreakpointTriggered
-            breakpoints(0).triggeredTuple = nextTuple
+            breakpoints(0).triggeredTuple = currentInputTuple
             breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
             breakpoints(0).triggeredTupleId = generatedCount
+            breakpoints(0).isInput = true
             processTime += System.nanoTime()-processStart
             Breaks.break()
         }
@@ -452,9 +454,10 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               dPThreadState = ThreadState.LocalBreakpointTriggered
             }
             self ! LocalBreakpointTriggered
-            breakpoints(0).triggeredTuple = nextTuple
+            breakpoints(0).triggeredTuple = currentInputTuple
             breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
             breakpoints(0).triggeredTupleId = generatedCount
+            breakpoints(0).isInput = true
             processTime += System.nanoTime()-processStart
             Breaks.break()
         }
@@ -486,7 +489,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         while (processingIndex < batch.length) {
           exitIfPaused()
           try {
-            dataProcessor.accept(batch(processingIndex))
+            currentInputTuple = batch(processingIndex)
+            dataProcessor.accept(currentInputTuple)
             processedCount += 1
           }catch{
             case e:Exception =>
@@ -494,10 +498,11 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
                 dPThreadState = ThreadState.LocalBreakpointTriggered
               }
               self ! LocalBreakpointTriggered
-              breakpoints(0).triggeredTuple = batch(processingIndex)
+              breakpoints(0).triggeredTuple = currentInputTuple
               breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
               breakpoints(0).asInstanceOf[ExceptionBreakpoint].isInput = true
               breakpoints(0).triggeredTupleId = processedCount
+              breakpoints(0).isInput = true
               processTime += System.nanoTime()-processStart
               Breaks.break()
             case other:Any =>
@@ -517,9 +522,10 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
                   dPThreadState = ThreadState.LocalBreakpointTriggered
                 }
                 self ! LocalBreakpointTriggered
-                breakpoints(0).triggeredTuple = nextTuple
+                breakpoints(0).triggeredTuple = currentInputTuple
                 breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
                 breakpoints(0).triggeredTupleId = generatedCount
+                breakpoints(0).isInput = true
                 processTime += System.nanoTime()-processStart
                 Breaks.break()
             }
