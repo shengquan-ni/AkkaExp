@@ -3,7 +3,7 @@ package web.resource
 import java.util.concurrent.atomic.AtomicInteger
 
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
-import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, Start}
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, SkipTuple, SkipTupleGivenWorkerRef, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
 import Engine.Common.AmberTag.WorkflowTag
 import akka.actor.ActorRef
@@ -54,6 +54,8 @@ class WorkflowWebsocketResource {
         pauseWorkflow(session)
       case resume: ResumeWorkflowRequest =>
         resumeWorkflow(session)
+      case skipTupleMsg: SkipTupleRequest =>
+        skipTuple(session, skipTupleMsg)
     }
 
   }
@@ -63,6 +65,13 @@ class WorkflowWebsocketResource {
 
   def send(session: Session, event: TexeraWsEvent): Unit = {
     session.getAsyncRemote.sendText(objectMapper.writeValueAsString(event))
+  }
+
+  def skipTuple(session: Session, tupleReq: SkipTupleRequest): Unit = {
+    val actorRef = tupleReq.actorRef
+    val faultedTuple = tupleReq.faultedTuple
+    val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
+    controller ! SkipTupleGivenWorkerRef(actorRef,faultedTuple)
   }
 
   def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
@@ -75,11 +84,14 @@ class WorkflowWebsocketResource {
   def pauseWorkflow(session: Session): Unit = {
     val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
     controller ! Pause
+    // workflow paused event will be send after workflow is actually paused
+    // the callback function will handle sending the paused event to frontend
   }
 
   def resumeWorkflow(session: Session): Unit = {
     val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
     controller ! Resume
+    send(session, WorkflowResumedEvent())
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
@@ -117,6 +129,9 @@ class WorkflowWebsocketResource {
       },
       workflowPaused => {
         send(session, WorkflowPausedEvent())
+      },
+      skipTupleResponse => {
+        send(session, SkipTupleResponseEvent())
       }
     )
 
@@ -129,6 +144,9 @@ class WorkflowWebsocketResource {
 
     WorkflowWebsocketResource.sessionJobs(session.getId) =
       (texeraWorkflowCompiler, controllerActorRef)
+
+    send(session, WorkflowStartedEvent())
+
   }
 
 }

@@ -4,7 +4,7 @@ package Engine.Architecture.Controller
 import Clustering.ClusterListener.GetAvailableNodeAddresses
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.{ExceptionGlobalBreakpoint, GlobalBreakpoint}
 import Engine.Architecture.Breakpoint.GlobalBreakpoint.GlobalBreakpoint
-import Engine.Architecture.Controller.ControllerEvent.{BreakpointTriggered, ModifyLogicCompleted, WorkflowCompleted, WorkflowPaused, WorkflowStatusUpdate}
+import Engine.Architecture.Controller.ControllerEvent.{BreakpointTriggered, ModifyLogicCompleted, SkipTupleResponse, WorkflowCompleted, WorkflowPaused, WorkflowStatusUpdate}
 import Engine.Architecture.DeploySemantics.DeployStrategy.OneOnEach
 import Engine.Architecture.DeploySemantics.DeploymentFilter.FollowPrevious
 import Engine.Architecture.DeploySemantics.Layer.{ActorLayer, GeneratorWorkerLayer, ProcessorWorkerLayer}
@@ -546,6 +546,9 @@ class Controller
       }
     case ReportGlobalBreakpointTriggered(bp, opID) =>
       context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
+      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
+        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
+      }
     case msg => stash()
   }
 
@@ -583,6 +586,11 @@ class Controller
       context.parent ! Ack
       if (this.eventListener != null && this.eventListener.get.modifyLogicCompletedListener != null) {
         this.eventListener.get.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
+      }
+    case SkipTupleGivenWorkerRef(actorRef, faultedTuple) =>
+      AdvancedMessageSending.blockingAskWithRetry(actorRef, SkipTuple(faultedTuple),5)
+      if (this.eventListener != null && this.eventListener.get.skipTupleResponseListener != null) {
+        this.eventListener.get.skipTupleResponseListener.apply(SkipTupleResponse())
       }
     case msg => stash()
   }
