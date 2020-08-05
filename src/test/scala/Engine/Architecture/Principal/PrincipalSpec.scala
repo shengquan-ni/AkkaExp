@@ -380,7 +380,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(100000,5.seconds)
@@ -421,7 +421,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(100000,30.seconds)
@@ -464,7 +464,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(5,30.seconds)
@@ -504,7 +504,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(3,30.seconds)
@@ -545,7 +545,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(100000,5.seconds)
@@ -586,7 +586,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(100000,30.seconds)
@@ -636,7 +636,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(100000,30.seconds)
@@ -687,7 +687,7 @@ class PrincipalSpec
             parent.sender() ! Resume
           case _ =>
         }
-      case ReportGlobalBreakpointTriggered(s) =>
+      case ReportGlobalBreakpointTriggered(s, operatorID) =>
         println(s)
     }
     resultValidation(99975,30.seconds)
