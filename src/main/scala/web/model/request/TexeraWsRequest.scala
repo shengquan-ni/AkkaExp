@@ -10,7 +10,8 @@ import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
     new Type(value = classOf[ExecuteWorkflowRequest]),
     new Type(value = classOf[PauseWorkflowRequest]),
     new Type(value = classOf[ResumeWorkflowRequest]),
-    new Type(value = classOf[ModifyLogicRequest])
+    new Type(value = classOf[ModifyLogicRequest]),
+    new Type(value = classOf[SkipTupleRequest])
   )
 )
 trait TexeraWsRequest {}

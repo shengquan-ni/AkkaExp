@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
   new Type(value = classOf[WorkflowResumedEvent]),
   new Type(value = classOf[BreakpointTriggeredEvent]),
   new Type(value = classOf[ModifyLogicCompletedEvent]),
+  new Type(value = classOf[SkipTupleResponseEvent]),
 ))
 trait TexeraWsEvent {
 }

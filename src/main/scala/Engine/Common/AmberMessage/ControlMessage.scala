@@ -4,6 +4,7 @@ import Engine.Operators.OperatorMetadata
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.LocalBreakpoint
 import Engine.Common.AmberTuple.Tuple
+import akka.actor.ActorRef
 
 
 object ControlMessage{
@@ -39,6 +40,8 @@ object ControlMessage{
   final case class ReleaseOutput()
 
   final case class SkipTuple(faultedTuple:FaultedTuple)
+
+  final case class SkipTupleGivenWorkerRef(actorRef: ActorRef, faultedTuple: FaultedTuple)
 
   final case class ModifyTuple(faultedTuple:FaultedTuple)
 
