@@ -75,11 +75,14 @@ class WorkflowWebsocketResource {
   def pauseWorkflow(session: Session): Unit = {
     val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
     controller ! Pause
+    // workflow paused event will be send after workflow is actually paused
+    // the callback function will handle sending the paused event to frontend
   }
 
   def resumeWorkflow(session: Session): Unit = {
     val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
     controller ! Resume
+    send(session, WorkflowResumedEvent())
   }
 
   def executeWorkflow(session: Session, request: ExecuteWorkflowRequest): Unit = {
@@ -129,6 +132,9 @@ class WorkflowWebsocketResource {
 
     WorkflowWebsocketResource.sessionJobs(session.getId) =
       (texeraWorkflowCompiler, controllerActorRef)
+
+    send(session, WorkflowStartedEvent())
+
   }
 
 }
