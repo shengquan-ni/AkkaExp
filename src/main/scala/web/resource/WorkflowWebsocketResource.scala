@@ -3,7 +3,7 @@ package web.resource
 import java.util.concurrent.atomic.AtomicInteger
 
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
-import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, Start}
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, SkipTuple, SkipTupleGivenWorkerRef, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
 import Engine.Common.AmberTag.WorkflowTag
 import akka.actor.ActorRef
@@ -54,6 +54,8 @@ class WorkflowWebsocketResource {
         pauseWorkflow(session)
       case resume: ResumeWorkflowRequest =>
         resumeWorkflow(session)
+      case skipTupleMsg: SkipTupleRequest =>
+        skipTuple(session, skipTupleMsg)
     }
 
   }
@@ -63,6 +65,13 @@ class WorkflowWebsocketResource {
 
   def send(session: Session, event: TexeraWsEvent): Unit = {
     session.getAsyncRemote.sendText(objectMapper.writeValueAsString(event))
+  }
+
+  def skipTuple(session: Session, tupleReq: SkipTupleRequest): Unit = {
+    val actorRef = tupleReq.actorRef
+    val faultedTuple = tupleReq.faultedTuple
+    val controller = WorkflowWebsocketResource.sessionJobs(session.getId)._2
+    controller ! SkipTupleGivenWorkerRef(actorRef,faultedTuple)
   }
 
   def modifyLogic(session: Session, newLogic: ModifyLogicRequest): Unit = {
@@ -117,6 +126,9 @@ class WorkflowWebsocketResource {
       },
       workflowPaused => {
         send(session, WorkflowPausedEvent())
+      },
+      skipTupleResponse => {
+        send(session, SkipTupleResponseEvent())
       }
     )
 

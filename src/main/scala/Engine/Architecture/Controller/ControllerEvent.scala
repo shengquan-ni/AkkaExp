@@ -28,4 +28,6 @@ object ControllerEvent {
       operatorID: String = null
   )
 
+  case class SkipTupleResponse()
+
 }
