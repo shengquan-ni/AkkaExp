@@ -322,7 +322,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       try {
         transferTuple(userFixedTuple, generatedCount)
         userFixedTuple = null
-        generatedCount += 1
       } catch {
         case e: BreakpointException =>
           synchronized {
@@ -402,9 +401,9 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             Breaks.break()
         }
         try {
+          generatedCount += 1
           transferTuple(nextTuple, generatedCount)
           outputRowCount += 1
-          generatedCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -462,9 +461,9 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             Breaks.break()
         }
         try {
+          generatedCount += 1
           transferTuple(nextTuple,generatedCount)
           outputRowCount += 1
-          generatedCount += 1
         }catch{
           case e:BreakpointException =>
             synchronized {
@@ -533,8 +532,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //              if(breakpoints.exists(_.isTriggered)){
 //                log.info("break point triggered but it is not stopped")
 //              }
-              transferTuple(nextTuple,generatedCount)
               generatedCount += 1
+              transferTuple(nextTuple,generatedCount)
               outputRowCount += 1
             }catch{
               case e:BreakpointException =>

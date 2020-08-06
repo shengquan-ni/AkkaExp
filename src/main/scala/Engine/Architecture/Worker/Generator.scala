@@ -83,7 +83,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       output(i).accept(faultedTuple.tuple)
       i += 1
     }
-    generatedCount+=1
   }
 
   override def getOutputRowCount(): Int = {
@@ -137,7 +136,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       try {
         transferTuple(userFixedTuple, generatedCount)
         userFixedTuple = null
-        generatedCount += 1
       } catch {
         case e: BreakpointException =>
           self ! LocalBreakpointTriggered
@@ -178,8 +176,8 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
             Breaks.break()
         }
         try {
-          transferTuple(nextTuple,generatedCount)
           generatedCount += 1
+          transferTuple(nextTuple,generatedCount)
           outputRowCount += 1
         }catch{
           case e:BreakpointException =>
