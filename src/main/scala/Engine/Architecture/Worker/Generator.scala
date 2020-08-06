@@ -36,8 +36,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   @elidable(INFO) var generateTime = 0L
   @elidable(INFO) var generateStart = 0L
 
-  var outputRowCount = 0
-
   override def onResuming(): Unit = {
     super.onResuming()
     Future {
@@ -73,7 +71,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       context.become(paused)
       context.become(breakpointTriggered,discardOld = false)
       unstashAll()
-    case QueryState => sender ! ReportStatistics(WorkerStatistics(WorkerState.Pausing, outputRowCount))
+    case QueryState => sender ! ReportStatistics(WorkerStatistics(WorkerState.Pausing, generatedCount))
     case msg => stash()
   }
 
@@ -86,8 +84,8 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
     generatedCount+=1
   }
 
-  override def getOutputRowCount(): Int = {
-    this.outputRowCount
+  override def getOutputRowCount(): Long = {
+    this.generatedCount
   }
   
   override def onModifyTuple(faultedTuple: FaultedTuple): Unit = {
@@ -180,7 +178,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
         try {
           transferTuple(nextTuple,generatedCount)
           generatedCount += 1
-          outputRowCount += 1
         }catch{
           case e:BreakpointException =>
             self ! LocalBreakpointTriggered

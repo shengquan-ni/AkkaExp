@@ -71,7 +71,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     workerStatisticsMap.update(worker, workerStatistics)
   }
 
-  private def aggregateWorkerStatistics(): Int = {
+  private def aggregateWorkerStatistics(): Long = {
     workerStatisticsMap.values.map(s => s.outputRowCount).sum
   }
 

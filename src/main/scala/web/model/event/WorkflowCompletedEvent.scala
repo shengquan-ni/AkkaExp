@@ -4,7 +4,7 @@ import Engine.Architecture.Controller.ControllerEvent.WorkflowCompleted
 
 import scala.collection.mutable
 
-case class OperatorResult(operatorID: String, table: List[Map[String, Any]])
+case class OperatorResult(operatorID: String, table: List[List[String]])
 
 object WorkflowCompletedEvent {
 
@@ -13,16 +13,8 @@ object WorkflowCompletedEvent {
     val resultList = new mutable.MutableList[OperatorResult]
     workflowCompleted.result.foreach(pair => {
       val operatorID = pair._1
-      val table = new mutable.MutableList[Map[String, Any]]
-      for (tuple <- pair._2) {
-        val tupleMap = new mutable.HashMap[String, Any]
-        for (column <- Range.apply(0, tuple.length)) {
-          val columnName = "_c" + column.toString
-          tupleMap(columnName) = tuple.get(column)
-        }
-        table += tupleMap.toMap
-      }
-      resultList += OperatorResult(operatorID, table.toList)
+      val table = pair._2.map(tuple => tuple.toArray().map(v => v.toString).toList)
+      resultList += OperatorResult(operatorID, table)
     })
     WorkflowCompletedEvent(resultList.toList)
   }

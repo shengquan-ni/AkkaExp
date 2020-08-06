@@ -56,23 +56,24 @@ class TexeraWorkflowCompiler(texeraWorkflow: TexeraWorkflow, context: TexeraCont
       val breakpoint = pair.breakpoint
       breakpoint match {
         case conditionBp: TexeraConditionBreakpoint =>
+          val column = conditionBp.column.toInt
           val predicate: Tuple => Boolean = conditionBp.condition match {
             case TexeraBreakpointCondition.EQ =>
               tuple => {
-                tuple.get(conditionBp.column).toString.trim == conditionBp.value
+                tuple.get(column).toString.trim == conditionBp.value
               }
             case TexeraBreakpointCondition.LT =>
-              tuple => tuple.get(conditionBp.column).toString.trim < conditionBp.value
+              tuple => tuple.get(column).toString.trim < conditionBp.value
             case TexeraBreakpointCondition.LE =>
-              tuple => tuple.get(conditionBp.column).toString.trim <= conditionBp.value
+              tuple => tuple.get(column).toString.trim <= conditionBp.value
             case TexeraBreakpointCondition.GT =>
-              tuple => tuple.get(conditionBp.column).toString.trim > conditionBp.value
+              tuple => tuple.get(column).toString.trim > conditionBp.value
             case TexeraBreakpointCondition.GE =>
-              tuple => tuple.get(conditionBp.column).toString.trim >= conditionBp.value
+              tuple => tuple.get(column).toString.trim >= conditionBp.value
             case TexeraBreakpointCondition.NE =>
-              tuple => tuple.get(conditionBp.column).toString.trim != conditionBp.value
+              tuple => tuple.get(column).toString.trim != conditionBp.value
             case texera.common.workflow.TexeraBreakpointCondition.CONTAINS =>
-              tuple => tuple.get(conditionBp.column).toString.trim.contains(conditionBp.value)
+              tuple => tuple.get(column).toString.trim.contains(conditionBp.value)
           }
           controller ! PassBreakpointTo(operatorID, new ConditionalGlobalBreakpoint(breakpointID, predicate))
         case countBp: TexeraCountBreakpoint =>

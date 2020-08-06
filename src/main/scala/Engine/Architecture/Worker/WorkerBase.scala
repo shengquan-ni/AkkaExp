@@ -91,7 +91,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
   }
 
-  def getOutputRowCount(): Int
+  def getOutputRowCount(): Long
 
   def getResultTuples(): mutable.MutableList[Tuple] = {
     mutable.MutableList()

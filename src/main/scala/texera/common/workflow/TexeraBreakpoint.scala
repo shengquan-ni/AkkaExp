@@ -36,7 +36,7 @@ object TexeraBreakpointCondition extends Enumeration {
 class ConditionType extends TypeReference[TexeraBreakpointCondition.type]
 
 case class TexeraConditionBreakpoint(
-    column: Integer,
+    column: String,
     @JsonScalaEnumeration(classOf[ConditionType]) condition: TexeraBreakpointCondition.Condition,
     value: String
 ) extends TexeraBreakpoint

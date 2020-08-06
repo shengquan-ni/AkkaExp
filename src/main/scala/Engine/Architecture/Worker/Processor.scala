@@ -43,7 +43,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   val aliveUpstreams = new mutable.HashSet[LayerTag]
   @volatile var dPThreadState: ThreadState.Value = ThreadState.Idle
   var processingIndex = 0
-  var outputRowCount = 0
   var processedCount:Long = 0L
   var generatedCount:Long = 0L
   var currentInputTuple:Tuple = _
@@ -211,8 +210,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     dataProcessor.initialize()
   }
 
-  override def getOutputRowCount(): Int = {
-    this.outputRowCount
+  override def getOutputRowCount(): Long = {
+    this.generatedCount
   }
 
   final def activateWhenReceiveDataMessages:Receive = {
@@ -403,7 +402,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         }
         try {
           transferTuple(nextTuple, generatedCount)
-          outputRowCount += 1
           generatedCount += 1
         }catch{
           case e:BreakpointException =>
@@ -463,7 +461,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         }
         try {
           transferTuple(nextTuple,generatedCount)
-          outputRowCount += 1
           generatedCount += 1
         }catch{
           case e:BreakpointException =>
@@ -535,7 +532,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //              }
               transferTuple(nextTuple,generatedCount)
               generatedCount += 1
-              outputRowCount += 1
             }catch{
               case e:BreakpointException =>
                 synchronized {
