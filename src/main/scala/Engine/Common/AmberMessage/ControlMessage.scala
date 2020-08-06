@@ -41,7 +41,7 @@ object ControlMessage{
 
   final case class SkipTuple(faultedTuple:FaultedTuple)
 
-  final case class SkipTupleGivenWorkerRef(actorRef: ActorRef, faultedTuple: FaultedTuple)
+  final case class SkipTupleGivenWorkerRef(actorPath: String, faultedTuple: FaultedTuple)
 
   final case class ModifyTuple(faultedTuple:FaultedTuple)
 

@@ -8,5 +8,5 @@ class PrincipalStateType extends TypeReference[PrincipalState.type]
 
 case class PrincipalStatistics(
     @JsonScalaEnumeration(classOf[PrincipalStateType]) operatorState: PrincipalState,
-    aggregatedOutputRowCount: Int
+    aggregatedOutputRowCount: Long
 )

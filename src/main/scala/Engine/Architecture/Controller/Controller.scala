@@ -587,11 +587,18 @@ class Controller
       if (this.eventListener != null && this.eventListener.get.modifyLogicCompletedListener != null) {
         this.eventListener.get.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
       }
-    case SkipTupleGivenWorkerRef(actorRef, faultedTuple) =>
-      AdvancedMessageSending.blockingAskWithRetry(actorRef, SkipTuple(faultedTuple),5)
-      if (this.eventListener != null && this.eventListener.get.skipTupleResponseListener != null) {
-        this.eventListener.get.skipTupleResponseListener.apply(SkipTupleResponse())
+    case SkipTupleGivenWorkerRef(actorPath, faultedTuple) =>
+      val actorRefFuture = this.context.actorSelection(actorPath).resolveOne()
+      actorRefFuture.onComplete {
+        case scala.util.Success(actorRef) =>
+          AdvancedMessageSending.blockingAskWithRetry(actorRef, SkipTuple(faultedTuple),5)
+          if (this.eventListener != null && this.eventListener.get.skipTupleResponseListener != null) {
+            this.eventListener.get.skipTupleResponseListener.apply(SkipTupleResponse())
+          }
+        case scala.util.Failure(t) =>
+          throw t
       }
+
     case msg => stash()
   }
 

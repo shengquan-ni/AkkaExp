@@ -1,6 +1,5 @@
 package web.model.request
 
-import Engine.Architecture.Breakpoint.FaultedTuple
-import akka.actor.ActorRef
+import web.model.common.FaultedTupleFrontend
 
-case class SkipTupleRequest (actorRef:ActorRef, faultedTuple:FaultedTuple) extends TexeraWsRequest
+case class SkipTupleRequest (actorPath:String, faultedTuple:FaultedTupleFrontend) extends TexeraWsRequest
