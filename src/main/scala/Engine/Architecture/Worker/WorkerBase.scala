@@ -88,6 +88,11 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   def onBreakpointTriggered(): Unit = {
+    breakpoints.foreach{
+      brk =>
+      if(brk.isTriggered)
+        unhandledFaultedTuples(brk.triggeredTupleId) = new FaultedTuple(brk.triggeredTuple,brk.triggeredTupleId,brk.isInput)
+    }
     context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
   }
 

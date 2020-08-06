@@ -29,8 +29,6 @@ trait BreakpointSupport {
   def removeBreakpoint(breakpointID:String): Unit ={
     val idx = breakpoints.indexWhere(_.id == breakpointID)
     if(idx != -1){
-      val brk = breakpoints(idx)
-      unhandledFaultedTuples(brk.triggeredTupleId) = new FaultedTuple(brk.triggeredTuple,brk.triggeredTupleId,brk.isInput)
       breakpoints = breakpoints.take(idx)
     }
   }
