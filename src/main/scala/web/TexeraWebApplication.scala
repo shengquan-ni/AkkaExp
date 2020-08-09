@@ -21,11 +21,11 @@ object TexeraWebApplication {
 
   def main(args: Array[String]): Unit = {
 
-    val local = if (args.length > 1) args(0) else "localhost"
+    val local = if (args.length > 1) args(0) else "remote"
     val localHost = "localhost".equalsIgnoreCase(local)
 
     // start actor master
-    actorSystem = WebUtils.startActorMaster()
+    actorSystem = WebUtils.startActorMaster(localHost)
 
     // start web server
     val server = if (args.length > 2) args(1)
