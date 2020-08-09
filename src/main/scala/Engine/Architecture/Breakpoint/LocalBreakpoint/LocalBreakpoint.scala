@@ -19,4 +19,11 @@ abstract class LocalBreakpoint(val id:String,val version:Long) extends Serializa
   var isInput = false
 
   var triggeredTupleId: Long = -1
+
+  def reset():Unit = {
+    isReported = false
+    triggeredTuple = null
+    isInput = false
+    triggeredTupleId = -1
+  }
 }

@@ -99,4 +99,10 @@ trait DataTransferSupport extends BreakpointSupport {
     }
   }
 
+  def resetOutput(): Unit ={
+    output.foreach{
+      _.reset()
+    }
+  }
+
 }

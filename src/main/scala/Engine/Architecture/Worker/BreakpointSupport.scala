@@ -33,4 +33,10 @@ trait BreakpointSupport {
     }
   }
 
+  def resetBreakpoints(): Unit ={
+    breakpoints.foreach{
+      _.reset()
+    }
+  }
+
 }

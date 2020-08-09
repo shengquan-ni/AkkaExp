@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import Engine.Architecture.Breakpoint.FaultedTuple
 import Engine.Architecture.Breakpoint.LocalBreakpoint.{ExceptionBreakpoint, LocalBreakpoint}
 import Engine.Common.AmberException.BreakpointException
-import Engine.Common.{AdvancedMessageSending, ElidableStatement, ThreadState, TupleProducer}
+import Engine.Common.{AdvancedMessageSending, ElidableStatement, ThreadState, TupleProcessor, TupleProducer}
 import Engine.Common.AmberMessage.WorkerMessage._
 import Engine.Common.AmberMessage.StateMessage._
 import Engine.Common.AmberMessage.ControlMessage._
@@ -27,7 +27,7 @@ object Generator {
   def props(producer:TupleProducer,tag:WorkerTag): Props = Props(new Generator(producer,tag))
 }
 
-class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends WorkerBase with ActorLogging with Stash{
+class Generator(var dataProducer:TupleProducer,val tag:WorkerTag) extends WorkerBase with ActorLogging with Stash{
 
   val dataGenerateExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
   var isGeneratingFinished = false
@@ -35,6 +35,19 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
   var generatedCount = 0L
   @elidable(INFO) var generateTime = 0L
   @elidable(INFO) var generateStart = 0L
+
+
+  override def onReset(value: Any, recoveryInformation:Seq[(Long,Long)]): Unit = {
+    super.onReset(value, recoveryInformation)
+    generatedCount = 0L
+    dataProducer = value.asInstanceOf[TupleProducer]
+    dataProducer.initialize()
+    resetBreakpoints()
+    resetOutput()
+    context.become(ready)
+    self ! Start
+  }
+
 
   override def onResuming(): Unit = {
     super.onResuming()
@@ -50,6 +63,7 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
 
   override def onPaused(): Unit ={
     log.info(s"paused at $generatedCount , 0")
+    context.parent ! ReportCurrentProcessingTuple(null)
     context.parent ! RecoveryPacket(tag, generatedCount, 0)
     context.parent ! ReportState(WorkerState.Paused)
   }
@@ -81,7 +95,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       output(i).accept(faultedTuple.tuple)
       i += 1
     }
-    generatedCount+=1
   }
 
   override def getOutputRowCount(): Long = {
@@ -135,7 +148,6 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       try {
         transferTuple(userFixedTuple, generatedCount)
         userFixedTuple = null
-        generatedCount += 1
       } catch {
         case e: BreakpointException =>
           self ! LocalBreakpointTriggered
@@ -176,8 +188,8 @@ class Generator(val dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
             Breaks.break()
         }
         try {
-          transferTuple(nextTuple,generatedCount)
           generatedCount += 1
+          transferTuple(nextTuple,generatedCount)
         }catch{
           case e:BreakpointException =>
             self ! LocalBreakpointTriggered

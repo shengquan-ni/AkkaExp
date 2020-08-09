@@ -53,4 +53,11 @@ class OneToOnePolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
   override def dispose(): Unit = {
     routee.dispose()
   }
+
+  override def reset(): Unit = {
+    routee.reset()
+    batch = new Array[Tuple](batchSize)
+    currentSize = 0
+    sequenceNum = 0L
+  }
 }

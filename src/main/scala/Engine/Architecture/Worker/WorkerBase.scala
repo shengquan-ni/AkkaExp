@@ -98,6 +98,15 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
   def getOutputRowCount(): Long
 
+  def onReset(value: Any,recoveryInformation:Seq[(Long,Long)]): Unit ={
+    Thread.sleep(10000)
+    receivedRecoveryInformation.clear()
+    receivedRecoveryInformation ++= recoveryInformation
+    userFixedTuple = null
+    receivedFaultedTupleIds.clear()
+    pausedFlag = false
+  }
+
   def getResultTuples(): mutable.MutableList[Tuple] = {
     mutable.MutableList()
   }
@@ -130,6 +139,11 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case RemoveBreakpoint(id) =>
       sender ! Ack
       throw new AmberException(s"Removal of breakpoint $id is not allowed at this time")
+  }
+
+  final def allowReset: Receive = {
+    case Reset(core, rec)=>
+      onReset(core,rec)
   }
 
   final def allowQueryBreakpoint:Receive = {
@@ -233,7 +247,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   } orElse discardOthers
 
   def pausedBeforeStart:Receive =
-    allowStashOrReleaseOutput orElse
+    allowReset orElse allowStashOrReleaseOutput orElse
     allowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     disallowQueryTriggeredBreakpoints orElse[Any, Unit] {
@@ -258,6 +272,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
 
   def paused:Receive =
+    allowReset orElse
     allowStashOrReleaseOutput orElse
     allowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
@@ -311,7 +326,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
 
 
   def running:Receive=
-    allowStashOrReleaseOutput orElse
+    allowReset orElse allowStashOrReleaseOutput orElse
     disallowUpdateOutputLinking orElse
     disallowModifyBreakpoints orElse
     disallowQueryBreakpoint orElse
@@ -377,7 +392,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   } orElse stashOthers
 
   def completed:Receive=
-    allowStashOrReleaseOutput orElse
+    allowReset orElse allowStashOrReleaseOutput orElse
     disallowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     allowQueryBreakpoint orElse[Any, Unit] {

@@ -7,6 +7,7 @@ import Engine.Architecture.Principal.{PrincipalState, PrincipalStatistics}
 import Engine.Common.AmberTag.{AmberTag, LayerTag, WorkerTag}
 import Engine.Common.AmberTuple.Tuple
 import Engine.Operators.OperatorMetadata
+import akka.actor.{ActorPath, ActorRef}
 
 import scala.collection.mutable
 
@@ -30,6 +31,8 @@ object PrincipalMessage{
   final case class ReportOutputResult(results: List[Tuple])
 
   final case class ReportPrincipalPartialCompleted(from:AmberTag,layer:LayerTag)
+
+  final case class ReportCurrentProcessingTuple(tuple:Array[(Tuple,ActorPath)])
 
 
 
