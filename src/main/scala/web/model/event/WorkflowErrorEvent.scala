@@ -10,5 +10,5 @@ case class WorkflowErrorEvent
 (
   operatorErrors: Map[String, Set[TexeraConstraintViolation]] =
     new HashMap[String, Set[TexeraConstraintViolation]](),
-  generalErrorMessages: Set[String] = new HashSet[String]()
+  generalErrors: Map[String, String] = new HashMap[String, String]()
 ) extends TexeraWsEvent

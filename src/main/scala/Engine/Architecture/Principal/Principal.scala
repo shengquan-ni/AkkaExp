@@ -303,8 +303,8 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           k ! QueryState
         }
       }
-    case WorkerMessage.ReportCurrentProcessingTuple(tuple) =>
-      receivedTuples.append((tuple,sender.path))
+    case reportCurrentTuple: WorkerMessage.ReportCurrentProcessingTuple =>
+      receivedTuples.append((reportCurrentTuple.tuple,reportCurrentTuple.workerID))
     case WorkerMessage.ReportState(state) =>
       log.info("pausing: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
@@ -315,7 +315,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           unstashAll()
         }else if (whenAllUncompletedWorkersBecome(WorkerState.Paused)) {
           safeRemoveAskHandle()
-          context.parent ! ReportCurrentProcessingTuple(receivedTuples.toArray)
+          context.parent ! ReportCurrentProcessingTuple(this.metadata.tag.operator, receivedTuples.toArray)
           receivedTuples.clear()
           context.parent ! ReportState(PrincipalState.Paused)
           context.become(paused)

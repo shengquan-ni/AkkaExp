@@ -8,7 +8,7 @@ import scala.collection.mutable
 
 class TexeraContext {
   var workflowID: String = null
-  var validator: javax.validation.Validator = null
+  @transient var validator: javax.validation.Validator = null
   var customFieldIndexMapping: Map[String, Integer] = _
 
   def fieldIndexMapping(field: String): Integer = {

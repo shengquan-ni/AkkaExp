@@ -32,7 +32,7 @@ object PrincipalMessage{
 
   final case class ReportPrincipalPartialCompleted(from:AmberTag,layer:LayerTag)
 
-  final case class ReportCurrentProcessingTuple(tuple:Array[(Tuple,ActorPath)])
+  final case class ReportCurrentProcessingTuple(operatorID: String, tuple:Array[(Tuple,ActorPath)])
 
 
 

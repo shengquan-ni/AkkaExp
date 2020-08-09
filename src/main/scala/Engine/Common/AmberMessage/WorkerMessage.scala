@@ -7,7 +7,7 @@ import Engine.Architecture.Worker.{WorkerState, WorkerStatistics}
 import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberTag.{LayerTag, LinkTag, WorkerTag}
 import Engine.Common.AmberTuple.Tuple
-import akka.actor.ActorRef
+import akka.actor.{ActorPath, ActorRef}
 
 import scala.collection.mutable
 
@@ -51,7 +51,7 @@ object WorkerMessage {
 
   final case class CheckRecovery()
 
-  final case class ReportCurrentProcessingTuple(tuple:Tuple)
+  final case class ReportCurrentProcessingTuple(workerID: ActorPath, tuple:Tuple)
 
   final case class Reset(core:Any, recoveryInformation:Seq[(Long,Long)])
 

@@ -20,13 +20,17 @@ object TexeraWebApplication {
   var validator: Validator = _
 
   def main(args: Array[String]): Unit = {
+
+    val local = if (args.length > 1) args(0) else "localhost"
+    val localHost = "localhost".equalsIgnoreCase(local)
+
     // start actor master
     actorSystem = WebUtils.startActorMaster()
 
     // start web server
-    val server = if (args.length > 1) args(0)
+    val server = if (args.length > 2) args(1)
     else "server"
-    val serverConfig = if (args.length > 2) args(1)
+    val serverConfig = if (args.length > 3) args(2)
     else TexeraUtils.texeraHomePath.resolve("conf").resolve("web-config.yml").toString
     new TexeraWebApplication().run(server, serverConfig)
   }

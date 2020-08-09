@@ -59,7 +59,7 @@ object Controller{
   def props(json:String, withCheckpoint:Boolean = false): Props = Props(fromJsonString(json,withCheckpoint))
 
   def props(tag: WorkflowTag, workflow: Workflow, withCheckpoint: Boolean, eventListener: ControllerEventListener, statusUpdateInterval: Long): Props =
-    Props(new Controller(tag, workflow, withCheckpoint, Option.apply(eventListener), Option.apply(statusUpdateInterval)))
+    Props(new Controller(tag, workflow, withCheckpoint, eventListener, Option.apply(statusUpdateInterval)))
 
   private def fromJsonString(jsonString:String, withCheckpoint:Boolean):Controller ={
     val json: JsValue = Json.parse(jsonString)
@@ -71,7 +71,7 @@ object Controller{
         .map { case (k,v) => (k,v.map(_._2).toSet)}
     val operatorArray:JsArray = (json \ "operators").as[JsArray]
     val operators:mutable.Map[OperatorTag,OperatorMetadata] = mutable.Map(operatorArray.value.map(x => (OperatorTag(tag,x("operatorID").as[String]),jsonToOperatorMetadata(tag,x))):_*)
-    new Controller(tag,new Workflow(operators,links),withCheckpoint, Option.empty, Option.empty)
+    new Controller(tag,new Workflow(operators,links),withCheckpoint, ControllerEventListener(), Option.empty)
 
   }
 
@@ -100,7 +100,8 @@ object Controller{
 class Controller
 (
   val tag: WorkflowTag, val workflow: Workflow, val withCheckpoint: Boolean,
-  val eventListener: Option[ControllerEventListener], val statisticsUpdateIntervalMs: Option[Long]
+  val eventListener: ControllerEventListener = ControllerEventListener(),
+  val statisticsUpdateIntervalMs: Option[Long]
 ) extends Actor with ActorLogging with Stash {
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val timeout:Timeout = 5.seconds
@@ -176,12 +177,11 @@ class Controller
   }
 
   def triggerStatusUpdateEvent(): Unit = {
-    if (this.eventListener.nonEmpty
-      && this.eventListener.get.workflowStatusUpdateListener != null
+    if (this.eventListener.workflowStatusUpdateListener != null
       && this.principalStatisticsMap.nonEmpty) {
       val workflowStatus = this.principalStatisticsMap
         .map(e => (this.principalBiMap.inverse().get(e._1).operator, e._2)).toMap;
-      this.eventListener.get.workflowStatusUpdateListener.apply(WorkflowStatusUpdate(workflowStatus))
+      this.eventListener.workflowStatusUpdateListener.apply(WorkflowStatusUpdate(workflowStatus))
     }
   }
 
@@ -360,8 +360,8 @@ class Controller
             pauseTimer.reset()
             safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Paused)
-            if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
-              this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+            if (this.eventListener.workflowPausedListener != null) {
+              this.eventListener.workflowPausedListener.apply(WorkflowPaused())
             }
             context.become(paused)
             unstashAll()
@@ -442,8 +442,8 @@ class Controller
             pauseTimer.reset()
             safeRemoveAskHandle()
             context.parent ! ReportState(ControllerState.Paused)
-            if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
-              this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+            if (this.eventListener.workflowPausedListener != null) {
+              this.eventListener.workflowPausedListener.apply(WorkflowPaused())
             }
             context.become(paused)
             unstashAll()
@@ -453,8 +453,8 @@ class Controller
     case ReportGlobalBreakpointTriggered(bp, opID) =>
       self ! Pause
       context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
-      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
-        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
+      if (this.eventListener.breakpointTriggeredListener != null) {
+        this.eventListener.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
       }
       log.info(bp.toString())
     case Pause =>
@@ -494,11 +494,10 @@ class Controller
       triggerStatusUpdateEvent();
     case EnforceStateCheck =>
       frontier.flatMap(workflow.inLinks(_)).foreach(principalBiMap.get(_) ! QueryState)
-    case ReportCurrentProcessingTuple(tuples) =>
-      // TODO: send tuples to frontend
-      val principalPath = sender.path
-      println(s"receive current processing tuples from $principalPath :")
-      println(tuples.mkString("\n"))
+    case reportCurrentProcessingTuple: ReportCurrentProcessingTuple =>
+      if (this.eventListener.reportCurrentTuplesListener != null) {
+        this.eventListener.reportCurrentTuplesListener.apply(reportCurrentProcessingTuple);
+      }
     case PrincipalMessage.ReportState(state) =>
       if(state != PrincipalState.Paused && state != PrincipalState.Pausing && state != PrincipalState.Completed){
         sender ! Pause
@@ -527,8 +526,8 @@ class Controller
           pauseTimer.reset()
           safeRemoveAskHandle()
           context.parent ! ReportState(ControllerState.Paused)
-          if (this.eventListener.nonEmpty && this.eventListener.get.workflowPausedListener != null) {
-            this.eventListener.get.workflowPausedListener.apply(WorkflowPaused())
+          if (this.eventListener.workflowPausedListener != null) {
+            this.eventListener.workflowPausedListener.apply(WorkflowPaused())
           }
           context.become(paused)
           unstashAll()
@@ -541,8 +540,8 @@ class Controller
       }
     case ReportGlobalBreakpointTriggered(bp, opID) =>
       context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
-      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
-        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
+      if (this.eventListener.breakpointTriggeredListener != null) {
+        this.eventListener.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
       }
     case msg => stash()
   }
@@ -577,16 +576,16 @@ class Controller
       val principal: ActorRef = principalBiMap.get(newMetadata.tag)
       AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newMetadata), 3)
       context.parent ! Ack
-      if (this.eventListener != null && this.eventListener.get.modifyLogicCompletedListener != null) {
-        this.eventListener.get.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
+      if (this.eventListener.modifyLogicCompletedListener != null) {
+        this.eventListener.modifyLogicCompletedListener.apply(ModifyLogicCompleted())
       }
     case SkipTupleGivenWorkerRef(actorPath, faultedTuple) =>
       val actorRefFuture = this.context.actorSelection(actorPath).resolveOne()
       actorRefFuture.onComplete {
         case scala.util.Success(actorRef) =>
           AdvancedMessageSending.blockingAskWithRetry(actorRef, SkipTuple(faultedTuple),5)
-          if (this.eventListener != null && this.eventListener.get.skipTupleResponseListener != null) {
-            this.eventListener.get.skipTupleResponseListener.apply(SkipTupleResponse())
+          if (this.eventListener.skipTupleResponseListener != null) {
+            this.eventListener.skipTupleResponseListener.apply(SkipTupleResponse())
           }
         case scala.util.Failure(t) =>
           throw t
@@ -644,8 +643,8 @@ class Controller
       val operatorID = this.principalBiMap.inverse().get(sender()).operator
       this.principalSinkResultMap(operatorID) = sinkResults
       if (this.principalSinkResultMap.size == this.workflow.endOperators.size) {
-        if (this.eventListener != null && this.eventListener.get.workflowCompletedListener != null) {
-          this.eventListener.get.workflowCompletedListener.apply(WorkflowCompleted(this.principalSinkResultMap.toMap))
+        if (this.eventListener.workflowCompletedListener != null) {
+          this.eventListener.workflowCompletedListener.apply(WorkflowCompleted(this.principalSinkResultMap.toMap))
         }
       }
       this.exitIfCompleted
@@ -658,8 +657,8 @@ class Controller
   }
 
   private[this] def exitIfCompleted: Unit = {
-    val reportStatistics = this.eventListener != null && this.eventListener.get.workflowStatusUpdateListener != null;
-    val reportOutputResult = this.eventListener != null && this.eventListener.get.workflowCompletedListener != null;
+    val reportStatistics = this.eventListener.workflowStatusUpdateListener != null;
+    val reportOutputResult = this.eventListener.workflowCompletedListener != null;
 
     val reportStatisticsCompleted = !reportStatistics ||
       this.principalStatisticsMap.values.forall(v => v.operatorState == PrincipalState.Completed)

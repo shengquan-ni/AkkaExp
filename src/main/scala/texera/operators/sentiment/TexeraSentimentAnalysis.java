@@ -39,35 +39,34 @@ public class TexeraSentimentAnalysis extends TexeraOperator {
         props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
         StanfordCoreNLPWrapper coreNlp = new StanfordCoreNLPWrapper(props);
         int column = this.context().fieldIndexMapping(attribute);
-        Function1<Tuple, Tuple> func = t -> {
-            String text = t.get(column).toString();
-            Annotation documentAnnotation = new Annotation(text);
-            coreNlp.get().annotate(documentAnnotation);
-            // mainSentiment is calculated by the sentiment class of the longest sentence
-            Integer mainSentiment = 0;
-            Integer longestSentenceLength = 0;
-            for (CoreMap sentence : documentAnnotation.get(CoreAnnotations.SentencesAnnotation.class)) {
-                Tree tree = sentence.get(SentimentCoreAnnotations.SentimentAnnotatedTree.class);
-                int sentiment = RNNCoreAnnotations.getPredictedClass(tree);
-                String sentenceText = sentence.toString();
-                if (sentenceText.length() > longestSentenceLength) {
-                    mainSentiment = sentiment;
-                    longestSentenceLength = sentenceText.length();
-                }
-            }
-            String sentiment = "";
-            if (mainSentiment > 2) {
-                sentiment = "positive";
-            } else if (mainSentiment == 2) {
-                sentiment = "neutral";
-            } else {
-                sentiment = "negative";
-            }
-
-            return new AmberTuple(ArrayUtils.add(t.toArray(), sentiment));
-        };
         return new MapMetadata(this.amberOperatorTag(), Constants.defaultNumWorkers(),
-                (Function1<Tuple, Tuple> & Serializable) func);
+            (Function1<Tuple, Tuple> & Serializable) t -> {
+                String text = t.get(column).toString();
+                Annotation documentAnnotation = new Annotation(text);
+                coreNlp.get().annotate(documentAnnotation);
+                // mainSentiment is calculated by the sentiment class of the longest sentence
+                Integer mainSentiment = 0;
+                Integer longestSentenceLength = 0;
+                for (CoreMap sentence : documentAnnotation.get(CoreAnnotations.SentencesAnnotation.class)) {
+                    Tree tree = sentence.get(SentimentCoreAnnotations.SentimentAnnotatedTree.class);
+                    int sentiment = RNNCoreAnnotations.getPredictedClass(tree);
+                    String sentenceText = sentence.toString();
+                    if (sentenceText.length() > longestSentenceLength) {
+                        mainSentiment = sentiment;
+                        longestSentenceLength = sentenceText.length();
+                    }
+                }
+                String sentiment = "";
+                if (mainSentiment > 2) {
+                    sentiment = "positive";
+                } else if (mainSentiment == 2) {
+                    sentiment = "neutral";
+                } else {
+                    sentiment = "negative";
+                }
+
+                return new AmberTuple(ArrayUtils.add(t.toArray(), sentiment));
+            });
     }
 
     @Override

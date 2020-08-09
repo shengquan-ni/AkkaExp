@@ -204,7 +204,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def onPaused(): Unit ={
     log.info(s"paused at $generatedCount , $processedCount")
-    context.parent ! ReportCurrentProcessingTuple(currentInputTuple)
+    context.parent ! ReportCurrentProcessingTuple(self.path, currentInputTuple)
     context.parent ! RecoveryPacket(tag, generatedCount, processedCount)
     context.parent ! ReportState(WorkerState.Paused)
   }

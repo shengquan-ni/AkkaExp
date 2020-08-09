@@ -1,17 +1,26 @@
 package web
 
-import java.net.InetAddress
+import java.io.{BufferedReader, InputStreamReader}
+import java.net.{InetAddress, URL}
 
 import Clustering.ClusterListener
 import akka.actor.{ActorSystem, Props}
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.typesafe.config.ConfigFactory
-import web.model.request.HelloWorldRequest
 
 object WebUtils {
 
-  def startActorMaster(): ActorSystem = {
-    val localIpAddress = InetAddress.getLocalHost.getHostAddress
+  def startActorMaster(localhost: Boolean): ActorSystem = {
+    var localIpAddress = InetAddress.getLocalHost.getHostAddress
+    if (! localhost) {
+      try{
+        val query = new URL("http://checkip.amazonaws.com")
+        val in = new BufferedReader(new InputStreamReader(query.openStream()))
+        localIpAddress = in.readLine()
+      }catch{
+        case e: Exception => throw e
+      }
+    }
+
     val config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.hostname = $localIpAddress
         akka.remote.netty.tcp.port = 2552

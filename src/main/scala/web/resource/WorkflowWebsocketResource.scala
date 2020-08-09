@@ -3,17 +3,10 @@ package web.resource
 import java.util.concurrent.atomic.AtomicInteger
 
 import Engine.Architecture.Controller.{Controller, ControllerEventListener}
-import Engine.Common.AmberMessage.ControlMessage.{
-  ModifyLogic,
-  Pause,
-  Resume,
-  SkipTuple,
-  SkipTupleGivenWorkerRef,
-  Start
-}
+import Engine.Common.AmberMessage.ControlMessage.{ModifyLogic, Pause, Resume, SkipTuple, SkipTupleGivenWorkerRef, Start}
 import Engine.Common.AmberMessage.ControllerMessage.AckedControllerInitialization
 import Engine.Common.AmberTag.WorkflowTag
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, PoisonPill}
 import javax.websocket.server.ServerEndpoint
 import javax.websocket._
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
@@ -67,15 +60,20 @@ class WorkflowWebsocketResource {
       }
     } catch {
       case e: Throwable => {
-        send(session, WorkflowErrorEvent(generalErrorMessages = Set(e.getMessage)))
+        send(session, WorkflowErrorEvent(generalErrors = Map("exception" ->e.getMessage)))
+        throw e
       }
     }
-
 
   }
 
   @OnClose
-  def myOnClose(session: Session, cr: CloseReason): Unit = {}
+  def myOnClose(session: Session, cr: CloseReason): Unit = {
+    if (WorkflowWebsocketResource.sessionJobs.contains(session.getId)) {
+      println(s"session ${session.getId} disconnected, kill its controller actor")
+      WorkflowWebsocketResource.sessionJobs(session.getId)._2 ! PoisonPill
+    }
+  }
 
   def send(session: Session, event: TexeraWsEvent): Unit = {
     session.getAsyncRemote.sendText(objectMapper.writeValueAsString(event))
@@ -114,9 +112,16 @@ class WorkflowWebsocketResource {
     context.workflowID = workflowID
     context.validator = TexeraWebApplication.validator
     context.customFieldIndexMapping = Map(
-      "create_at" -> 0, "id" -> 1, "text" -> 2,
-      "in_reply_to_status" -> 3, "in_reply_to_user" -> 4, "favorite_count" -> 5,
-      "coordinate" -> 6, "retweet_count" -> 7, "lang" -> 8, "is_retweet" -> 9,
+      "create_at" -> 0,
+      "id" -> 1,
+      "text" -> 2,
+      "in_reply_to_status" -> 3,
+      "in_reply_to_user" -> 4,
+      "favorite_count" -> 5,
+      "coordinate" -> 6,
+      "retweet_count" -> 7,
+      "lang" -> 8,
+      "is_retweet" -> 9
     )
 
     val texeraWorkflowCompiler = new TexeraWorkflowCompiler(
@@ -135,24 +140,27 @@ class WorkflowWebsocketResource {
     val workflowTag = WorkflowTag.apply(workflowID)
 
     val eventListener = ControllerEventListener(
-      completed => {
+      workflowCompletedListener = completed => {
         send(session, WorkflowCompletedEvent.apply(completed))
         WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
-      statusUpdate => {
+      workflowStatusUpdateListener = statusUpdate => {
         send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
       },
-      modifyLogicCompleted => {
+      modifyLogicCompletedListener = _ => {
         send(session, ModifyLogicCompletedEvent())
       },
-      breakpointTriggered => {
+      breakpointTriggeredListener = breakpointTriggered => {
         send(session, BreakpointTriggeredEvent.apply(breakpointTriggered))
       },
-      workflowPaused => {
+      workflowPausedListener = _ => {
         send(session, WorkflowPausedEvent())
       },
-      skipTupleResponse => {
+      skipTupleResponseListener = _ => {
         send(session, SkipTupleResponseEvent())
+      },
+      reportCurrentTuplesListener = report => {
+        send(session, OperatorCurrentTuplesUpdateEvent.apply(report))
       }
     )
 
