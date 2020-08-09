@@ -51,8 +51,8 @@ libraryDependencies ++= Seq(
   "org.glassfish.jersey.media" % "jersey-media-multipart" % jerseyMultipartVersion,
   "com.fasterxml.jackson.module" % "jackson-module-jsonSchema" % jacksonVersion,
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % jacksonVersion,
-  "javax.el" % "javax.el-api" % "3.0.0",
-
+  "javax.el" % "javax.el-api" % "2.2.4",
+  "org.glassfish.web" % "javax.el" % "2.2.4",
 )
 
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "3.9.2"
