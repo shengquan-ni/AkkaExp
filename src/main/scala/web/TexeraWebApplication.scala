@@ -9,14 +9,15 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.dirkraft.dropwizard.fileassets.FileAssetsBundle
 import io.dropwizard.setup.{Bootstrap, Environment}
 import io.dropwizard.websockets.WebsocketBundle
+import javax.validation.Validator
 import org.eclipse.jetty.servlet.ErrorPageErrorHandler
 import texera.common.TexeraUtils
 import web.resource.{SystemMetadataResource, WorkflowWebsocketResource}
 
 object TexeraWebApplication {
 
-  var actorSystem: ActorSystem = null
-
+  var actorSystem: ActorSystem = _
+  var validator: Validator = _
 
   def main(args: Array[String]): Unit = {
     // start actor master
@@ -52,6 +53,8 @@ class TexeraWebApplication extends io.dropwizard.Application[TexeraWebConfigurat
     environment.getApplicationContext.setErrorHandler(eph)
 
     environment.jersey().register(classOf[SystemMetadataResource])
+
+    TexeraWebApplication.validator = environment.getValidator
   }
 
 }

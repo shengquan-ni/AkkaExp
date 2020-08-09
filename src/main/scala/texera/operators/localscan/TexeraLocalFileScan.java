@@ -1,4 +1,4 @@
-package texera.operators.scan;
+package texera.operators.localscan;
 
 import Engine.Common.Constants;
 import Engine.Operators.OperatorMetadata;

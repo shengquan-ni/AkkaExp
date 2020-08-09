@@ -38,7 +38,7 @@ public class TexeraSleepOperator extends TexeraOperator {
     public TexeraOperatorDescription texeraOperatorDescription() {
         return new TexeraOperatorDescription(
                 "Sleep", "do nothing but sleep for x miliseconds per tuple",
-                OperatorGroupConstants.ANALYTICS_GROUP(),
+                OperatorGroupConstants.UTILITY_GROUP(),
                 1, 1
         );
     }

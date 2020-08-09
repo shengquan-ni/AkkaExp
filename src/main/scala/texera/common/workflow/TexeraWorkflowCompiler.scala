@@ -22,7 +22,11 @@ class TexeraWorkflowCompiler(texeraWorkflow: TexeraWorkflow, context: TexeraCont
   }
 
   def validate: Map[String, Set[TexeraConstraintViolation]] =
-    this.texeraWorkflow.operators.map(o => o.operatorID -> o.validate).toMap.filter(pair => pair._2.nonEmpty)
+    this.texeraWorkflow.operators.map(o => {
+      o.operatorID -> {
+        o.validate()
+      }
+    }).toMap.filter(pair => pair._2.nonEmpty)
 
   def amberWorkflow: Workflow = {
     val amberOperators: mutable.Map[OperatorTag, OperatorMetadata] = mutable.Map()
@@ -56,7 +60,7 @@ class TexeraWorkflowCompiler(texeraWorkflow: TexeraWorkflow, context: TexeraCont
       val breakpoint = pair.breakpoint
       breakpoint match {
         case conditionBp: TexeraConditionBreakpoint =>
-          val column = conditionBp.column.toInt
+          val column = this.context.fieldIndexMapping(conditionBp.column);
           val predicate: Tuple => Boolean = conditionBp.condition match {
             case TexeraBreakpointCondition.EQ =>
               tuple => {

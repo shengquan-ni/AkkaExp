@@ -48,22 +48,29 @@ class WorkflowWebsocketResource {
   def myOnMsg(session: Session, message: String): Unit = {
     val request = objectMapper.readValue(message, classOf[TexeraWsRequest])
     println(request)
-    request match {
-      case helloWorld: HelloWorldRequest =>
-        send(session, HelloWorldResponse("hello from texera web server"))
-      case execute: ExecuteWorkflowRequest =>
-        println(execute)
-        executeWorkflow(session, execute)
-      case newLogic: ModifyLogicRequest =>
-        println(newLogic)
-        modifyLogic(session, newLogic)
-      case pause: PauseWorkflowRequest =>
-        pauseWorkflow(session)
-      case resume: ResumeWorkflowRequest =>
-        resumeWorkflow(session)
-      case skipTupleMsg: SkipTupleRequest =>
-        skipTuple(session, skipTupleMsg)
+    try {
+      request match {
+        case helloWorld: HelloWorldRequest =>
+          send(session, HelloWorldResponse("hello from texera web server"))
+        case execute: ExecuteWorkflowRequest =>
+          println(execute)
+          executeWorkflow(session, execute)
+        case newLogic: ModifyLogicRequest =>
+          println(newLogic)
+          modifyLogic(session, newLogic)
+        case pause: PauseWorkflowRequest =>
+          pauseWorkflow(session)
+        case resume: ResumeWorkflowRequest =>
+          resumeWorkflow(session)
+        case skipTupleMsg: SkipTupleRequest =>
+          skipTuple(session, skipTupleMsg)
+      }
+    } catch {
+      case e: Throwable => {
+        send(session, WorkflowErrorEvent(generalErrorMessages = Set(e.getMessage)))
+      }
     }
+
 
   }
 
@@ -105,6 +112,13 @@ class WorkflowWebsocketResource {
     val context = new TexeraContext
     val workflowID = Integer.toString(WorkflowWebsocketResource.nextWorkflowID.incrementAndGet)
     context.workflowID = workflowID
+    context.validator = TexeraWebApplication.validator
+    context.customFieldIndexMapping = Map(
+      "create_at" -> 0, "id" -> 1, "text" -> 2,
+      "in_reply_to_status" -> 3, "in_reply_to_user" -> 4, "favorite_count" -> 5,
+      "coordinate" -> 6, "retweet_count" -> 7, "lang" -> 8, "is_retweet" -> 9,
+    )
+
     val texeraWorkflowCompiler = new TexeraWorkflowCompiler(
       TexeraWorkflow(request.operators, request.links, request.breakpoints),
       context
@@ -113,7 +127,7 @@ class WorkflowWebsocketResource {
     texeraWorkflowCompiler.init()
     val violations = texeraWorkflowCompiler.validate
     if (violations.nonEmpty) {
-      send(session, WorkflowCompilationErrorEvent(violations))
+      send(session, WorkflowErrorEvent(violations))
       return
     }
 
