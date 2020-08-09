@@ -13,4 +13,9 @@ class CountBreakpoint(val target:Long)(implicit id:String,version:Long) extends 
   override def isTriggered: Boolean = current == target
 
   override def isDirty: Boolean = isReported
+
+  override def reset(): Unit = {
+    super.reset()
+    current = 0
+  }
 }

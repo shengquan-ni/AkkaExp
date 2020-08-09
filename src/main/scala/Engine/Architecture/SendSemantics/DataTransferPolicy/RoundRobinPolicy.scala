@@ -66,4 +66,12 @@ class RoundRobinPolicy(batchSize:Int) extends DataTransferPolicy(batchSize) {
   override def dispose(): Unit = {
     routees.foreach(_.dispose())
   }
+
+  override def reset(): Unit = {
+    routees.foreach(_.reset())
+    batch = new Array[Tuple](batchSize)
+    sequenceNum = new Array[Long](routees.length)
+    roundRobinIndex = 0
+    currentSize = 0
+  }
 }

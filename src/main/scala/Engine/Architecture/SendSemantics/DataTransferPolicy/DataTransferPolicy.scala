@@ -27,4 +27,6 @@ abstract class DataTransferPolicy(var batchSize:Int) extends Serializable {
 
   def dispose():Unit
 
+  def reset():Unit
+
 }

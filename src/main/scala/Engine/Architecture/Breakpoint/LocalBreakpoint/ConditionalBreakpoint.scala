@@ -13,4 +13,9 @@ class ConditionalBreakpoint(val predicate:Tuple => Boolean)(implicit id:String, 
   override def isTriggered: Boolean = _isTriggered
 
   override def isDirty: Boolean = isTriggered
+
+  override def reset(): Unit = {
+    super.reset()
+    _isTriggered = false
+  }
 }

@@ -21,4 +21,6 @@ abstract class BaseRoutee(val receiver:ActorRef) extends Serializable {
   def schedule(msg:EndSending)(implicit sender: ActorRef)
 
   def dispose()
+
+  def reset()
 }

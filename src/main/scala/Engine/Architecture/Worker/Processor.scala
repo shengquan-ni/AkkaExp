@@ -50,6 +50,26 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
 
+
+  override def onReset(value: Any, recoveryInformation:Seq[(Long,Long)]): Unit = {
+    super.onReset(value, recoveryInformation)
+    processingIndex = 0
+    processedCount = 0L
+    generatedCount = 0L
+    currentInputTuple = null
+    dataProcessor = value.asInstanceOf[TupleProcessor]
+    dataProcessor.initialize()
+    input.reset()
+    processingQueue.clear()
+    resetBreakpoints()
+    resetOutput()
+    context.become(ready)
+    if(receivedRecoveryInformation.contains((0,0))){
+      self ! Pause
+    }
+  }
+
+
   override def onResuming(): Unit = {
     super.onResuming()
     if (processingQueue.nonEmpty) {
@@ -184,6 +204,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def onPaused(): Unit ={
     log.info(s"paused at $generatedCount , $processedCount")
+    context.parent ! ReportCurrentProcessingTuple(currentInputTuple)
     context.parent ! RecoveryPacket(tag, generatedCount, processedCount)
     context.parent ! ReportState(WorkerState.Paused)
   }

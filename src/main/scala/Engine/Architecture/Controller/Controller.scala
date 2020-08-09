@@ -16,9 +16,8 @@ import Engine.Common.AmberException.AmberException
 import Engine.Common.AmberMessage.ControllerMessage._
 import Engine.Common.AmberMessage.ControlMessage._
 import Engine.Common.AmberMessage.PrincipalMessage
-import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, AssignBreakpoint, GetOutputLayer, ReportPrincipalPartialCompleted}
+import Engine.Common.AmberMessage.PrincipalMessage.{AckedPrincipalInitialization, AssignBreakpoint, GetOutputLayer, ReportCurrentProcessingTuple, ReportOutputResult, ReportPrincipalPartialCompleted}
 import Engine.Common.AmberMessage.StateMessage.EnforceStateCheck
-import Engine.Common.AmberMessage.PrincipalMessage.ReportOutputResult
 import Engine.Common.AmberTag.{AmberTag, LayerTag, LinkTag, OperatorTag, WorkflowTag}
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.{AdvancedMessageSending, AmberUtils, Constants, TupleProducer}
@@ -35,6 +34,7 @@ import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata
 import Engine.Operators.Sink.SimpleSinkOperatorMetadata
 import Engine.Operators.Sort.SortMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSelection, Address, Cancellable, Deploy, PoisonPill, Props, Stash}
+import akka.dispatch.Futures
 import akka.event.LoggingAdapter
 import akka.pattern.ask
 import akka.remote.RemoteScope
@@ -45,9 +45,10 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 
+import collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -162,27 +163,16 @@ class Controller
     }
   }
 
-  private def stopCurrentStage(): Unit ={
-    principalInCurrentStage.foreach{
-      x => x ! StopCurrentStage
-    }
-  }
 
-  private def recoverCurrentStage(): Unit ={
-    recoveryMode = true
-    principalInCurrentStage.foreach{
-      x =>
-        principalStates.remove(x)
-    }
-    principalInCurrentStage.clear()
-    frontier.clear()
-    if(prevFrontier != null) {
-      frontier ++= prevFrontier
-    }else{
-      frontier ++= workflow.startOperators
-    }
-    context.become(receive)
-    self ! ContinuedInitialization
+  private def killAndRecoverStage(): Unit ={
+    val futures = principalInCurrentStage.filter(x=> !principalBiMap.inverse().get(x).operator.contains("Sink")).map{
+      x=>
+        principalStates(x) = PrincipalState.Running
+        AdvancedMessageSending.nonBlockingAskWithRetry(x, KillAndRecover, 5, 0)(3.minutes, ec, log)
+    }.asJava
+    val tasks = Futures.sequence(futures,ec)
+    Await.result(tasks,5.minutes)
+    context.become(pausing)
   }
 
   def triggerStatusUpdateEvent(): Unit = {
@@ -390,10 +380,8 @@ class Controller
   }
 
   private[this] def running:Receive ={
-    case StopCurrentStage =>
-      stopCurrentStage()
-    case RecoverCurrentStage =>
-      recoverCurrentStage()
+    case KillAndRecover =>
+      killAndRecoverStage()
     case QueryStatistics =>
       this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
     case PrincipalMessage.ReportStatistics(statistics) =>
@@ -465,9 +453,9 @@ class Controller
     case ReportGlobalBreakpointTriggered(bp, opID) =>
       self ! Pause
       context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
-      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
-        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
-      }
+//      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
+//        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
+//      }
       log.info(bp.toString())
     case Pause =>
       pauseTimer.start()
@@ -506,6 +494,11 @@ class Controller
       triggerStatusUpdateEvent();
     case EnforceStateCheck =>
       frontier.flatMap(workflow.inLinks(_)).foreach(principalBiMap.get(_) ! QueryState)
+    case ReportCurrentProcessingTuple(tuples) =>
+      // TODO: send tuples to frontend
+      val principalPath = sender.path
+      println(s"receive current processing tuples from $principalPath :")
+      println(tuples.mkString("\n"))
     case PrincipalMessage.ReportState(state) =>
       if(state != PrincipalState.Paused && state != PrincipalState.Pausing && state != PrincipalState.Completed){
         sender ! Pause
@@ -526,7 +519,9 @@ class Controller
           }
           unstashAll()
         }else if(allUnCompletedPrincipalStates.forall(_ == PrincipalState.Paused)){
-          pauseTimer.stop()
+          if(pauseTimer.isRunning){
+            pauseTimer.stop()
+          }
           frontier.clear()
           log.info("workflow paused! Time Elapsed: "+pauseTimer.toString())
           pauseTimer.reset()
@@ -553,10 +548,8 @@ class Controller
   }
 
   private[this] def paused:Receive = {
-    case StopCurrentStage =>
-      stopCurrentStage()
-    case RecoverCurrentStage =>
-      recoverCurrentStage()
+    case KillAndRecover =>
+      killAndRecoverStage()
     case QueryStatistics =>
       this.principalBiMap.values().forEach(principal => principal ! QueryStatistics)
     case PrincipalMessage.ReportStatistics(statistics) =>

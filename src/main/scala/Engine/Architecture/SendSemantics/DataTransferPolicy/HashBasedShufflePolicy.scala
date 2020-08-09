@@ -72,4 +72,14 @@ class HashBasedShufflePolicy(batchSize:Int,val hashFunc:Tuple => Int) extends Da
   override def dispose(): Unit = {
     routees.foreach(_.dispose())
   }
+
+  override def reset(): Unit = {
+    routees.foreach(_.reset())
+    batches = new Array[Array[Tuple]](routees.length)
+    for(i <- routees.indices){
+      batches(i) = new Array[Tuple](batchSize)
+    }
+    currentSizes = new Array[Int](routees.length)
+    sequenceNum = new Array[Long](routees.length)
+  }
 }

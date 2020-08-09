@@ -11,6 +11,9 @@ import akka.remote.RemoteScope
 
 class ProcessorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProcessor, _numWorkers:Int, df: DeploymentFilter, ds: DeployStrategy) extends ActorLayer(tag,_numWorkers,df,ds) {
 
+  var metadataForFirst:TupleProcessor = _
+  var deployForFirst:Address = _
+
   override def clone(): AnyRef = {
     val res = new ProcessorWorkerLayer(tag,metadata,numWorkers,df,ds)
     res.layer = layer.clone()
@@ -23,9 +26,16 @@ class ProcessorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProcessor, _n
     layer = new Array[ActorRef](numWorkers)
     for(i <- 0 until numWorkers){
       val workerTag = WorkerTag(tag,i)
-      layer(i)=context.actorOf(Processor.props(metadata(i),workerTag).withDeploy(Deploy(scope = RemoteScope(deployStrategy.next()))))
+      val m = metadata(i)
+      val d = deployStrategy.next()
+      if(i == 0){
+        metadataForFirst = m
+        tagForFirst = workerTag
+        deployForFirst = d
+      }
+      layer(i)=context.actorOf(Processor.props(m,workerTag).withDeploy(Deploy(scope = RemoteScope(d))))
     }
   }
 
-
+  override def getFirstMetadata:Any = metadataForFirst
 }

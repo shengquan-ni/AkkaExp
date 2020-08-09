@@ -48,4 +48,10 @@ abstract class ActorRoutee(receiver: ActorRef) extends BaseRoutee(receiver) {
   override def dispose(): Unit = {
     senderActor ! PoisonPill
   }
+
+  override def reset(): Unit = {
+    senderActor ! PoisonPill
+    stash.clear()
+    isPaused = false
+  }
 }

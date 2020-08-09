@@ -10,4 +10,9 @@ class ExceptionBreakpoint()(implicit id:String, version:Long) extends LocalBreak
   override def isTriggered: Boolean = triggeredTuple != null
 
   override def isDirty: Boolean = isTriggered
+
+  override def reset(): Unit = {
+    super.reset()
+    error = null
+  }
 }

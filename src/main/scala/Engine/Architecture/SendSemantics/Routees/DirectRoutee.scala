@@ -55,4 +55,9 @@ class DirectRoutee(receiver:ActorRef) extends BaseRoutee(receiver) {
   }
 
   override def toString: String = s"DirectRoutee($receiver)"
+
+  override def reset(): Unit = {
+    stash.clear()
+    isPaused = false
+  }
 }

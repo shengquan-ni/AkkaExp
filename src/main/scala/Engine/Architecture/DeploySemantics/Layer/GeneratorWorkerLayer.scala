@@ -11,6 +11,9 @@ import akka.remote.RemoteScope
 
 class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _numWorkers:Int, df: DeploymentFilter, ds: DeployStrategy ) extends ActorLayer(tag,_numWorkers,df,ds) {
 
+  var metadataForFirst:TupleProducer = _
+  var deployForFirst:Address = _
+
   override def clone(): AnyRef = {
     val res = new GeneratorWorkerLayer(tag,metadata,numWorkers,df,ds)
     res.layer = layer.clone()
@@ -24,7 +27,14 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
     for(i <- 0 until numWorkers){
       try{
         val workerTag = WorkerTag(tag,i)
-        layer(idx)=context.actorOf(Generator.props(metadata(i),workerTag).withDeploy(Deploy(scope = RemoteScope(deployStrategy.next()))))
+        val m = metadata(i)
+        val d = deployStrategy.next()
+        if(i == 0){
+          metadataForFirst = m
+          tagForFirst = workerTag
+          deployForFirst = d
+        }
+        layer(idx)=context.actorOf(Generator.props(m,workerTag).withDeploy(Deploy(scope = RemoteScope(d))))
         idx += 1
       }
       catch{
@@ -37,4 +47,5 @@ class GeneratorWorkerLayer(tag:LayerTag, val metadata: Int => TupleProducer, _nu
     }
   }
 
+  override def getFirstMetadata:Any = metadataForFirst
 }

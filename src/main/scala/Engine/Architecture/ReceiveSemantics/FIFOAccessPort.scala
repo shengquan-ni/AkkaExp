@@ -17,6 +17,25 @@ class FIFOAccessPort {
 
   def isFinished: Boolean = endToBeReceived.isEmpty
 
+  def reset(): Unit ={
+    seqNumMap.keys.foreach{
+      sender =>
+      seqNumMap(sender) = 0
+      stashedMessage(sender) = new mutable.LongMap[Array[Tuple]]
+    }
+    endMap.clear()
+    endToBeReceived.clear()
+    actorToEdge.foreach{
+      x =>
+      val (sender,from) = x
+        if(endToBeReceived.contains(from)){
+          endToBeReceived(from).add(sender)
+        }else{
+          endToBeReceived(from) = mutable.HashSet[ActorRef](sender)
+        }
+    }
+  }
+
   def addSender(sender:ActorRef, from:LayerTag): Unit ={
     val edge = actorToEdge.values.find(m => m == from)
     seqNumMap(sender) = 0
