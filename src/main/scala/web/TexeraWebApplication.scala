@@ -40,7 +40,7 @@ class TexeraWebApplication extends io.dropwizard.Application[TexeraWebConfigurat
 
   override def initialize(bootstrap: Bootstrap[TexeraWebConfiguration]): Unit = {
     // serve static frontend GUI files
-    bootstrap.addBundle(new FileAssetsBundle("./new-gui/dist/", "/", "index.html"))
+    bootstrap.addBundle(new FileAssetsBundle(".texera/core/new-gui/dist/", "/", "index.html"))
     // add websocket bundle
     bootstrap.addBundle(new WebsocketBundle(classOf[WorkflowWebsocketResource]))
     // register scala module to dropwizard default object mapper
