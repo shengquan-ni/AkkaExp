@@ -1,15 +1,10 @@
 package web
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-
-import Engine.Common.AmberTag.WorkflowTag
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.dirkraft.dropwizard.fileassets.FileAssetsBundle
 import io.dropwizard.setup.{Bootstrap, Environment}
 import io.dropwizard.websockets.WebsocketBundle
-import javax.validation.Validator
 import org.eclipse.jetty.servlet.ErrorPageErrorHandler
 import texera.common.TexeraUtils
 import web.resource.{SystemMetadataResource, WorkflowWebsocketResource}
@@ -17,7 +12,6 @@ import web.resource.{SystemMetadataResource, WorkflowWebsocketResource}
 object TexeraWebApplication {
 
   var actorSystem: ActorSystem = _
-  var validator: Validator = _
 
   def main(args: Array[String]): Unit = {
 
@@ -57,8 +51,6 @@ class TexeraWebApplication extends io.dropwizard.Application[TexeraWebConfigurat
     environment.getApplicationContext.setErrorHandler(eph)
 
     environment.jersey().register(classOf[SystemMetadataResource])
-
-    TexeraWebApplication.validator = environment.getValidator
   }
 
 }

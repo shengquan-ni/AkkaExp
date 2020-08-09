@@ -5,24 +5,20 @@ import Engine.Operators.OperatorMetadata;
 import Engine.Operators.Scan.HDFSFileScan.HDFSFileScanMetadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import org.hibernate.validator.constraints.NotEmpty;
 import texera.common.schema.OperatorGroupConstants;
 import texera.common.schema.TexeraOperatorDescription;
 import texera.common.workflow.TexeraOperator;
 
 public class TexeraHdfsFileScan extends TexeraOperator {
 
-    @NotEmpty
     @JsonProperty("HDFS host")
     @JsonPropertyDescription("HDFS host URL and port")
     public String hdfsHost;
 
-    @NotEmpty
     @JsonProperty("file path")
     @JsonPropertyDescription("HDFS file path")
     public String filePath;
 
-    @NotEmpty
     @JsonProperty("delimiter")
     @JsonPropertyDescription("delimiter to separate each line into fields")
     public String delimiter;

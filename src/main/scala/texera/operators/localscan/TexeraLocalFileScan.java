@@ -3,22 +3,19 @@ package texera.operators.localscan;
 import Engine.Common.Constants;
 import Engine.Operators.OperatorMetadata;
 import Engine.Operators.Scan.LocalFileScan.LocalFileScanMetadata;
-import org.hibernate.validator.constraints.NotEmpty;
-import texera.common.schema.OperatorGroupConstants;
-import texera.common.workflow.TexeraOperator;
-import texera.common.schema.TexeraOperatorDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import texera.common.schema.OperatorGroupConstants;
+import texera.common.schema.TexeraOperatorDescription;
+import texera.common.workflow.TexeraOperator;
 
 
 public class TexeraLocalFileScan extends TexeraOperator {
 
-    @NotEmpty
     @JsonProperty("file path")
     @JsonPropertyDescription("local file path")
     public String filePath;
 
-    @NotEmpty
     @JsonProperty("delimiter")
     @JsonPropertyDescription("delimiter to separate each line into fields")
     public String delimiter;

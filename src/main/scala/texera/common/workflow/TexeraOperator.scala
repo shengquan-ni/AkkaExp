@@ -44,11 +44,7 @@ abstract class TexeraOperator {
   def texeraOperatorDescription: TexeraOperatorDescription
 
   def validate(): Set[TexeraConstraintViolation] = {
-    if (this.context.validator == null) {
-      Set()
-    } else {
-      TexeraConstraintViolation.of(JavaConverters.asScalaSet(this.context.validator.validate(this))).toSet
-    }
+    Set()
   }
 
   override def hashCode: Int = HashCodeBuilder.reflectionHashCode(this)

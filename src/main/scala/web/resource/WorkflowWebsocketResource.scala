@@ -110,7 +110,6 @@ class WorkflowWebsocketResource {
     val context = new TexeraContext
     val workflowID = Integer.toString(WorkflowWebsocketResource.nextWorkflowID.incrementAndGet)
     context.workflowID = workflowID
-    context.validator = TexeraWebApplication.validator
     context.customFieldIndexMapping = Map(
       "create_at" -> 0,
       "id" -> 1,

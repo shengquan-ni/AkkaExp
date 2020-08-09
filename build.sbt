@@ -27,11 +27,12 @@ libraryDependencies ++= Seq(
 
 val excludeHadoopJersey = ExclusionRule(organization = "com.sun.jersey")
 val excludeHadoopSlf4j = ExclusionRule(organization = "org.slf4j")
+val excludeHadoopJsp = ExclusionRule(organization = "javax.servlet.jsp")
 
 libraryDependencies ++= Seq(
-  "org.apache.hadoop" % "hadoop-common" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
-  "org.apache.hadoop" % "hadoop-client" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j, excludeHadoopJsp),
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j, excludeHadoopJsp),
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j, excludeHadoopJsp),
 )
 
 // dropwizard webframework
@@ -43,7 +44,6 @@ val jacksonVersion = "2.9.10"
 libraryDependencies ++= Seq(
   "io.dropwizard" % "dropwizard-core" % dropwizardVersion,
   "io.dropwizard" % "dropwizard-client" % dropwizardVersion,
-  "io.dropwizard" % "dropwizard-validation" % dropwizardVersion,
 
   "com.github.dirkraft.dropwizard" % "dropwizard-file-assets" % "0.0.2",
   "io.dropwizard-bundles" % "dropwizard-redirect-bundle" % "1.0.5",
@@ -51,8 +51,6 @@ libraryDependencies ++= Seq(
   "org.glassfish.jersey.media" % "jersey-media-multipart" % jerseyMultipartVersion,
   "com.fasterxml.jackson.module" % "jackson-module-jsonSchema" % jacksonVersion,
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % jacksonVersion,
-  "javax.el" % "javax.el-api" % "3.0.0",
-  "org.glassfish" % "javax.el" % "3.0.0",
 )
 
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "3.9.2"

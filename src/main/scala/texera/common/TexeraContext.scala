@@ -1,14 +1,7 @@
 package texera.common
 
-import java.lang.NumberFormatException
-
-import javax.validation.Validator
-
-import scala.collection.mutable
-
 class TexeraContext {
   var workflowID: String = null
-  @transient var validator: javax.validation.Validator = null
   var customFieldIndexMapping: Map[String, Integer] = _
 
   def fieldIndexMapping(field: String): Integer = {

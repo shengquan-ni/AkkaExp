@@ -14,7 +14,6 @@ import edu.stanford.nlp.sentiment.SentimentCoreAnnotations;
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.util.CoreMap;
 import org.apache.commons.lang3.ArrayUtils;
-import org.hibernate.validator.constraints.NotEmpty;
 import scala.Function1;
 import scala.Serializable;
 import texera.common.schema.OperatorGroupConstants;
@@ -25,7 +24,6 @@ import java.util.Properties;
 
 public class TexeraSentimentAnalysis extends TexeraOperator {
 
-    @NotEmpty
     @JsonProperty("attribute")
     @JsonPropertyDescription("column to perform sentiment analysis on")
     public String attribute;
