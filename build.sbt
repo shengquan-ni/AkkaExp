@@ -26,11 +26,12 @@ libraryDependencies ++= Seq(
   "com.chuusai" %% "shapeless" % "2.3.3")
 
 val excludeHadoopJersey = ExclusionRule(organization = "com.sun.jersey")
+val excludeHadoopSlf4j = ExclusionRule(organization = "org.slf4j")
 
 libraryDependencies ++= Seq(
-  "org.apache.hadoop" % "hadoop-common" % hadoopVersion excludeAll(excludeHadoopJersey),
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion excludeAll(excludeHadoopJersey),
-  "org.apache.hadoop" % "hadoop-client" % hadoopVersion excludeAll(excludeHadoopJersey),
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion excludeAll(excludeHadoopJersey, excludeHadoopSlf4j),
 )
 
 // dropwizard webframework
