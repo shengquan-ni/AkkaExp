@@ -453,9 +453,9 @@ class Controller
     case ReportGlobalBreakpointTriggered(bp, opID) =>
       self ! Pause
       context.parent ! ReportGlobalBreakpointTriggered(bp, opID)
-//      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
-//        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
-//      }
+      if (this.eventListener != null && this.eventListener.get.breakpointTriggeredListener != null) {
+        this.eventListener.get.breakpointTriggeredListener.apply(BreakpointTriggered(bp, opID))
+      }
       log.info(bp.toString())
     case Pause =>
       pauseTimer.start()
