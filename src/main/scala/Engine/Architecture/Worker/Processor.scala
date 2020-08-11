@@ -17,6 +17,7 @@ import Engine.Operators.KeywordSearch.{KeywordSearchMetadata, KeywordSearchTuple
 import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, ThreadState, TupleProcessor}
 import Engine.Operators.Sink.SimpleSinkProcessor
 import Engine.FaultTolerance.Recovery.RecoveryPacket
+import Engine.Operators.Common.Filter.{FilterGeneralMetadata, FilterGeneralTupleProcessor}
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -297,19 +298,17 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       sender ! Ack
       //val json: JsValue = Json.parse(newLogic)
       // val operatorType = json("operatorID").as[String]
+      log.info("modify logic received by worker " + this.self.path.name + ", updating logic")
       newMetadata match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
-          var dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
           dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
-          dataProcessor = dp
-//        case filterOpMetadata: FilterMetadata =>
-//          var dp: FilterSpecializedTupleProcessor = dataProcessor.asInstanceOf[FilterSpecializedTupleProcessor]
-//          dp.filterType = 0 //unused parameter
-//          dp.targetField = json("targetField").as[Int]
-//          dp.threshold = DateTime.parse(json("threshold").as[String])
-//          dataProcessor = dp
+        case filterOpMetadata: FilterGeneralMetadata =>
+          val dp = dataProcessor.asInstanceOf[FilterGeneralTupleProcessor]
+          dp.filterFunc = filterOpMetadata.filterFunc
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
+      log.info("modify logic received by worker " + this.self.path.name + ", updating logic completed")
   }
 
 

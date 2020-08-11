@@ -19,7 +19,7 @@ object TexeraWebApplication {
     val localHost = "localhost".equalsIgnoreCase(local)
 
     // start actor master
-    actorSystem = WebUtils.startActorMaster(localHost)
+    actorSystem = WebUtils.startActorMaster(true)
 
     // start web server
     val server = if (args.length > 2) args(1)

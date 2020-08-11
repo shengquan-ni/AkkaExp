@@ -29,7 +29,7 @@ public class TexeraLocalFileScan extends TexeraOperator {
     @Override
     public TexeraOperatorDescription texeraOperatorDescription() {
         return new TexeraOperatorDescription(
-                "Local File Scan",
+                "File Scan",
                 "Scan data from a local file",
                 OperatorGroupConstants.SOURCE_GROUP(),
                 0, 1);

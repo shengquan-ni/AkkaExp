@@ -6,8 +6,8 @@ import Engine.Common.AmberTuple.AmberTuple
 
 object FaultedTupleFrontend{
   def apply(faultedTuple: FaultedTuple): FaultedTupleFrontend = {
-    val tuple = faultedTuple.tuple;
-    val tupleList = faultedTuple.tuple.toArray().map(v => v.toString).toList
+    val tuple = faultedTuple.tuple
+    val tupleList = faultedTuple.tuple.toArray().filter(v => v != null).map(v => v.toString).toList
     FaultedTupleFrontend(tupleList, faultedTuple.id, faultedTuple.isInput)
   }
 }

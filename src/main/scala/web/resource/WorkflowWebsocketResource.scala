@@ -11,6 +11,7 @@ import javax.websocket.server.ServerEndpoint
 import javax.websocket._
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
 import texera.common.{TexeraContext, TexeraUtils}
+import texera.operators.sink.TexeraAdhocSink
 import web.TexeraWebApplication
 import web.model.event._
 import web.model.request._
@@ -114,13 +115,11 @@ class WorkflowWebsocketResource {
       "create_at" -> 0,
       "id" -> 1,
       "text" -> 2,
-      "in_reply_to_status" -> 3,
-      "in_reply_to_user" -> 4,
-      "favorite_count" -> 5,
-      "coordinate" -> 6,
-      "retweet_count" -> 7,
-      "lang" -> 8,
-      "is_retweet" -> 9
+      "favorite_count" -> 3,
+      "retweet_count" -> 4,
+      "lang" -> 5,
+      "is_retweet" -> 6,
+      "sentiment" -> 7,
     )
 
     val texeraWorkflowCompiler = new TexeraWorkflowCompiler(
@@ -144,7 +143,15 @@ class WorkflowWebsocketResource {
         WorkflowWebsocketResource.sessionJobs.remove(session.getId)
       },
       workflowStatusUpdateListener = statusUpdate => {
-        send(session, WorkflowStatusUpdateEvent(statusUpdate.operatorStatistics))
+        val updateMutable = mutable.HashMap(statusUpdate.operatorStatistics.toSeq: _*)
+        val sinkID = texeraWorkflowCompiler.texeraWorkflow.operators
+          .find(p => p.isInstanceOf[TexeraAdhocSink]).get.operatorID
+        val sinkInputID = texeraWorkflowCompiler.texeraWorkflow.links
+          .find(link => link.destination == sinkID).get.origin
+        if (updateMutable.contains(sinkInputID)) {
+          updateMutable(sinkID) = updateMutable(sinkInputID)
+        }
+        send(session, WorkflowStatusUpdateEvent(updateMutable.toMap))
       },
       modifyLogicCompletedListener = _ => {
         send(session, ModifyLogicCompletedEvent())

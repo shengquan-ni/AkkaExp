@@ -566,15 +566,11 @@ class Controller
     case Pause =>
     case EnforceStateCheck =>
     case ModifyLogic(newMetadata) =>
-      // newLogic is something like {"operatorID":"Filter","operatorType":"Filter","targetField":2,"filterType":"Greater","threshold":"1991-01-01"}
-
-//      val json: JsValue = Json.parse(newLogic)
-//      val id = json("operatorID").as[String]
-//      val operatorTag = OperatorTag(tag.workflow,id)
-
       // newLogic is now an OperatorMetadata
       val principal: ActorRef = principalBiMap.get(newMetadata.tag)
+      log.info("modify logic received by controller, sending to principal")
       AdvancedMessageSending.blockingAskWithRetry(principal, ModifyLogic(newMetadata), 3)
+      log.info("modify logic received by controller, sent to principal")
       context.parent ! Ack
       if (this.eventListener.modifyLogicCompletedListener != null) {
         this.eventListener.modifyLogicCompletedListener.apply(ModifyLogicCompleted())

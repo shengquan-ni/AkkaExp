@@ -7,8 +7,8 @@ import Engine.Common.TupleProcessor
 import scala.Function1
 import scala.reflect.ClassTag
 
-class FilterTupleProcessor(
-  val filterFunc: (Tuple => Boolean) with java.io.Serializable
+class FilterGeneralTupleProcessor(
+  var filterFunc: (Tuple => java.lang.Boolean) with java.io.Serializable
 ) extends TupleProcessor {
   private var tuple: Tuple = _
   private var nextFlag = false

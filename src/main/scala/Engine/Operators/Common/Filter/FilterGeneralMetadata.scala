@@ -15,10 +15,10 @@ import akka.util.Timeout
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-class FilterMetadata(
+class FilterGeneralMetadata(
     override val tag: OperatorTag,
     val numWorkers: Int,
-    val filterFunc: Tuple => Boolean
+    val filterFunc: (Tuple => java.lang.Boolean) with java.io.Serializable
 ) extends OperatorMetadata(tag) {
   override lazy val topology: Topology = {
     new Topology(
@@ -26,9 +26,8 @@ class FilterMetadata(
         new ProcessorWorkerLayer(
           LayerTag(tag, "main"),
           _ =>
-            new FilterTupleProcessor(
+            new FilterGeneralTupleProcessor(
               filterFunc
-                .asInstanceOf[(Tuple => Boolean) with java.io.Serializable]
             ),
           numWorkers,
           FollowPrevious(),

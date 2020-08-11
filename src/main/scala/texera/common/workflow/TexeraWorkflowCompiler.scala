@@ -11,7 +11,7 @@ import texera.common.{TexeraConstraintViolation, TexeraContext}
 
 import scala.collection.mutable
 
-class TexeraWorkflowCompiler(texeraWorkflow: TexeraWorkflow, context: TexeraContext) {
+class TexeraWorkflowCompiler(val texeraWorkflow: TexeraWorkflow, val context: TexeraContext) {
 
   def init(): Unit = {
     this.texeraWorkflow.operators.foreach(initOperator)
