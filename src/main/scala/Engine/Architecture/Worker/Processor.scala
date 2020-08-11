@@ -102,7 +102,6 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         output(i).accept(faultedTuple.tuple)
         i += 1
       }
-      generatedCount+=1
     }else{
       //if its input tuple, the same breakpoint will be triggered again
     }
