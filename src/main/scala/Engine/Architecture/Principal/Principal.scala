@@ -366,15 +366,15 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
               isUserPaused = true //upgrade pause
               i.report(map)
             }
-            context.parent ! ReportGlobalBreakpointTriggered(map, this.metadata.tag.operator)
             safeRemoveAskHandle()
-            context.parent ! ReportState(PrincipalState.Paused)
             context.become(paused)
             unstashAll()
             if(!isUserPaused){
               log.info("no global breakpoint triggered, continue")
               self ! Resume
             }else{
+              context.parent ! ReportGlobalBreakpointTriggered(map, this.metadata.tag.operator)
+              context.parent ! ReportState(PrincipalState.Paused)
               log.info("user paused or global breakpoint triggered, pause. Stage1 cost = "+stage1Timer.toString()+" Stage2 cost ="+stage2Timer.toString())
             }
             if(stage2Timer.isRunning){
