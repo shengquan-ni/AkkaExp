@@ -9,11 +9,13 @@ import akka.actor.{ActorContext, ActorRef}
 import akka.event.LoggingAdapter
 import akka.util.Timeout
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.util.control.Breaks
 
 trait DataTransferSupport extends BreakpointSupport {
   var output = new Array[DataTransferPolicy](0)
+  var skippedTuples = new mutable.HashSet[Tuple]
 
   def pauseDataTransfer():Unit = {
     var i = 0
@@ -51,7 +53,7 @@ trait DataTransferSupport extends BreakpointSupport {
   }
 
   def transferTuple(tuple: Tuple, tupleId: Long)(implicit sender:ActorRef): Unit ={
-    if(tuple != null){
+    if(tuple != null && !skippedTuples.contains(tuple)){
       var i = 1
       var breakpointTriggered = false
       var needUserFix = false

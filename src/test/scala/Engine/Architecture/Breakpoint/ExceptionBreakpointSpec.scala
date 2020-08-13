@@ -15,6 +15,7 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike}
 
+import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration._
 import scala.util.Random
@@ -31,14 +32,12 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
   private val logicalPlan1 =
     """{
       |"operators":[
-      |{"tableName":"D:\\fragmented_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
-      |{"attributeName":0,"keyword":"Asia","operatorID":"KeywordSearch1","operatorType":"KeywordMatcher"},
-      |{"attributeName":12,"keyword":"12","operatorID":"KeywordSearch2","operatorType":"KeywordMatcher"},
+      |{"tableName":"D:\\small_input.csv","operatorID":"Scan","operatorType":"LocalScanSource","delimiter":","},
+      |{"attributeName":0,"keyword":"asia","operatorID":"KeywordSearch1","operatorType":"KeywordMatcher"},
       |{"operatorID":"Sink","operatorType":"Sink"}],
       |"links":[
       |{"origin":"Scan","destination":"KeywordSearch1"},
-      |{"origin":"KeywordSearch1","destination":"KeywordSearch2"},
-      |{"origin":"KeywordSearch2","destination":"Sink"}]
+      |{"origin":"KeywordSearch1","destination":"Sink"}]
       |}""".stripMargin
 
   private val logicalPlan2 =
@@ -51,6 +50,7 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
       |{"origin":"Gen","destination":"Count"},
       |{"origin":"Count","destination":"Sink"}]
       |}""".stripMargin
+
 
   val workflowTag = WorkflowTag("sample")
   var index=0
@@ -228,5 +228,35 @@ class ExceptionBreakpointSpec  extends TestKit(ActorSystem("PrincipalSpec"))
     assert(isCompleted)
     parent.ref ! PoisonPill
   }
+
+
+
+
+  "A workflow" should "be able to trigger count breakpoint in the workflow1, then resume it" in {
+    val parent = TestProbe()
+    val controller = parent.childActorOf(Controller.props(logicalPlan1))
+    controller ! AckedControllerInitialization
+    parent.expectMsg(30.seconds,ReportState(ControllerState.Ready))
+    controller ! PassBreakpointTo("KeywordSearch1", new CountGlobalBreakpoint("CountBreakpoint", 3))
+    controller ! Start
+    parent.expectMsg(ReportState(ControllerState.Running))
+    var isCompleted = false
+    parent.receiveWhile(3000.seconds,1000.seconds){
+      case ReportGlobalBreakpointTriggered(bp, opID) =>
+        for(i <- bp){
+          log.info((if(i._1._2.isInput)"[IN]" else "[OUT]")+i._1._2.tuple+" ERRORS: ["+i._2.mkString(",")+"]")
+        }
+        controller ! Resume
+      case ReportState(ControllerState.Paused) =>
+      case ReportState(ControllerState.Completed) =>
+        isCompleted = true
+      case _ =>
+    }
+    assert(isCompleted)
+    parent.ref ! PoisonPill
+  }
+
+
+
 
 }

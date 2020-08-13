@@ -58,8 +58,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     processedCount = 0L
     generatedCount = 0L
     currentInputTuple = null
-    dataProcessor = value.asInstanceOf[TupleProcessor]
-    dataProcessor.initialize()
+    //dataProcessor = value.asInstanceOf[TupleProcessor]
+    //dataProcessor.initialize()
     input.reset()
     processingQueue.clear()
     resetBreakpoints()
@@ -87,6 +87,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   override def onSkipTuple(faultedTuple: FaultedTuple): Unit = {
+    super.onSkipTuple(faultedTuple)
     if(faultedTuple.isInput){
       processingIndex+=1
       processedCount+=1
@@ -505,7 +506,9 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           exitIfPaused()
           try {
             currentInputTuple = batch(processingIndex)
-            dataProcessor.accept(currentInputTuple)
+            if(!skippedTuples.contains(currentInputTuple)){
+              dataProcessor.accept(currentInputTuple)
+            }
             processedCount += 1
           }catch{
             case e:Exception =>

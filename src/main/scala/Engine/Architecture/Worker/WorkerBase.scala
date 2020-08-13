@@ -36,7 +36,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
-
+    skippedTuples.add(faultedTuple.tuple)
   }
 
   def onResumeTuple(faultedTuple:FaultedTuple):Unit = {

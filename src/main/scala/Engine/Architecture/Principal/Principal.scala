@@ -59,7 +59,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   val timer = Stopwatch.createUnstarted();
   val stage1Timer = Stopwatch.createUnstarted();
   val stage2Timer = Stopwatch.createUnstarted();
-  var receivedRecoveryInformation = new mutable.HashMap[AmberTag,Seq[(Long,Long)]]()
+  var receivedRecoveryInformation = new mutable.HashMap[AmberTag,(Long,Long)]()
   val receivedTuples = new mutable.ArrayBuffer[(Tuple,ActorPath)]()
 
   def allWorkerStates: Iterable[WorkerState.Value] = workerStateMap.values
@@ -122,12 +122,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def ready:Receive = {
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case Start =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,Start,10,0))
@@ -181,12 +176,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def running:Receive = {
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case WorkerMessage.ReportState(state) =>
       log.info("running: "+ sender +" to "+ state)
       if(setWorkerState(sender,state)) {
@@ -291,12 +281,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def pausing:Receive={
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case EnforceStateCheck =>
       for((k,v) <- workerStateMap){
         if(!allowedStatesOnPausing.contains(v)){
@@ -348,12 +333,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def collectingBreakpoints:Receive={
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case EnforceStateCheck =>
       workersTriggeredBreakpoint.foreach(x => x ! QueryTriggeredBreakpoints)//query all
     case WorkerMessage.ReportState(state) =>
@@ -432,12 +412,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def resuming:Receive={
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case EnforceStateCheck =>
       for((k,v) <- workerStateMap){
         if(!allowedStatesOnResuming.contains(v)){
@@ -485,18 +460,13 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case KillAndRecover =>
       workerLayers.foreach{
         x=>
-          x.layer(0) ! Reset(x.getFirstMetadata,receivedRecoveryInformation(x.tagForFirst))
+          x.layer(0) ! Reset(x.getFirstMetadata,Seq(receivedRecoveryInformation(x.tagForFirst)))
           workerStateMap(x.layer(0)) = WorkerState.Ready
       }
       sender ! Ack
       context.become(pausing)
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag)
     case Resume =>
       isUserPaused = false //reset
       assert(unCompletedWorkerStates.nonEmpty)
@@ -532,12 +502,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 
   final def completed:Receive={
     case RecoveryPacket(amberTag, seq1,seq2) =>
-      if(receivedRecoveryInformation.contains(amberTag)){
-        receivedRecoveryInformation(amberTag) = receivedRecoveryInformation(amberTag) :+ (seq1,seq2)
-      }
-      else{
-        receivedRecoveryInformation(amberTag) = (seq1,seq2) :: Nil
-      }
+        receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case QueryStatistics =>
       this.allWorkers.foreach(worker => worker ! QueryStatistics)
     case StashOutput =>
@@ -599,10 +564,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
           x.layer.foreach{
             worker =>
               val workerTag = WorkerTag(x.tag,i)
-              if(receivedRecoveryInformation.contains(workerTag))
-                worker ! AckedWorkerInitialization(receivedRecoveryInformation(workerTag))
-              else
-                worker ! AckedWorkerInitialization()
+              worker ! AckedWorkerInitialization()
               i += 1
           }
       }
