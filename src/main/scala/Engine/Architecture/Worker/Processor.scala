@@ -325,7 +325,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   override def ready: Receive = activateWhenReceiveDataMessages orElse allowUpdateInputLinking orElse super.ready
 
-  override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse super.pausedBeforeStart
+  override def pausedBeforeStart: Receive = saveDataMessages orElse allowUpdateInputLinking orElse allowOperatorLogicUpdate orElse super.pausedBeforeStart
 
   override def running: Receive = receiveDataMessages orElse disallowUpdateInputLinking orElse reactOnUpstreamExhausted orElse super.running
 
