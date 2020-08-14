@@ -18,6 +18,7 @@ import Engine.Common.{AdvancedMessageSending, ElidableStatement, TableMetadata, 
 import Engine.Operators.Sink.SimpleSinkProcessor
 import Engine.FaultTolerance.Recovery.RecoveryPacket
 import Engine.Operators.Common.Filter.{FilterGeneralMetadata, FilterGeneralTupleProcessor}
+import Engine.Operators.OperatorMetadata
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
 import akka.event.LoggingAdapter
 import akka.pattern.ask
@@ -47,6 +48,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var processedCount:Long = 0L
   var generatedCount:Long = 0L
   var currentInputTuple:Tuple = _
+  var savedModifyLogic:(Long,Long,OperatorMetadata) = _
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -58,8 +60,20 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     processedCount = 0L
     generatedCount = 0L
     currentInputTuple = null
-    //dataProcessor = value.asInstanceOf[TupleProcessor]
-    //dataProcessor.initialize()
+    dataProcessor = value.asInstanceOf[TupleProcessor]
+    dataProcessor.initialize()
+    if(savedModifyLogic!=null && savedModifyLogic._1 == 0 && savedModifyLogic._2 == 0){
+      savedModifyLogic._3 match{
+        case keywordSeachOpMetadata: KeywordSearchMetadata =>
+          val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
+        case filterOpMetadata: FilterGeneralMetadata =>
+          val dp = dataProcessor.asInstanceOf[FilterGeneralTupleProcessor]
+          dp.filterFunc = filterOpMetadata.filterFunc
+        case t => throw new NotImplementedError("Unknown operator type: "+ t)
+      }
+      savedModifyLogic = null
+    }
     input.reset()
     processingQueue.clear()
     resetBreakpoints()
@@ -298,6 +312,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       sender ! Ack
       //val json: JsValue = Json.parse(newLogic)
       // val operatorType = json("operatorID").as[String]
+      savedModifyLogic = (generatedCount,processedCount,newMetadata)
       log.info("modify logic received by worker " + this.self.path.name + ", updating logic")
       newMetadata match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
@@ -379,6 +394,18 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   override def onInterrupted(operations: => Unit): Unit = {
+    if(savedModifyLogic!=null && savedModifyLogic._1 == generatedCount && savedModifyLogic._2 == processedCount){
+      savedModifyLogic._3 match{
+        case keywordSeachOpMetadata: KeywordSearchMetadata =>
+          val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
+          dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
+        case filterOpMetadata: FilterGeneralMetadata =>
+          val dp = dataProcessor.asInstanceOf[FilterGeneralTupleProcessor]
+          dp.filterFunc = filterOpMetadata.filterFunc
+        case t => throw new NotImplementedError("Unknown operator type: "+ t)
+      }
+      savedModifyLogic = null
+    }
     if(receivedRecoveryInformation.contains((generatedCount,processedCount))){
       pausedFlag = true
       log.info(s"interrupted at ($generatedCount,$processedCount)")
@@ -408,16 +435,18 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           nextTuple = dataProcessor.next()
         }catch{
           case e:Exception =>
-            synchronized {
-              dPThreadState = ThreadState.LocalBreakpointTriggered
+            if(breakpoints.nonEmpty) {
+              synchronized {
+                dPThreadState = ThreadState.LocalBreakpointTriggered
+              }
+              self ! LocalBreakpointTriggered
+              breakpoints(0).triggeredTuple = currentInputTuple
+              breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+              breakpoints(0).triggeredTupleId = generatedCount
+              breakpoints(0).isInput = true
+              processTime += System.nanoTime() - processStart
+              Breaks.break()
             }
-            self ! LocalBreakpointTriggered
-            breakpoints(0).triggeredTuple = currentInputTuple
-            breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
-            breakpoints(0).triggeredTupleId = generatedCount
-            breakpoints(0).isInput = true
-            processTime += System.nanoTime()-processStart
-            Breaks.break()
         }
         try {
           generatedCount += 1
@@ -467,16 +496,18 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           nextTuple = dataProcessor.next()
         }catch{
           case e:Exception =>
-            synchronized {
-              dPThreadState = ThreadState.LocalBreakpointTriggered
+            if(breakpoints.nonEmpty) {
+              synchronized {
+                dPThreadState = ThreadState.LocalBreakpointTriggered
+              }
+              self ! LocalBreakpointTriggered
+              breakpoints(0).triggeredTuple = currentInputTuple
+              breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+              breakpoints(0).triggeredTupleId = generatedCount
+              breakpoints(0).isInput = true
+              processTime += System.nanoTime() - processStart
+              Breaks.break()
             }
-            self ! LocalBreakpointTriggered
-            breakpoints(0).triggeredTuple = currentInputTuple
-            breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
-            breakpoints(0).triggeredTupleId = generatedCount
-            breakpoints(0).isInput = true
-            processTime += System.nanoTime()-processStart
-            Breaks.break()
         }
         try {
           generatedCount += 1
@@ -512,17 +543,19 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
             processedCount += 1
           }catch{
             case e:Exception =>
-              synchronized {
-                dPThreadState = ThreadState.LocalBreakpointTriggered
+              if(breakpoints.nonEmpty) {
+                synchronized {
+                  dPThreadState = ThreadState.LocalBreakpointTriggered
+                }
+                self ! LocalBreakpointTriggered
+                breakpoints(0).triggeredTuple = currentInputTuple
+                breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+                breakpoints(0).asInstanceOf[ExceptionBreakpoint].isInput = true
+                breakpoints(0).triggeredTupleId = processedCount
+                breakpoints(0).isInput = true
+                processTime += System.nanoTime() - processStart
+                Breaks.break()
               }
-              self ! LocalBreakpointTriggered
-              breakpoints(0).triggeredTuple = currentInputTuple
-              breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
-              breakpoints(0).asInstanceOf[ExceptionBreakpoint].isInput = true
-              breakpoints(0).triggeredTupleId = processedCount
-              breakpoints(0).isInput = true
-              processTime += System.nanoTime()-processStart
-              Breaks.break()
             case other:Any =>
               println(other)
               println(batch(processingIndex))
@@ -536,16 +569,18 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
               nextTuple = dataProcessor.next()
             }catch{
               case e:Exception =>
-                synchronized {
-                  dPThreadState = ThreadState.LocalBreakpointTriggered
+                if(breakpoints.nonEmpty) {
+                  synchronized {
+                    dPThreadState = ThreadState.LocalBreakpointTriggered
+                  }
+                  self ! LocalBreakpointTriggered
+                  breakpoints(0).triggeredTuple = currentInputTuple
+                  breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
+                  breakpoints(0).triggeredTupleId = generatedCount
+                  breakpoints(0).isInput = true
+                  processTime += System.nanoTime() - processStart
+                  Breaks.break()
                 }
-                self ! LocalBreakpointTriggered
-                breakpoints(0).triggeredTuple = currentInputTuple
-                breakpoints(0).asInstanceOf[ExceptionBreakpoint].error = e
-                breakpoints(0).triggeredTupleId = generatedCount
-                breakpoints(0).isInput = true
-                processTime += System.nanoTime()-processStart
-                Breaks.break()
             }
             try {
 //              if(breakpoints.exists(_.isTriggered)){
