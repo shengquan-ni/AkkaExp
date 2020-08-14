@@ -48,7 +48,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   var processedCount:Long = 0L
   var generatedCount:Long = 0L
   var currentInputTuple:Tuple = _
-  var savedModifyLogic:(Long,Long,OperatorMetadata) = _
+  var savedModifyLogic:mutable.Queue[(Long,Long,OperatorMetadata)] = new mutable.Queue[(Long, Long, OperatorMetadata)]()
 
   @elidable(INFO) var processTime = 0L
   @elidable(INFO) var processStart = 0L
@@ -62,8 +62,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     currentInputTuple = null
     dataProcessor = value.asInstanceOf[TupleProcessor]
     dataProcessor.initialize()
-    if(savedModifyLogic!=null && savedModifyLogic._1 == 0 && savedModifyLogic._2 == 0){
-      savedModifyLogic._3 match{
+    while(savedModifyLogic.nonEmpty && savedModifyLogic.head._1 == 0 && savedModifyLogic.head._2 == 0){
+      savedModifyLogic.head._3 match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
           val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
           dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
@@ -72,7 +72,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           dp.filterFunc = filterOpMetadata.filterFunc
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
-      savedModifyLogic = null
+      savedModifyLogic.dequeue()
     }
     input.reset()
     processingQueue.clear()
@@ -312,7 +312,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
       sender ! Ack
       //val json: JsValue = Json.parse(newLogic)
       // val operatorType = json("operatorID").as[String]
-      savedModifyLogic = (generatedCount,processedCount,newMetadata)
+      savedModifyLogic.enqueue((generatedCount,processedCount,newMetadata))
       log.info("modify logic received by worker " + this.self.path.name + ", updating logic")
       newMetadata match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
@@ -394,8 +394,8 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   override def onInterrupted(operations: => Unit): Unit = {
-    if(savedModifyLogic!=null && savedModifyLogic._1 == generatedCount && savedModifyLogic._2 == processedCount){
-      savedModifyLogic._3 match{
+    while(savedModifyLogic.nonEmpty && savedModifyLogic.head._1 == 0 && savedModifyLogic.head._2 == 0){
+      savedModifyLogic.head._3 match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
           val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
           dp.setPredicate(keywordSeachOpMetadata.targetField, keywordSeachOpMetadata.keyword)
@@ -404,7 +404,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           dp.filterFunc = filterOpMetadata.filterFunc
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
-      savedModifyLogic = null
+      savedModifyLogic.dequeue()
     }
     if(receivedRecoveryInformation.contains((generatedCount,processedCount))){
       pausedFlag = true
