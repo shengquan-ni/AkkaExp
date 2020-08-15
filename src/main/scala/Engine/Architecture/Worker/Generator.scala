@@ -85,7 +85,7 @@ class Generator(var dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       context.become(paused)
       context.become(breakpointTriggered,discardOld = false)
       unstashAll()
-    case QueryState => sender ! ReportStatistics(WorkerStatistics(WorkerState.Pausing, generatedCount))
+    case QueryState => sender ! ReportStatistics(WorkerStatistics(WorkerState.Pausing, generatedCount, generatedCount))
     case msg => stash()
   }
 
@@ -95,6 +95,10 @@ class Generator(var dataProducer:TupleProducer,val tag:WorkerTag) extends Worker
       output(i).accept(faultedTuple.tuple)
       i += 1
     }
+  }
+
+  override def getInputRowCount(): Long = {
+    this.generatedCount
   }
 
   override def getOutputRowCount(): Long = {

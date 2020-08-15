@@ -232,6 +232,10 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     dataProcessor.initialize()
   }
 
+  override def getInputRowCount(): Long = {
+    this.processedCount
+  }
+
   override def getOutputRowCount(): Long = {
     this.generatedCount
   }

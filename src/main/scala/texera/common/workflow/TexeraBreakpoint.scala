@@ -31,6 +31,7 @@ object TexeraBreakpointCondition extends Enumeration {
   val GE: Condition = Value(">=")
   val NE: Condition = Value("!=")
   val CONTAINS: Condition = Value("contains")
+  val NOT_CONTAINS: Condition = Value("does not contain")
 }
 
 class ConditionType extends TypeReference[TexeraBreakpointCondition.type]

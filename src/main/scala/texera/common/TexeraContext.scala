@@ -6,7 +6,12 @@ class TexeraContext {
 
   def fieldIndexMapping(field: String): Integer = {
     if (customFieldIndexMapping != null) {
-      customFieldIndexMapping(field.toLowerCase.trim)
+      val index = customFieldIndexMapping(field.toLowerCase.trim)
+      if (index == null) {
+        return -1;
+      } else {
+        return index;
+      }
     } else {
       try {
         Integer.parseInt(field.trim())

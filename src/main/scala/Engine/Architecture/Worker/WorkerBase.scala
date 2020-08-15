@@ -96,6 +96,8 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
   }
 
+  def getInputRowCount(): Long
+
   def getOutputRowCount(): Long
 
   def onReset(value: Any,recoveryInformation:Seq[(Long,Long)]): Unit ={
@@ -222,7 +224,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case QueryState =>
       sender ! ReportState(WorkerState.Uninitialized)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Uninitialized, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Uninitialized, getInputRowCount(), getOutputRowCount()))
     case _ => stash()
   }
 
@@ -243,7 +245,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case Resume => context.parent ! ReportState(WorkerState.Ready)
     case QueryState => sender ! ReportState(WorkerState.Ready)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Ready, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Ready, getInputRowCount(), getOutputRowCount()))
   } orElse discardOthers
 
   def pausedBeforeStart:Receive =
@@ -267,7 +269,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getInputRowCount(), getOutputRowCount()))
   } orElse discardOthers
 
 
@@ -308,7 +310,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case Pause => context.parent ! ReportState(WorkerState.Paused)
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Paused, getInputRowCount(), getOutputRowCount()))
     case QueryBreakpoint(id) =>
       val toReport = breakpoints.find(_.id == id)
       if(toReport.isDefined) {
@@ -354,7 +356,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     case Resume => context.parent ! ReportState(WorkerState.Running)
     case QueryState => sender ! ReportState(WorkerState.Running)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Running, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Running, getInputRowCount(), getOutputRowCount()))
     case CollectSinkResults =>
       sender ! WorkerMessage.ReportOutputResult(this.getResultTuples().toList)
   } orElse discardOthers
@@ -385,7 +387,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
      }
    case QueryState => sender ! ReportState(WorkerState.LocalBreakpointTriggered)
    case QueryStatistics =>
-     sender ! ReportStatistics(WorkerStatistics(WorkerState.LocalBreakpointTriggered, getOutputRowCount()))
+     sender ! ReportStatistics(WorkerStatistics(WorkerState.LocalBreakpointTriggered, getInputRowCount(), getOutputRowCount()))
    case DataMessage(_,_) | EndSending(_) => stash()
    case Resume | Pause => context.parent ! ReportState(WorkerState.LocalBreakpointTriggered)
    case LocalBreakpointTriggered => //discard this
@@ -398,7 +400,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     allowQueryBreakpoint orElse[Any, Unit] {
     case QueryState => sender ! ReportState(WorkerState.Paused)
     case QueryStatistics =>
-      sender ! ReportStatistics(WorkerStatistics(WorkerState.Completed, getOutputRowCount()))
+      sender ! ReportStatistics(WorkerStatistics(WorkerState.Completed, getInputRowCount(), getOutputRowCount()))
     case QueryTriggeredBreakpoints => //skip this
     case ExecutionCompleted => //skip this as well
     case CollectSinkResults =>

@@ -72,7 +72,11 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     workerStatisticsMap.update(worker, workerStatistics)
   }
 
-  private def aggregateWorkerStatistics(): Long = {
+  private def aggregateWorkerInputRowCount(): Long = {
+    workerStatisticsMap.values.map(s => s.inputRowCount).sum
+  }
+
+  private def aggregateWorkerOutputRowCount(): Long = {
     workerStatisticsMap.values.map(s => s.outputRowCount).sum
   }
 
@@ -147,7 +151,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Ready, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Ready, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case StashOutput =>
       sender ! Ack
       allWorkers.foreach(worker => AdvancedMessageSending.nonBlockingAskWithRetry(worker,StashOutput,10,0))
@@ -238,7 +242,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Running, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Running, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case Pause =>
       //single point pause: pause itself
       if(sender != self){
@@ -317,7 +321,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Pausing, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Pausing, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case QueryState => sender ! ReportState(PrincipalState.Pausing)
     case QueryStatistics =>
       this.allWorkers.foreach(worker => worker ! QueryStatistics)
@@ -368,7 +372,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.CollectingBreakpoints, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.CollectingBreakpoints, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case ReportedTriggeredBreakpoints(bps) =>
       bps.foreach(x =>{
         val bp = globalBreakpoints(x.id)
@@ -446,7 +450,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Resuming, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Resuming, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case QueryState => sender ! ReportState(PrincipalState.Resuming)
     case QueryStatistics =>
       this.allWorkers.foreach(worker => worker ! QueryStatistics)
@@ -494,7 +498,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Paused, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Paused, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -514,7 +518,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case WorkerMessage.ReportStatistics(statistics) =>
       setWorkerStatistics(sender, statistics)
       context.parent ! PrincipalMessage.ReportStatistics(
-        PrincipalStatistics(PrincipalState.Completed, aggregateWorkerStatistics()))
+        PrincipalStatistics(PrincipalState.Completed, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case CollectSinkResults =>
       this.metadata match {
         case sink: SimpleSinkOperatorMetadata =>
@@ -557,7 +561,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
       }
       layerCompletedCounter = mutable.HashMap(prev.map(x => x._2.tag -> workerLayers.head.layer.length).toSeq:_*)
       workerStateMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerState.Uninitialized)).toMap.toSeq:_*)
-      workerStatisticsMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerStatistics(WorkerState.Uninitialized, 0))).toMap.toSeq:_*)
+      workerStatisticsMap = mutable.AnyRefMap(workerLayers.flatMap(x => x.layer).map((_, WorkerStatistics(WorkerState.Uninitialized, 0, 0))).toMap.toSeq:_*)
       workerLayers.foreach{
         x =>
           var i = 0
@@ -576,7 +580,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case QueryState => sender ! ReportState(PrincipalState.Uninitialized)
     case QueryStatistics =>
       this.allWorkers.foreach(worker => worker ! QueryStatistics)
-      sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Uninitialized, aggregateWorkerStatistics()))
+      sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Uninitialized, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()
@@ -609,7 +613,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
     case QueryState => sender ! ReportState(PrincipalState.Initializing)
     case QueryStatistics =>
       this.allWorkers.foreach(worker => worker ! QueryStatistics)
-      sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Initializing, aggregateWorkerStatistics()))
+      sender() ! ReportStatistics(PrincipalStatistics(PrincipalState.Initializing, aggregateWorkerInputRowCount(), aggregateWorkerOutputRowCount()))
     case msg =>
       //log.info("stashing: "+ msg)
       stash()

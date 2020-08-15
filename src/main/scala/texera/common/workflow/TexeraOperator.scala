@@ -9,10 +9,12 @@ import com.fasterxml.jackson.annotation.{JsonIgnore, JsonProperty, JsonSubTypes,
 import org.apache.commons.lang3.builder.{EqualsBuilder, HashCodeBuilder, ToStringBuilder}
 import texera.common.schema.{PropertyNameConstants, TexeraOperatorDescription}
 import texera.common.{TexeraConstraintViolation, TexeraContext}
+import texera.operators.count.TexeraCount
 import texera.operators.filter.TexeraFilter
 import texera.operators.hdfsscan.TexeraHdfsFileScan
 import texera.operators.keyword.TexeraKeywordSearch
 import texera.operators.localscan.TexeraLocalFileScan
+import texera.operators.regex.TexeraRegex
 import texera.operators.sentiment.TexeraSentimentAnalysis
 import texera.operators.sink.TexeraAdhocSink
 import texera.operators.sleep.TexeraSleepOperator
@@ -30,7 +32,9 @@ import scala.collection.{JavaConverters, mutable}
   new Type(value = classOf[TexeraAdhocSink], name = "AdhocSink"),
   new Type(value = classOf[TexeraSleepOperator], name = "Sleep"),
   new Type(value = classOf[TexeraKeywordSearch], name = "KeywordSearch"),
+  new Type(value = classOf[TexeraRegex], name = "Regex"),
   new Type(value = classOf[TexeraFilter], name = "Filter"),
+  new Type(value = classOf[TexeraCount], name = "Count"),
   new Type(value = classOf[TexeraSentimentAnalysis], name = "SentimentAnalysis"),
 ))
 abstract class TexeraOperator {

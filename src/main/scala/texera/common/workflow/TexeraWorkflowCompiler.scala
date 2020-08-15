@@ -53,37 +53,40 @@ class TexeraWorkflowCompiler(val texeraWorkflow: TexeraWorkflow, val context: Te
     new Workflow(amberOperators, outLinksImmutable)
   }
 
+  def addBreakpoint(controller: ActorRef, operatorID: String, breakpoint: TexeraBreakpoint): Unit = {
+    val breakpointID = "breakpoint-" + operatorID
+    breakpoint match {
+      case conditionBp: TexeraConditionBreakpoint =>
+        val column = this.context.fieldIndexMapping(conditionBp.column);
+        val predicate: Tuple => Boolean = conditionBp.condition match {
+          case TexeraBreakpointCondition.EQ =>
+            tuple => {
+              tuple.get(column).toString.trim == conditionBp.value
+            }
+          case TexeraBreakpointCondition.LT =>
+            tuple => tuple.get(column).toString.trim < conditionBp.value
+          case TexeraBreakpointCondition.LE =>
+            tuple => tuple.get(column).toString.trim <= conditionBp.value
+          case TexeraBreakpointCondition.GT =>
+            tuple => tuple.get(column).toString.trim > conditionBp.value
+          case TexeraBreakpointCondition.GE =>
+            tuple => tuple.get(column).toString.trim >= conditionBp.value
+          case TexeraBreakpointCondition.NE =>
+            tuple => tuple.get(column).toString.trim != conditionBp.value
+          case TexeraBreakpointCondition.CONTAINS =>
+            tuple => tuple.get(column).toString.trim.contains(conditionBp.value)
+          case TexeraBreakpointCondition.NOT_CONTAINS =>
+            tuple => ! tuple.get(column).toString.trim.contains(conditionBp.value)
+        }
+        controller ! PassBreakpointTo(operatorID, new ConditionalGlobalBreakpoint(breakpointID, predicate))
+      case countBp: TexeraCountBreakpoint =>
+        controller ! PassBreakpointTo(operatorID, new CountGlobalBreakpoint("breakpointID", countBp.count))
+    }
+  }
+
   def initializeBreakpoint(controller: ActorRef): Unit = {
     for (pair <- this.texeraWorkflow.breakpoints) {
-      val operatorID = pair.operatorID
-      val breakpointID = "breakpoint-" + operatorID
-      val breakpoint = pair.breakpoint
-      breakpoint match {
-        case conditionBp: TexeraConditionBreakpoint =>
-          val column = this.context.fieldIndexMapping(conditionBp.column);
-          val predicate: Tuple => Boolean = conditionBp.condition match {
-            case TexeraBreakpointCondition.EQ =>
-              tuple => {
-                tuple.get(column).toString.trim == conditionBp.value
-              }
-            case TexeraBreakpointCondition.LT =>
-              tuple => tuple.get(column).toString.trim < conditionBp.value
-            case TexeraBreakpointCondition.LE =>
-              tuple => tuple.get(column).toString.trim <= conditionBp.value
-            case TexeraBreakpointCondition.GT =>
-              tuple => tuple.get(column).toString.trim > conditionBp.value
-            case TexeraBreakpointCondition.GE =>
-              tuple => tuple.get(column).toString.trim >= conditionBp.value
-            case TexeraBreakpointCondition.NE =>
-              tuple => tuple.get(column).toString.trim != conditionBp.value
-            case texera.common.workflow.TexeraBreakpointCondition.CONTAINS =>
-              tuple => tuple.get(column).toString.trim.contains(conditionBp.value)
-          }
-          controller ! PassBreakpointTo(operatorID, new ConditionalGlobalBreakpoint(breakpointID, predicate))
-        case countBp: TexeraCountBreakpoint =>
-          controller ! PassBreakpointTo(operatorID, new CountGlobalBreakpoint("breakpointID", countBp.count))
-      }
+      addBreakpoint(controller, pair.operatorID, pair.breakpoint)
     }
-
   }
 }
