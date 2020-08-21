@@ -505,6 +505,18 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
   final def completed:Receive={
+    case KillAndRecover =>
+      workerLayers.foreach{
+        x=>
+          if (receivedRecoveryInformation.contains(x.tagForFirst)) {
+            x.layer(0) ! Reset(x.getFirstMetadata,Seq(receivedRecoveryInformation(x.tagForFirst)))
+          } else {
+            x.layer(0) ! Reset(x.getFirstMetadata,Seq())
+          }
+          workerStateMap(x.layer(0)) = WorkerState.Ready
+      }
+      sender ! Ack
+      context.become(pausing)
     case RecoveryPacket(amberTag, seq1,seq2) =>
         receivedRecoveryInformation(amberTag) = (seq1,seq2)
     case QueryStatistics =>
@@ -542,7 +554,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
 
-  final override def receive: Receive = {
+  final override def receive:Receive = {
     case AckedPrincipalInitialization(prev:Array[(OperatorMetadata,ActorLayer)]) =>
       workerLayers = metadata.topology.layers
       workerEdges = metadata.topology.links
@@ -587,7 +599,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
   }
 
 
-  final def initializing: Receive ={
+  final def initializing:Receive ={
     case EnforceStateCheck =>
       for((k,v) <- workerStateMap){
         if(v != WorkerState.Ready){

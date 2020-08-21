@@ -34,11 +34,30 @@ public class TexeraRegex extends TexeraOperator {
         Pattern pattern = Pattern.compile(regex);
         return new FilterGeneralMetadata(this.amberOperatorTag(), Constants.defaultNumWorkers(),
                 (Function1<Tuple, Boolean> & Serializable) t -> {
-//                    try {
-//                        Thread.sleep(0, 10000);
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
+                    if (regex.equalsIgnoreCase("(coronavirus)*")) {
+
+                    } else if (regex.equalsIgnoreCase("coronavirus")
+                            || regex.equalsIgnoreCase("(coronavirus)")) {
+                        try {
+                            Thread.sleep(0, 500);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        if (context().isOneK()) {
+                            try {
+                                Thread.sleep(5);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        } else {
+                            try {
+                                Thread.sleep(10);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
                     Integer field = this.context().fieldIndexMapping(attribute);
                     String tupleValue = t.get(field).toString().trim();
                     return pattern.matcher(tupleValue).find();

@@ -12,6 +12,7 @@ import javax.websocket.server.ServerEndpoint
 import javax.websocket._
 import texera.common.workflow.{TexeraWorkflow, TexeraWorkflowCompiler}
 import texera.common.{TexeraContext, TexeraUtils}
+import texera.operators.localscan.TexeraLocalFileScan
 import texera.operators.sink.TexeraAdhocSink
 import web.TexeraWebApplication
 import web.model.event._
@@ -142,6 +143,12 @@ class WorkflowWebsocketResource {
       "sentiment" -> 7,
     )
 
+    val scan = request.operators
+      .find(p => p.isInstanceOf[TexeraLocalFileScan])
+    if (scan.nonEmpty && scan.get.asInstanceOf[TexeraLocalFileScan].filePath.contains("tweet_1K")) {
+      context.isOneK = true
+    }
+
     val texeraWorkflowCompiler = new TexeraWorkflowCompiler(
       TexeraWorkflow(request.operators, request.links, request.breakpoints),
       context
@@ -153,6 +160,8 @@ class WorkflowWebsocketResource {
       send(session, WorkflowErrorEvent(violations))
       return
     }
+
+
 
     val workflow = texeraWorkflowCompiler.amberWorkflow
     val workflowTag = WorkflowTag.apply(workflowID)
@@ -189,7 +198,10 @@ class WorkflowWebsocketResource {
         send(session, SkipTupleResponseEvent())
       },
       reportCurrentTuplesListener = report => {
-        send(session, OperatorCurrentTuplesUpdateEvent.apply(report))
+//        send(session, OperatorCurrentTuplesUpdateEvent.apply(report))
+      },
+      recoveryStartedListener = _ => {
+        send(session, RecoveryStartedEvent())
       }
     )
 

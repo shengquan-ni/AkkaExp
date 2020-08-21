@@ -3,6 +3,7 @@ package texera.common
 class TexeraContext {
   var workflowID: String = null
   var customFieldIndexMapping: Map[String, Integer] = _
+  var isOneK = false
 
   def fieldIndexMapping(field: String): Integer = {
     if (customFieldIndexMapping != null) {

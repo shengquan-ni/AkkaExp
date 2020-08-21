@@ -8,13 +8,14 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.{GET, POST, Path, Produces}
 import texera.common.TexeraUtils
 import texera.common.schema.{GroupOrder, OperatorGroupConstants, OperatorSchemaGenerator}
+import web.model.event.RecoveryStartedEvent
 
 import scala.beans.BeanProperty
 import scala.collection.JavaConverters
 
 @Path("/kill")
 @Produces(Array(MediaType.APPLICATION_JSON))
-class MockKillWorkerResource {
+class MockKillWorkerResource() {
 
   case class OperatorMetadata
   (
@@ -24,10 +25,11 @@ class MockKillWorkerResource {
 
   @POST
   @Path("/worker") def mockKillWorker: Unit = {
-    WorkflowWebsocketResource.sessionJobs.values.map(p => p._2)
-      .foreach(controller => {
-        controller ! KillAndRecover
-      })
+    WorkflowWebsocketResource.sessionJobs.foreach(p => {
+      val controller = p._2._2
+      Thread.sleep(1500)
+      controller ! KillAndRecover
+    })
   }
 
 }

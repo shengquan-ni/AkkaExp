@@ -28,7 +28,7 @@ import scala.collection.{JavaConverters, mutable}
 )
 @JsonSubTypes(Array(
   new Type(value = classOf[TexeraLocalFileScan], name = "LocalFileScan"),
-  new Type(value = classOf[TexeraHdfsFileScan], name = "HdfsFileScan"),
+//  new Type(value = classOf[TexeraHdfsFileScan], name = "HdfsFileScan"),
   new Type(value = classOf[TexeraAdhocSink], name = "AdhocSink"),
   new Type(value = classOf[TexeraSleepOperator], name = "Sleep"),
   new Type(value = classOf[TexeraKeywordSearch], name = "KeywordSearch"),

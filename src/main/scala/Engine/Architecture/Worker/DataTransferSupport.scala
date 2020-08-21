@@ -15,7 +15,8 @@ import scala.util.control.Breaks
 
 trait DataTransferSupport extends BreakpointSupport {
   var output = new Array[DataTransferPolicy](0)
-  var skippedTuples = new mutable.HashSet[Tuple]
+  var skippedInputTuples = new mutable.HashSet[Tuple]
+  var skippedOutputTuples = new mutable.HashSet[Tuple]
 
   def pauseDataTransfer():Unit = {
     var i = 0
@@ -53,7 +54,7 @@ trait DataTransferSupport extends BreakpointSupport {
   }
 
   def transferTuple(tuple: Tuple, tupleId: Long)(implicit sender:ActorRef): Unit ={
-    if(tuple != null && !skippedTuples.contains(tuple)){
+    if(tuple != null && !skippedOutputTuples.contains(tuple)){
       var i = 1
       var breakpointTriggered = false
       var needUserFix = false

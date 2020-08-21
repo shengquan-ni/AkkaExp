@@ -10,5 +10,6 @@ case class ControllerEventListener(
     breakpointTriggeredListener: BreakpointTriggered => Unit = null,
     workflowPausedListener: WorkflowPaused => Unit = null,
     skipTupleResponseListener: SkipTupleResponse => Unit = null,
-    reportCurrentTuplesListener: ReportCurrentProcessingTuple => Unit = null
+    reportCurrentTuplesListener: ReportCurrentProcessingTuple => Unit = null,
+    recoveryStartedListener: Unit => Unit = null,
 )

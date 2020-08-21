@@ -60,6 +60,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
     processedCount = 0L
     generatedCount = 0L
     currentInputTuple = null
+    dPThreadState = ThreadState.Idle
     dataProcessor = value.asInstanceOf[TupleProcessor]
     dataProcessor.initialize()
     while(savedModifyLogic.nonEmpty && savedModifyLogic.head._1 == 0 && savedModifyLogic.head._2 == 0){
@@ -398,7 +399,17 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
   }
 
   override def onInterrupted(operations: => Unit): Unit = {
-    while(savedModifyLogic.nonEmpty && savedModifyLogic.head._1 == 0 && savedModifyLogic.head._2 == 0){
+//    if (savedModifyLogic.nonEmpty && receivedRecoveryInformation.nonEmpty) {
+//      log.info(s"onInterrupted: generated $generatedCount , processed $processedCount, " +
+//        s"savedModify: _1: ${savedModifyLogic.head._1}, :2 ${savedModifyLogic.head._2}")
+//    }
+    while(receivedRecoveryInformation.nonEmpty && savedModifyLogic.nonEmpty &&
+      savedModifyLogic.head._1 == this.generatedCount &&
+      savedModifyLogic.head._2 == this.processedCount){
+      log.info(s"!!!!!!triggered change logic at generated: " +
+        s"$generatedCount, processed: $processedCount, " +
+        s"savedModify: _1: ${savedModifyLogic.head._1}, :2 ${savedModifyLogic.head._2}, " +
+        s"id: ${this.tag}")
       savedModifyLogic.head._3 match{
         case keywordSeachOpMetadata: KeywordSearchMetadata =>
           val dp: KeywordSearchTupleProcessor = dataProcessor.asInstanceOf[KeywordSearchTupleProcessor]
@@ -409,6 +420,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
         case t => throw new NotImplementedError("Unknown operator type: "+ t)
       }
       savedModifyLogic.dequeue()
+      println(s"!!!!!!triggered change logic done")
     }
     if(receivedRecoveryInformation.contains((generatedCount,processedCount))){
       pausedFlag = true
@@ -541,7 +553,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
           exitIfPaused()
           try {
             currentInputTuple = batch(processingIndex)
-            if(!skippedTuples.contains(currentInputTuple)){
+            if(!skippedInputTuples.contains(currentInputTuple)){
               dataProcessor.accept(currentInputTuple)
             }
             processedCount += 1
@@ -592,6 +604,7 @@ class Processor(var dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 //              }
               generatedCount += 1
               transferTuple(nextTuple,generatedCount)
+              exitIfPaused()
             }catch{
               case e:BreakpointException =>
                 synchronized {

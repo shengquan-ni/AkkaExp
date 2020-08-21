@@ -166,13 +166,29 @@ class Controller
 
 
   private def killAndRecoverStage(): Unit ={
-    val futures = principalInCurrentStage.filter(x=> !principalBiMap.inverse().get(x).operator.contains("Sink")).map{
+    val futuresNoSinkScan = principalInCurrentStage.filter(
+      x=> !principalBiMap.inverse().get(x).operator.contains("Sink") &&
+        !principalBiMap.inverse().get(x).operator.contains("Scan")
+    ).map{
       x=>
         principalStates(x) = PrincipalState.Running
         AdvancedMessageSending.nonBlockingAskWithRetry(x, KillAndRecover, 5, 0)(3.minutes, ec, log)
     }.asJava
-    val tasks = Futures.sequence(futures,ec)
-    Await.result(tasks,5.minutes)
+    val tasksNoSinkScan = Futures.sequence(futuresNoSinkScan,ec)
+    Await.result(tasksNoSinkScan,5.minutes)
+    Thread.sleep(2000)
+    val futuresScan = principalInCurrentStage.filter(
+      x=> principalBiMap.inverse().get(x).operator.contains("Scan")
+    ).map{
+      x=>
+        principalStates(x) = PrincipalState.Running
+        AdvancedMessageSending.nonBlockingAskWithRetry(x, KillAndRecover, 5, 0)(3.minutes, ec, log)
+    }.asJava
+    val tasksScan = Futures.sequence(futuresScan,ec)
+    Await.result(tasksScan,5.minutes)
+    if (this.eventListener.recoveryStartedListener != null) {
+      this.eventListener.recoveryStartedListener.apply()
+    }
     context.become(pausing)
   }
 
@@ -586,7 +602,13 @@ class Controller
         case scala.util.Failure(t) =>
           throw t
       }
-
+    case PassBreakpointTo(id:String,breakpoint:GlobalBreakpoint) =>
+      val opTag = OperatorTag(tag,id)
+      if(principalBiMap.containsKey(opTag)){
+        AdvancedMessageSending.blockingAskWithRetry(principalBiMap.get(opTag),AssignBreakpoint(breakpoint),3)
+      }else {
+        throw new AmberException("target operator not found")
+      }
     case msg => stash()
   }
 

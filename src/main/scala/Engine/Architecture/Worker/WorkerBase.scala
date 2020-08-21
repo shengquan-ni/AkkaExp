@@ -36,7 +36,11 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   }
 
   def onSkipTuple(faultedTuple:FaultedTuple):Unit = {
-    skippedTuples.add(faultedTuple.tuple)
+    if (faultedTuple.isInput) {
+      skippedInputTuples.add(faultedTuple.tuple)
+    } else {
+      skippedOutputTuples.add(faultedTuple.tuple)
+    }
   }
 
   def onResumeTuple(faultedTuple:FaultedTuple):Unit = {
@@ -101,7 +105,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
   def getOutputRowCount(): Long
 
   def onReset(value: Any,recoveryInformation:Seq[(Long,Long)]): Unit ={
-    Thread.sleep(10000)
+//    Thread.sleep(1000)
     receivedRecoveryInformation.clear()
     receivedRecoveryInformation ++= recoveryInformation
     userFixedTuple = null
@@ -398,7 +402,7 @@ abstract class WorkerBase extends Actor with ActorLogging with Stash with DataTr
     disallowUpdateOutputLinking orElse
     allowModifyBreakpoints orElse
     allowQueryBreakpoint orElse[Any, Unit] {
-    case QueryState => sender ! ReportState(WorkerState.Paused)
+    case QueryState => sender ! ReportState(WorkerState.Completed)
     case QueryStatistics =>
       sender ! ReportStatistics(WorkerStatistics(WorkerState.Completed, getInputRowCount(), getOutputRowCount()))
     case QueryTriggeredBreakpoints => //skip this

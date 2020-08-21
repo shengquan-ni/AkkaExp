@@ -12,7 +12,7 @@ object OperatorCurrentTuplesUpdateEvent {
       } else {
         WorkerTuples(workerName, p._1.toArray().map(v => v.toString).toList)
       }
-    }).toList
+    }).filter(tuples => tuples.tuple != null && tuples.tuple.nonEmpty).toList
     OperatorCurrentTuplesUpdateEvent(report.operatorID, workerTuples)
   }
 }
