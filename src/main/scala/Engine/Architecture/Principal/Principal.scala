@@ -290,7 +290,7 @@ class Principal(val metadata:OperatorMetadata) extends Actor with ActorLogging w
 //    println(s"SENDING INFO TO FREE WORKER")
 //    AdvancedMessageSending.blockingAskWithRetry(freeWorker, UpdateInputsLinking(inputsToBeUpdated, lyTag), 3)
 
-    println(s"OPENING THE FLOODGATES")
+    println(s"OPENING THE FLOODGATES ${formatter.format(new Date(System.currentTimeMillis()))}")
     join1Principal ! AddFreeWorkerAsReceiver(mostSkewedWorker, freeWorker)
   }
 

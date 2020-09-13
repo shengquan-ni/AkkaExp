@@ -331,6 +331,7 @@ class Processor(val dataProcessor: TupleProcessor,val tag:WorkerTag) extends Wor
 
   final def receiveHashTable: Receive = {
     case ReceiveHashTable(hashTable) =>
+      println(s" Free worker received HASHtable ${formatter.format(new Date(System.currentTimeMillis()))}")
       if(tag.operator.contains("Join2")) {
         dataProcessor.renewHashTable(hashTable)
         sender ! Ack
