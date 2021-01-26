@@ -7,9 +7,15 @@ object ControlMessage{
 
   final case class Pause()
 
+  final case class ModifyLogic(newLogic:String)
+
   final case class Resume()
 
   final case class QueryState()
+
+  final case class QueryStatistics()
+
+  final case class CollectSinkResults()
 
   final case class LocalBreakpointTriggered()
 

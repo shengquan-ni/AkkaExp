@@ -4,9 +4,19 @@ import Engine.Common.AmberTag.LayerTag
 import Engine.Common.AmberTuple.Tuple
 import Engine.Common.TupleProcessor
 
+import scala.collection.mutable
+
 class SimpleSinkProcessor extends TupleProcessor{
+
+  val results: mutable.MutableList[Tuple] = mutable.MutableList()
+
   override def accept(tuple: Tuple): Unit = {
     println("Sink: "+ tuple.toString)
+    results += tuple
+  }
+
+  def getResultTuples(): mutable.MutableList[Tuple] = {
+    results
   }
 
   override def noMore(): Unit = {
